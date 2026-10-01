@@ -64,11 +64,14 @@ android {
     sourceSets {
         // DAO and migration tests run both on device (androidTest) and on the JVM via Robolectric (test).
         getByName("test") {
-            java.directories += "src/sharedTest/java"
+            kotlin.directories += "src/sharedTest/java"
+        }
+        // Robolectric reads assets from the app variant: expose the Room schemas to debug only (never in release).
+        getByName("debug") {
             assets.directories += "$projectDir/schemas"
         }
         getByName("androidTest") {
-            java.directories += "src/sharedTest/java"
+            kotlin.directories += "src/sharedTest/java"
             assets.directories += "$projectDir/schemas"
         }
     }
@@ -116,6 +119,8 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.room.testing)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)
