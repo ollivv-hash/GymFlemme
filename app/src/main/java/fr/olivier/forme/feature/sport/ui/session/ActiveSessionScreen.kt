@@ -310,7 +310,7 @@ private fun SetEditor(item: ExerciseUi, viewModel: ActiveSessionViewModel) {
     }
 
     Spacer(Modifier.height(8.dp))
-    Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         when (type) {
             ExerciseType.WEIGHTED, ExerciseType.BODYWEIGHT -> {
                 Stepper(
@@ -320,6 +320,7 @@ private fun SetEditor(item: ExerciseUi, viewModel: ActiveSessionViewModel) {
                     onPlus = { viewModel.changeLoad(item, 1) },
                     onValueEntered = { t -> parseDecimal(t)?.let { v -> viewModel.updateDraft(item) { it.copy(loadKg = v.coerceAtLeast(0.0)) } } },
                     decimal = true,
+                    modifier = Modifier.weight(1f),
                 )
                 Stepper(
                     label = "Reps",
@@ -327,6 +328,7 @@ private fun SetEditor(item: ExerciseUi, viewModel: ActiveSessionViewModel) {
                     onMinus = { viewModel.updateDraft(item) { it.copy(reps = ((it.reps ?: 0) - 1).coerceAtLeast(0)) } },
                     onPlus = { viewModel.updateDraft(item) { it.copy(reps = (it.reps ?: 0) + 1) } },
                     onValueEntered = { t -> t.trim().toIntOrNull()?.let { v -> viewModel.updateDraft(item) { it.copy(reps = v) } } },
+                    modifier = Modifier.weight(1f),
                 )
             }
             ExerciseType.TIMED -> Stepper(
@@ -335,6 +337,7 @@ private fun SetEditor(item: ExerciseUi, viewModel: ActiveSessionViewModel) {
                 onMinus = { viewModel.updateDraft(item) { it.copy(durationSec = ((it.durationSec ?: 0) - 5).coerceAtLeast(0)) } },
                 onPlus = { viewModel.updateDraft(item) { it.copy(durationSec = (it.durationSec ?: 0) + 5) } },
                 onValueEntered = { t -> parseDuration(t)?.let { v -> viewModel.updateDraft(item) { it.copy(durationSec = v) } } },
+                modifier = Modifier.weight(1f),
             )
             ExerciseType.CARDIO -> Unit
         }
@@ -372,7 +375,7 @@ private fun CardioEditor(item: ExerciseUi, viewModel: ActiveSessionViewModel) {
             style = MaterialTheme.typography.bodyMedium,
         )
     }
-    FlowRow(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Stepper(
             label = "Durée",
             valueText = Fmt.mmss(d.durationSec),

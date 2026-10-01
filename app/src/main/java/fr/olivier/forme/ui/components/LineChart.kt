@@ -61,7 +61,8 @@ fun LineChart(
             drawText(layout, topLeft = Offset(0f, yPx - layout.size.height / 2))
         }
         val first = measurer.measure(xLabel(minX), labelStyle)
-        drawText(first, topLeft = Offset(left, bottom + 4.dp.toPx()))
+        val firstX = if (maxX == minX) (left + right - first.size.width) / 2 else left
+        drawText(first, topLeft = Offset(firstX, bottom + 4.dp.toPx()))
         if (maxX != minX) {
             val last = measurer.measure(xLabel(maxX), labelStyle)
             drawText(last, topLeft = Offset(right - last.size.width, bottom + 4.dp.toPx()))

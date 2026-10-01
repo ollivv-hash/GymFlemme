@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalIconButton
@@ -47,21 +48,21 @@ fun Stepper(
     var editing by remember { mutableStateOf(false) }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            FilledTonalIconButton(onClick = onMinus, modifier = Modifier.size(56.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.widthIn(max = 280.dp)) {
+            FilledTonalIconButton(onClick = onMinus, modifier = Modifier.size(52.dp)) {
                 Text("−", style = MaterialTheme.typography.headlineMedium)
             }
             Text(
                 valueText,
                 modifier = Modifier
-                    .width(96.dp)
+                    .weight(1f)
                     .clickable(enabled = onValueEntered != null) { editing = true }
                     .padding(vertical = 8.dp),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
-            FilledTonalIconButton(onClick = onPlus, modifier = Modifier.size(56.dp)) {
+            FilledTonalIconButton(onClick = onPlus, modifier = Modifier.size(52.dp)) {
                 Text("+", style = MaterialTheme.typography.headlineMedium)
             }
         }
