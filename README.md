@@ -3,8 +3,8 @@
 Application Android native de suivi des séances en salle (module **Sport**) puis de nutrition (module **Nutrition**, V1.1).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé via `adb install`, sans Play Store.
 
-> **Statut : V1.0 en cours de conception.** L'architecture ci-dessous est validée ; le développement démarre une fois l'environnement de build prêt.
-> Les sections « Build » et « Installation » décrivent la procédure cible de la V1.0.
+> **Statut : V1.0 (module Sport) implémentée.** Build, Lint et tests JVM au vert ; reste à valider sur le téléphone
+> (`connectedAndroidTest` + usage réel en salle).
 
 - Package : `fr.olivier.forme` — nom d'app provisoire : **Forme**
 - Interface en français, code (identifiants, commentaires) en anglais
@@ -38,18 +38,18 @@ Hors périmètre V1.0 : Nutrition, Drive, Health Connect, BLE, partage vers Clau
 
 | Dépendance | Pourquoi |
 |---|---|
-| AGP, Kotlin, plugin Compose Compiler | Socle |
+| AGP 9.4, Kotlin 2.4 (Kotlin intégré à AGP), plugin Compose Compiler, Gradle 9.8 | Socle (`compileSdk`/`targetSdk` 37) |
 | KSP | Génération de code Room et Hilt (remplace kapt, déprécié) |
-| Compose BOM, Material 3, `activity-compose`, `material-icons-extended` | UI |
+| Compose BOM, Material 3, `activity-compose`, `material-icons-core` | UI (`icons-extended` n'est plus maintenu : seules les icônes de base sont utilisées) |
 | `lifecycle-runtime-compose`, `lifecycle-viewmodel-compose` | `collectAsStateWithLifecycle`, ViewModels |
 | `navigation-compose` | Navigation (routes typées via kotlinx.serialization) |
-| Hilt + `hilt-navigation-compose` | Injection de dépendances, `hiltViewModel()` |
+| Hilt + `hilt-lifecycle-viewmodel-compose` | Injection de dépendances, `hiltViewModel()` |
 | Room (runtime, ktx, compiler, `room-testing`) | Persistance ; `room-testing` pour valider les migrations |
 | `datastore-preferences` | Réglages |
 | `kotlinx-serialization-json` | Export / import JSON, routes typées ; maintenu par JetBrains, sans réflexion |
 | `kotlinx-coroutines` | Asynchronisme |
 | `sh.calvin.reorderable` | Glisser-déposer dans une `LazyColumn` (absent de Compose) ; petite lib Apache 2, maintenue. **Seule dépendance tierce.** |
-| Tests : JUnit 4, `kotlinx-coroutines-test`, Turbine, `androidx.test` | Tests unitaires et instrumentés |
+| Tests : JUnit 4, `kotlinx-coroutines-test`, Turbine, `androidx.test`, Robolectric, `compose-ui-test-junit4` | Tests unitaires et instrumentés ; Robolectric exécute aussi les tests Room sur le JVM (sans téléphone) |
 
 Volontairement **sans** bibliothèque de graphiques (courbes dessinées en Compose Canvas) ni chargeur d'images (`BitmapFactory` sous-échantillonné suffit pour les photos de machines).
 
@@ -82,8 +82,9 @@ app_sport/
         │       ├── sport/       # data · domain · timer · ui (accueil, séance, historique, catalogue, modèles)
         │       ├── bodyweight/  # data · domain · ui
         │       └── settings/    # réglages + sauvegarde
-        ├── test/                # tests unitaires JVM
-        └── androidTest/         # tests DAO + migration
+        ├── test/                # tests unitaires JVM + tests de fumée Compose (Robolectric)
+        ├── sharedTest/          # tests Room (DAO, migration, aller-retour JSON) : exécutés par test ET androidTest
+        └── androidTest/
 ```
 
 V1.1 ajoutera `feature/nutrition/` et une migration Room 1 → 2 ; V1.2 ajoutera `core/sync/`.
@@ -226,9 +227,16 @@ APK produit : `app\build\outputs\apk\release\app-release.apk`
 Tests :
 
 ```bat
-gradlew test                    :: tests unitaires
-gradlew connectedAndroidTest    :: tests instrumentés (téléphone ou émulateur branché)
+gradlew testDebugUnitTest       :: règles métier, sauvegarde, Room (Robolectric), parcours UI — sans téléphone
+gradlew connectedAndroidTest    :: tests Room instrumentés (DAO, migration 1 → 1) sur le téléphone branché
+gradlew lintDebug               :: analyse statique Android
 ```
+
+Couverture : règle de progression, rotation (ajout / archivage / réordonnancement), records et volume,
+moyenne mobile 7 jours, pré-remplissage, bilan texte, export/import JSON (aller-retour sans perte, en mémoire
+et via la base), seed, DAO et repositories, validation du schéma Room v1.
+
+Les tests de fumée (`AppSmokeTest`, `RecapSmokeTest`) écrivent des captures d'écran dans `app/build/smoke-screens/`.
 
 ---
 
@@ -248,3 +256,23 @@ adb install -r app\build\outputs\apk\release\app-release.apk
 1. Copier le fichier `.json` sur le téléphone (ou le rendre accessible via le sélecteur de fichiers : stockage interne, Drive…).
 2. Dans l'app : **Configuration → Sauvegarde → Importer**, choisir le fichier.
 3. Confirmer : les données actuelles sont sauvegardées automatiquement puis **remplacées** par celles du fichier.
+
+La copie de sécurité automatique (5 dernières conservées) se trouve dans
+`Android/data/fr.olivier.forme/files/backups/` ; pour la récupérer sur le PC :
+
+```bat
+adb pull /sdcard/Android/data/fr.olivier.forme/files/backups/
+```
+
+---
+
+## Notes d'implémentation
+
+- **Séance en cours persistante** : chaque série validée est écrite immédiatement en base ; une séance sans
+  `endedAt` est reprise automatiquement au lancement. Seules les valeurs en cours de saisie (pas encore validées) sont perdues si Android tue l'app.
+- **Timer de repos** : notification avec compte à rebours (visible écran verrouillé) + alarme exacte
+  (`USE_EXACT_ALARM`) qui sonne et vibre en fin de repos, même app fermée. La permission de notification est demandée au premier lancement d'une séance (Android 13+).
+- **Pré-remplissage** : la série suivante reprend la série que tu viens de faire (si tu as changé la charge, elle est conservée),
+  sinon la même série de la dernière fois. Toucher une valeur permet de la saisir au clavier.
+- **Records** : un record doit battre strictement la meilleure valeur précédente ; une première fois n'est pas un record.
+- **Variante de build debug** : `fr.olivier.forme.debug`, installable à côté de la release sans conflit de données.
