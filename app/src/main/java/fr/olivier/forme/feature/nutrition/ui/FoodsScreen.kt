@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -12,7 +14,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -210,9 +211,7 @@ fun FoodEditScreen(onDone: () -> Unit, viewModel: FoodEditViewModel = hiltViewMo
                 Text("Favori", Modifier.weight(1f))
                 Switch(checked = f.favorite, onCheckedChange = { v -> viewModel.update { it.copy(favorite = v) } })
             }
-            Button(onClick = { viewModel.save(onDone) }, enabled = viewModel.canSave, modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp)) {
-                Text("Enregistrer")
-            }
+            Spacer(Modifier.height(24.dp)) // Saving is done with "Enregistrer" in the top bar.
         }
     }
 }
