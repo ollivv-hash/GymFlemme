@@ -252,6 +252,15 @@ class ActiveSessionViewModel @Inject constructor(
 
     fun dismissNote(item: ExerciseUi) = viewModelScope.launch { exercises.setNextNote(item.exercise.id, null) }
 
+    /** All exercises (archived included), to name the replaced one. */
+    val allExercises = exercises.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun replace(item: ExerciseUi, exerciseId: Long) = viewModelScope.launch {
+        session.value?.id?.let { sessions.replaceExercise(it, item.line, exerciseId) }
+        manualExpanded.value = null
+    }
+
     fun move(item: ExerciseUi, delta: Int) = viewModelScope.launch {
         session.value?.id?.let { sessions.moveLine(it, item.line.id, delta) }
     }

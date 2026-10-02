@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -213,6 +214,20 @@ private fun ExerciseCard(
     val skipped = item.line.status == SessionExerciseStatus.SKIPPED
     var menu by remember { mutableStateOf(false) }
     var noting by remember { mutableStateOf(false) }
+    var replacing by remember { mutableStateOf(false) }
+    if (replacing) {
+        val all by viewModel.allExercises.collectAsStateWithLifecycle()
+        val inSession = viewModel.ui.collectAsStateWithLifecycle().value.exercises.map { it.exercise.id }.toSet()
+        ReplaceDialog(
+            current = item.exercise,
+            candidates = all.filter { !it.archived && it.id !in inSession },
+            onPick = {
+                viewModel.replace(item, it.id)
+                replacing = false
+            },
+            onDismiss = { replacing = false },
+        )
+    }
     if (noting) {
         NoteDialog(
             exerciseName = item.exercise.name,
@@ -242,6 +257,12 @@ private fun ExerciseCard(
                     color = if (item.finished) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                 )
                 Text(targetLabel(item), style = MaterialTheme.typography.bodySmall)
+                item.line.replacedExerciseId?.let { id ->
+                    val all by viewModel.allExercises.collectAsStateWithLifecycle()
+                    all.firstOrNull { it.id == id }?.let {
+                        Text("remplace ${it.name}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+                    }
+                }
             }
             IconButton(onClick = { noting = true }) { Icon(Icons.Filled.Edit, contentDescription = "Note pour la prochaine fois") }
             IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "Actions") }
@@ -253,6 +274,7 @@ private fun ExerciseCard(
                 } else {
                     DropdownMenuItem(text = { Text("Reprendre") }, onClick = { menu = false; viewModel.reopen(item) })
                 }
+                DropdownMenuItem(text = { Text("Remplacer… (machine occupée)") }, onClick = { menu = false; replacing = true })
                 DropdownMenuItem(text = { Text("Retirer de la séance") }, onClick = { menu = false; viewModel.remove(item) })
             }
         }
@@ -527,4 +549,40 @@ private fun NoteBanner(note: String, onDismiss: () -> Unit) {
             TextButton(onClick = onDismiss) { Text("Vu ✓", color = MaterialTheme.colorScheme.tertiary) }
         }
     }
+}
+
+/** Same muscle group first; "Tous les exercices" widens the list. */
+@Composable
+private fun ReplaceDialog(
+    current: fr.olivier.forme.feature.sport.data.ExerciseEntity,
+    candidates: List<fr.olivier.forme.feature.sport.data.ExerciseEntity>,
+    onPick: (fr.olivier.forme.feature.sport.data.ExerciseEntity) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var showAll by remember { mutableStateOf(false) }
+    val sameGroup = candidates.filter { it.muscleGroup == current.muscleGroup }
+    val list = if (showAll || sameGroup.isEmpty()) candidates else sameGroup
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Remplacer ${current.name}") },
+        text = {
+            Column {
+                Text(
+                    if (list === sameGroup) "Même groupe : ${current.muscleGroup.label}" else "Tous les exercices",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                    items(list, key = { it.id }) { ex ->
+                        Text(
+                            ex.name + if (list !== sameGroup) " · ${ex.muscleGroup.label}" else "",
+                            modifier = Modifier.fillMaxWidth().clickable { onPick(ex) }.padding(vertical = 12.dp),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+                if (!showAll && sameGroup.isNotEmpty()) TextButton(onClick = { showAll = true }) { Text("Tous les exercices") }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
+    )
 }

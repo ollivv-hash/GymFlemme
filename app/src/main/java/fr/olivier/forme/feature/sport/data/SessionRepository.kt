@@ -111,6 +111,45 @@ class SessionRepository @Inject constructor(
         dao.updateSessionExercises(lines.mapIndexed { index, line -> line.copy(position = index) })
     }
 
+    /**
+     * Busy machine: replaces [line]'s exercise by [newExerciseId] in this session only (the template is untouched).
+     * Targets of the slot are kept when both exercises have the same type, otherwise the new exercise's defaults
+     * are used. If working sets were already done on the original, it is kept (marked done) and the replacement
+     * is inserted right after it.
+     */
+    suspend fun replaceExercise(sessionId: Long, line: SessionExerciseEntity, newExerciseId: Long) = db.withTransaction {
+        val old = exerciseDao.getById(line.exerciseId) ?: return@withTransaction
+        val new = exerciseDao.getById(newExerciseId) ?: return@withTransaction
+        val targets = if (old.type == new.type) {
+            line
+        } else {
+            line.copy(
+                targetSets = new.defaultTargetSets,
+                targetRepsMin = new.defaultRepsMin,
+                targetRepsMax = new.defaultRepsMax,
+                targetDurationSec = new.defaultDurationSec,
+            )
+        }
+        val replacement = targets.copy(
+            exerciseId = new.id,
+            status = SessionExerciseStatus.PENDING,
+            replacedExerciseId = line.replacedExerciseId ?: line.exerciseId,
+        )
+        val sets = dao.getSets(sessionId).filter { it.exerciseId == old.id }
+        val started = sets.any { !it.isWarmup } || dao.getCardio(sessionId).any { it.exerciseId == old.id }
+        if (!started) {
+            dao.deleteSetsOf(sessionId, old.id) // warm-ups of the machine that was abandoned
+            dao.updateSessionExercises(listOf(replacement))
+        } else {
+            val lines = dao.getSessionLines(sessionId).map { it.line }.toMutableList()
+            val index = lines.indexOfFirst { it.id == line.id }
+            lines[index] = line.copy(status = SessionExerciseStatus.DONE)
+            val newId = dao.insertSessionExercise(replacement.copy(id = 0, position = index + 1))
+            lines.add(index + 1, replacement.copy(id = newId))
+            dao.updateSessionExercises(lines.mapIndexed { i, l -> l.copy(position = i) })
+        }
+    }
+
     /** Removes an exercise from the running session together with its sets. */
     suspend fun removeLine(sessionId: Long, line: SessionExerciseEntity) = db.withTransaction {
         dao.deleteSetsOf(sessionId, line.exerciseId)
@@ -177,7 +216,8 @@ class SessionRepository @Inject constructor(
             }
             ExerciseReport(
                 exerciseId = exercise.id,
-                name = exercise.name,
+                name = line.replacedExerciseId?.let { exerciseDao.getById(it) }
+                    ?.let { "${exercise.name} (remplace ${it.name})" } ?: exercise.name,
                 muscleGroup = exercise.muscleGroup,
                 type = exercise.type,
                 perSide = exercise.perSide,
