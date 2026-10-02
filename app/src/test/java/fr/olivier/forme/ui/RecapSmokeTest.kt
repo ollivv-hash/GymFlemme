@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.room.Room
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -75,7 +76,7 @@ class RecapSmokeTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             waitFor("Dernières séances")
             shot("6-home-after")
-            rule.onNode(hasText(" min", substring = true)).performClick()
+            rule.onNode(hasText(" min", substring = true)).performScrollTo().performClick()
             waitFor("Copier le bilan texte")
             shot("7-recap")
             rule.onNodeWithText("Chest press").performClick()
@@ -83,7 +84,9 @@ class RecapSmokeTest {
             shot("8-exercise-history")
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
-            waitFor("Poids")
+            waitFor("Nutrition")
+            rule.onNode(hasText("Nutrition") and androidx.compose.ui.test.hasClickAction()).performClick()
+            waitFor("Journal")
             rule.onNode(hasText("Poids") and androidx.compose.ui.test.hasClickAction()).performClick()
             waitFor("Pesées")
             shot("9-weight")

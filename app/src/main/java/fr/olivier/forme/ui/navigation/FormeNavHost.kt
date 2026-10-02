@@ -24,7 +24,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import fr.olivier.forme.feature.bodyweight.ui.WeightScreen
+import fr.olivier.forme.feature.nutrition.domain.MealType
+import fr.olivier.forme.feature.nutrition.ui.AddFoodScreen
+import fr.olivier.forme.feature.nutrition.ui.FoodEditScreen
+import fr.olivier.forme.feature.nutrition.ui.FoodsScreen
+import fr.olivier.forme.feature.nutrition.ui.NutritionScreen
+import fr.olivier.forme.feature.nutrition.ui.ProfileScreen
+import fr.olivier.forme.feature.nutrition.ui.ScanScreen
 import fr.olivier.forme.feature.settings.ui.ConfigScreen
 import fr.olivier.forme.feature.settings.ui.SettingsScreen
 import fr.olivier.forme.feature.sport.ui.catalog.CatalogScreen
@@ -43,7 +49,7 @@ private data class TopLevel(val route: Any, val label: String, val icon: ImageVe
 private val topLevels = listOf(
     TopLevel(HomeRoute, "Accueil", Icons.Filled.Home),
     TopLevel(HistoryRoute, "Historique", Icons.Filled.DateRange),
-    TopLevel(WeightRoute, "Poids", Icons.Filled.Favorite),
+    TopLevel(NutritionRoute(), "Nutrition", Icons.Filled.Favorite),
     TopLevel(ConfigRoute, "Config", Icons.Filled.Settings),
 )
 
@@ -79,7 +85,8 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
                 HomeScreen(
                     onOpenSession = { nav.navigate(ActiveSessionRoute) },
                     onOpenSessionDetail = { nav.navigate(SessionDetailRoute(it)) },
-                    onOpenWeight = { nav.navigateTopLevel(WeightRoute) },
+                    onOpenWeight = { nav.navigateFresh(NutritionRoute(tab = 1)) },
+                    onOpenNutrition = { nav.navigateFresh(NutritionRoute(tab = 0)) },
                 )
             }
             composable<HistoryRoute> {
@@ -88,13 +95,42 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
                     onOpenExercise = { nav.navigate(ExerciseHistoryRoute(it)) },
                 )
             }
-            composable<WeightRoute> { WeightScreen() }
+            composable<NutritionRoute> {
+                NutritionScreen(
+                    initialTab = it.toRoute<NutritionRoute>().tab,
+                    onAddFood = { date, meal -> nav.navigate(AddFoodRoute(date.toEpochDay(), meal.name)) },
+                    onScan = { date, meal -> nav.navigate(ScanRoute(date.toEpochDay(), meal.name)) },
+                    onProfile = { nav.navigate(ProfileRoute) },
+                )
+            }
+            composable<AddFoodRoute> {
+                AddFoodScreen(
+                    onBack = { nav.popBackStack() },
+                    onScan = { date, meal -> nav.navigate(ScanRoute(date.toEpochDay(), meal.name)) },
+                    onCreateFood = { nav.navigate(FoodEditRoute()) },
+                )
+            }
+            composable<ScanRoute> {
+                ScanScreen(
+                    onBack = { nav.popBackStack() },
+                    onAdded = { nav.popBackStack() },
+                    onCreateFood = { barcode, name -> nav.navigate(FoodEditRoute(barcode = barcode, name = name)) },
+                    onSearch = { date, meal ->
+                        nav.navigate(AddFoodRoute(date.toEpochDay(), meal.name)) { popUpTo<ScanRoute> { inclusive = true } }
+                    },
+                )
+            }
+            composable<FoodsRoute> { FoodsScreen(onBack = { nav.popBackStack() }, onEdit = { nav.navigate(FoodEditRoute(foodId = it)) }) }
+            composable<FoodEditRoute> { FoodEditScreen(onDone = { nav.popBackStack() }) }
+            composable<ProfileRoute> { ProfileScreen(onDone = { nav.popBackStack() }) }
             composable<ConfigRoute> {
                 ConfigScreen(
                     onCatalog = { nav.navigate(CatalogRoute) },
                     onTemplates = { nav.navigate(TemplatesRoute) },
                     onRotation = { nav.navigate(RotationRoute) },
                     onSettings = { nav.navigate(SettingsRoute) },
+                    onProfile = { nav.navigate(ProfileRoute) },
+                    onFoods = { nav.navigate(FoodsRoute) },
                 )
             }
             composable<ActiveSessionRoute> {
@@ -138,6 +174,14 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
             composable<RotationRoute> { RotationScreen(onBack = { nav.popBackStack() }) }
             composable<SettingsRoute> { SettingsScreen(onBack = { nav.popBackStack() }) }
         }
+    }
+}
+
+/** Top-level destination opened with fresh arguments (e.g. a given tab), not the saved state. */
+private fun NavHostController.navigateFresh(route: Any) {
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id)
+        launchSingleTop = true
     }
 }
 

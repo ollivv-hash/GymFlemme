@@ -66,11 +66,11 @@ private val shortDate = DateTimeFormatter.ofPattern("dd/MM", Fmt.locale)
 private val longDate = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", Fmt.locale)
 
 @Composable
-fun WeightScreen(viewModel: WeightViewModel = hiltViewModel()) {
+fun WeightScreen(showTopBar: Boolean = true, viewModel: WeightViewModel = hiltViewModel()) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     var adding by remember { mutableStateOf(false) }
     Scaffold(
-        topBar = { FormeTopBar("Poids") },
+        topBar = { if (showTopBar) FormeTopBar("Poids") },
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Pesée") })
         },
