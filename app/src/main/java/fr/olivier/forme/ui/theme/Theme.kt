@@ -9,33 +9,69 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import fr.olivier.forme.core.settings.ThemeMode
 
+/*
+ * Electric blue + orange.
+ * Blue (primary) = actions: buttons, steppers, gauges, proposed session.
+ * Orange (tertiary) = what needs attention: running session, records, progression hint, rest over, goal reached.
+ * Neutrals are slightly blue-tinted so that no other hue competes.
+ */
+
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF9CD67D),
-    onPrimary = Color(0xFF0E3900),
-    primaryContainer = Color(0xFF235107),
-    onPrimaryContainer = Color(0xFFB7F397),
-    secondary = Color(0xFFBDCBAF),
-    secondaryContainer = Color(0xFF3E4A36),
-    onSecondaryContainer = Color(0xFFD9E7CA),
-    tertiary = Color(0xFFFFB86C),
-    tertiaryContainer = Color(0xFF5C3B00),
-    onTertiaryContainer = Color(0xFFFFDDB8),
-    background = Color(0xFF111411),
-    surface = Color(0xFF111411),
-    surfaceContainer = Color(0xFF1D211B),
-    surfaceContainerHigh = Color(0xFF272B25),
+    primary = Color(0xFF4DA8FF),
+    onPrimary = Color(0xFF00213F),
+    primaryContainer = Color(0xFF0B3A66),
+    onPrimaryContainer = Color(0xFFD3E6FF),
+    inversePrimary = Color(0xFF0A7CFF),
+    secondary = Color(0xFFAFC4DD),
+    onSecondary = Color(0xFF15273B),
+    secondaryContainer = Color(0xFF22324A),
+    onSecondaryContainer = Color(0xFFD6E5F7),
+    tertiary = Color(0xFFFF9A3C),
+    onTertiary = Color(0xFF3B1C00),
+    tertiaryContainer = Color(0xFF5A2D00),
+    onTertiaryContainer = Color(0xFFFFDCC2),
+    background = Color(0xFF0E1217),
+    onBackground = Color(0xFFE1E6ED),
+    surface = Color(0xFF0E1217),
+    onSurface = Color(0xFFE1E6ED),
+    surfaceVariant = Color(0xFF2A3340),
+    onSurfaceVariant = Color(0xFFB8C3D1),
+    surfaceContainerLowest = Color(0xFF0A0D11),
+    surfaceContainerLow = Color(0xFF151A21),
+    surfaceContainer = Color(0xFF19202A),
+    surfaceContainerHigh = Color(0xFF222A35),
+    surfaceContainerHighest = Color(0xFF2C3541),
+    outline = Color(0xFF7D8896),
+    outlineVariant = Color(0xFF3A4452),
 )
 
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF3A6A1F),
+    primary = Color(0xFF0A7CFF),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFB7F397),
-    onPrimaryContainer = Color(0xFF0A2100),
-    secondary = Color(0xFF55624C),
-    secondaryContainer = Color(0xFFD9E7CA),
-    tertiary = Color(0xFF825500),
-    tertiaryContainer = Color(0xFFFFDDB8),
-    onTertiaryContainer = Color(0xFF2A1800),
+    primaryContainer = Color(0xFFD6E8FF),
+    onPrimaryContainer = Color(0xFF001C38),
+    inversePrimary = Color(0xFF4DA8FF),
+    secondary = Color(0xFF4F6176),
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFDCE6F2),
+    onSecondaryContainer = Color(0xFF0B1D2E),
+    tertiary = Color(0xFFE8710A),
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFFFE0C7),
+    onTertiaryContainer = Color(0xFF331400),
+    background = Color(0xFFF8FAFD),
+    onBackground = Color(0xFF181C21),
+    surface = Color(0xFFF8FAFD),
+    onSurface = Color(0xFF181C21),
+    surfaceVariant = Color(0xFFDDE3EA),
+    onSurfaceVariant = Color(0xFF41484F),
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = Color(0xFFF1F4F8),
+    surfaceContainer = Color(0xFFEBEFF4),
+    surfaceContainerHigh = Color(0xFFE4E9EF),
+    surfaceContainerHighest = Color(0xFFDDE3EA),
+    outline = Color(0xFF717880),
+    outlineVariant = Color(0xFFC1C7CE),
 )
 
 @Composable
