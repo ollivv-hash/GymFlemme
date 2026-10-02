@@ -4,10 +4,13 @@ import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -22,6 +25,7 @@ import fr.olivier.forme.core.db.SeedCallback
 import fr.olivier.forme.core.db.TestClock
 import fr.olivier.forme.core.db.context
 import fr.olivier.forme.feature.sport.data.TemplateRepository
+import fr.olivier.forme.feature.sport.ui.home.OTHER_SESSIONS_TAG
 import fr.olivier.forme.feature.sport.data.WorkoutTemplateEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
@@ -32,12 +36,12 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import java.time.Instant
 
-/** The rotation screen scrolls as a whole when the templates do not fit on one page. */
+/** Long template lists: capped scrolling list on home, whole-screen scrolling on the rotation screen. */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w411dp-h640dp-xxhdpi")
-class RotationSmokeTest {
+class TemplateListsSmokeTest {
     @get:Rule
     val rule = createEmptyComposeRule()
 
@@ -48,8 +52,7 @@ class RotationSmokeTest {
         }
     }
 
-    @Test
-    fun longRotationScrolls() {
+    private fun seedExtraTemplates() {
         val db = Room.databaseBuilder(context(), FormeDatabase::class.java, FormeDatabase.NAME)
             .addMigrations(*Migrations.ALL)
             .addCallback(SeedCallback(TestClock(Instant.now())))
@@ -59,7 +62,26 @@ class RotationSmokeTest {
             (1..8).forEach { templates.save(WorkoutTemplateEntity(name = "Extra $it", code = "X$it"), emptyList()) }
         }
         db.close()
+    }
 
+    @Test
+    fun homeOtherSessionsAreCappedAndScroll() {
+        seedExtraTemplates()
+        ActivityScenario.launch(MainActivity::class.java).use {
+            rule.waitUntilAtLeastOneExists(hasText("Séance proposée"), 10_000)
+            rule.waitUntilAtLeastOneExists(hasText("faire défiler", substring = true), 10_000)
+            // The capped list only shows the first templates; the last one is reached by scrolling the list itself.
+            rule.onNodeWithText("Extra 8", substring = true).assertIsNotDisplayed()
+            rule.onNodeWithTag(OTHER_SESSIONS_TAG).performScrollToNode(hasText("Extra 8", substring = true))
+            rule.onNodeWithText("Extra 8", substring = true).assertIsDisplayed()
+            rule.onNodeWithText("Séance libre").assertExists()
+            shot("r0-home-other-sessions")
+        }
+    }
+
+    @Test
+    fun longRotationScrolls() {
+        seedExtraTemplates()
         ActivityScenario.launch(MainActivity::class.java).use {
             rule.waitUntilAtLeastOneExists(hasText("Séance proposée"), 10_000)
             rule.onNode(hasText("Config") and hasClickAction()).performClick()

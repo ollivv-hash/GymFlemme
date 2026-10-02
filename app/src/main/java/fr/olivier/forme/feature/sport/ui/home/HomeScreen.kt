@@ -3,7 +3,7 @@ package fr.olivier.forme.feature.sport.ui.home
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -165,12 +167,10 @@ fun HomeScreen(
                     }
                 }
                 SectionTitle("Autres séances")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    templates.filter { it.id != proposed?.id }.forEach { template ->
-                        FilledTonalButton(onClick = { viewModel.start(template.id, onOpenSession) }) { Text(template.title()) }
-                    }
-                    OutlinedButton(onClick = { viewModel.start(null, onOpenSession) }) { Text("Séance libre") }
-                }
+                OtherSessions(
+                    titles = templates.filter { it.id != proposed?.id }.map { it.id to it.title() },
+                    onStart = { id -> viewModel.start(id, onOpenSession) },
+                )
             }
 
             SectionTitle("Nutrition du jour")
@@ -230,4 +230,35 @@ fun HomeScreen(
             onDismiss = { addingWeight = false },
         )
     }
+}
+
+/** At most this many templates are visible at once; the rest scroll inside the list. */
+internal const val OTHER_SESSIONS_VISIBLE = 4
+internal const val OTHER_SESSIONS_TAG = "other-sessions"
+private val otherSessionRowHeight = 48.dp
+private val otherSessionSpacing = 8.dp
+
+/** Other templates as a vertical list capped to [OTHER_SESSIONS_VISIBLE] rows, then "Séance libre" always visible. */
+@Composable
+private fun OtherSessions(titles: List<Pair<Long, String>>, onStart: (Long?) -> Unit) {
+    val maxHeight = otherSessionRowHeight * OTHER_SESSIONS_VISIBLE + otherSessionSpacing * (OTHER_SESSIONS_VISIBLE - 1)
+    Column(
+        Modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(rememberScrollState()).testTag(OTHER_SESSIONS_TAG),
+        verticalArrangement = Arrangement.spacedBy(otherSessionSpacing),
+    ) {
+        titles.forEach { (id, title) ->
+            FilledTonalButton(onClick = { onStart(id) }, modifier = Modifier.fillMaxWidth().height(otherSessionRowHeight)) {
+                Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+    if (titles.size > OTHER_SESSIONS_VISIBLE) {
+        Text(
+            "↕ ${titles.size} modèles — faire défiler la liste",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
+    OutlinedButton(onClick = { onStart(null) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("Séance libre") }
 }
