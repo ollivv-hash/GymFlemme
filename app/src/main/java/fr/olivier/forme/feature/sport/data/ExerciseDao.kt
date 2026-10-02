@@ -35,6 +35,9 @@ interface ExerciseDao {
     @Query("UPDATE exercise SET archived = :archived WHERE id = :id")
     suspend fun setArchived(id: Long, archived: Boolean)
 
+    @Query("UPDATE exercise SET nextNote = :note WHERE id = :id")
+    suspend fun setNextNote(id: Long, note: String?)
+
     @Query("SELECT COUNT(*) FROM exercise")
     suspend fun count(): Int
 

@@ -69,7 +69,7 @@ data class ActiveSessionUi(
 @HiltViewModel
 class ActiveSessionViewModel @Inject constructor(
     private val sessions: SessionRepository,
-    exercises: ExerciseRepository,
+    private val exercises: ExerciseRepository,
     private val settings: SettingsRepository,
     private val restTimer: RestTimer,
 ) : ViewModel() {
@@ -78,6 +78,10 @@ class ActiveSessionViewModel @Inject constructor(
     private val drafts = MutableStateFlow<Map<Long, WorkSet>>(emptyMap())
     private val cardioDrafts = MutableStateFlow<Map<Long, CardioDraft>>(emptyMap())
     private val manualExpanded = MutableStateFlow<Long?>(null)
+
+    /** Exercises whose note was written during this session: shown at the next session, not now. */
+    private val _notedThisSession = MutableStateFlow<Set<Long>>(emptySet())
+    val notedThisSession: StateFlow<Set<Long>> = _notedThisSession
 
     val restTimerState: StateFlow<RestTimerState?> =
         restTimer.state.stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -240,6 +244,13 @@ class ActiveSessionViewModel @Inject constructor(
         sessions.setStatus(item.line.id, SessionExerciseStatus.PENDING)
         manualExpanded.value = item.line.id
     }
+
+    fun saveNote(item: ExerciseUi, note: String) = viewModelScope.launch {
+        exercises.setNextNote(item.exercise.id, note)
+        _notedThisSession.update { if (note.isBlank()) it - item.exercise.id else it + item.exercise.id }
+    }
+
+    fun dismissNote(item: ExerciseUi) = viewModelScope.launch { exercises.setNextNote(item.exercise.id, null) }
 
     fun move(item: ExerciseUi, delta: Int) = viewModelScope.launch {
         session.value?.id?.let { sessions.moveLine(it, item.line.id, delta) }
