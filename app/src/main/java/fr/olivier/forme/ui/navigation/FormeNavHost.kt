@@ -85,8 +85,8 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
                 HomeScreen(
                     onOpenSession = { nav.navigate(ActiveSessionRoute) },
                     onOpenSessionDetail = { nav.navigate(SessionDetailRoute(it)) },
-                    onOpenWeight = { nav.navigate(NutritionRoute(tab = 1, fromHome = true)) },
-                    onOpenNutrition = { nav.navigate(NutritionRoute(tab = 0, fromHome = true)) },
+                    onOpenWeight = { nav.switchTab(NutritionRoute(tab = 1)) },
+                    onOpenNutrition = { nav.switchTab(NutritionRoute(tab = 0)) },
                 )
             }
             composable<HistoryRoute> {
@@ -96,10 +96,8 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
                 )
             }
             composable<NutritionRoute> {
-                val route = it.toRoute<NutritionRoute>()
                 NutritionScreen(
-                    initialTab = route.tab,
-                    onBack = if (route.fromHome) ({ nav.popBackStack() }) else null,
+                    initialTab = it.toRoute<NutritionRoute>().tab,
                     onAddFood = { date, meal -> nav.navigate(AddFoodRoute(date.toEpochDay(), meal.name)) },
                     onScan = { date, meal -> nav.navigate(ScanRoute(date.toEpochDay(), meal.name)) },
                     onProfile = { nav.navigate(ProfileRoute) },
@@ -176,6 +174,18 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
             composable<RotationRoute> { RotationScreen(onBack = { nav.popBackStack() }) }
             composable<SettingsRoute> { SettingsScreen(onBack = { nav.popBackStack() }) }
         }
+    }
+}
+
+/**
+ * Switches to a bottom-bar tab with explicit arguments (e.g. the weight sub-tab from a home card).
+ * Same stack handling as the bottom bar, so the "Accueil" button brings home back; the arguments
+ * are applied instead of restoring the tab's saved state.
+ */
+private fun NavHostController.switchTab(route: Any) {
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
     }
 }
 

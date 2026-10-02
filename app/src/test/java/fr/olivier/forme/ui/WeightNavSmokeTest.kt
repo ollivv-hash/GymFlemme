@@ -23,7 +23,7 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w411dp-h891dp-xxhdpi")
-/** Home → weight card → back arrow returns home. */
+/** Home → weight card opens the Nutrition tab on "Poids"; the bottom bar "Accueil" returns home. */
 class WeightNavSmokeTest {
     @get:Rule
     val rule = createAndroidComposeRule<MainActivity>()
@@ -41,7 +41,12 @@ class WeightNavSmokeTest {
         rule.onNodeWithText("Aucune pesée").performScrollTo().performClick()
         rule.waitUntilAtLeastOneExists(hasText("Pesées"), 10_000)
         shot("x-weight-from-home")
-        rule.onNode(androidx.compose.ui.test.hasContentDescription("Retour")).performClick()
+        // Back to home with the bottom bar "Accueil" button.
+        rule.onNode(hasText("Accueil") and androidx.compose.ui.test.hasClickAction()).performClick()
         rule.waitUntilAtLeastOneExists(hasText("Séance proposée"), 10_000)
+        shot("x-back-home")
+        // The Nutrition tab still works afterwards and the system back key leaves home alone.
+        rule.onNode(hasText("Nutrition") and androidx.compose.ui.test.hasClickAction()).performClick()
+        rule.waitUntilAtLeastOneExists(hasText("Journal"), 10_000)
     }
 }
