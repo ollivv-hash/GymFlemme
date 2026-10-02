@@ -5,6 +5,17 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightDao
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightEntity
+import fr.olivier.forme.feature.nutrition.data.CiqualDao
+import fr.olivier.forme.feature.nutrition.data.CiqualFoodEntity
+import fr.olivier.forme.feature.nutrition.data.CiqualFtsEntity
+import fr.olivier.forme.feature.nutrition.data.CreatineDao
+import fr.olivier.forme.feature.nutrition.data.CreatineEntryEntity
+import fr.olivier.forme.feature.nutrition.data.FoodDao
+import fr.olivier.forme.feature.nutrition.data.FoodEntity
+import fr.olivier.forme.feature.nutrition.data.MealDao
+import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
+import fr.olivier.forme.feature.nutrition.data.ProfileDao
+import fr.olivier.forme.feature.nutrition.data.ProfileEntity
 import fr.olivier.forme.feature.sport.data.CardioEntryEntity
 import fr.olivier.forme.feature.sport.data.ExerciseDao
 import fr.olivier.forme.feature.sport.data.ExerciseEntity
@@ -26,6 +37,12 @@ import fr.olivier.forme.feature.sport.data.WorkoutTemplateEntity
         SetEntryEntity::class,
         CardioEntryEntity::class,
         BodyWeightEntity::class,
+        ProfileEntity::class,
+        CiqualFoodEntity::class,
+        CiqualFtsEntity::class,
+        FoodEntity::class,
+        MealEntryEntity::class,
+        CreatineEntryEntity::class,
     ],
     version = FormeDatabase.VERSION,
     exportSchema = true,
@@ -36,9 +53,14 @@ abstract class FormeDatabase : RoomDatabase() {
     abstract fun templateDao(): TemplateDao
     abstract fun sessionDao(): SessionDao
     abstract fun bodyWeightDao(): BodyWeightDao
+    abstract fun profileDao(): ProfileDao
+    abstract fun ciqualDao(): CiqualDao
+    abstract fun foodDao(): FoodDao
+    abstract fun mealDao(): MealDao
+    abstract fun creatineDao(): CreatineDao
 
     companion object {
-        const val VERSION = 1
+        const val VERSION = 2
         const val NAME = "forme.db"
     }
 }
