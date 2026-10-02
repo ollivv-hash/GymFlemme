@@ -1,6 +1,7 @@
 package fr.olivier.forme.core
 
 import android.util.Log
+import fr.olivier.forme.core.backup.AutoBackupScheduler
 import fr.olivier.forme.core.di.ApplicationScope
 import fr.olivier.forme.feature.nutrition.data.CiqualLoader
 import fr.olivier.forme.feature.nutrition.reminder.CreatineReminder
@@ -15,8 +16,10 @@ class AppStartup @Inject constructor(
     @ApplicationScope private val scope: CoroutineScope,
     private val ciqual: CiqualLoader,
     private val creatineReminder: CreatineReminder,
+    private val autoBackup: AutoBackupScheduler,
 ) {
     fun run() {
+        autoBackup.scheduleDaily()
         scope.launch {
             runCatching { creatineReminder.reschedule() }.onFailure { Log.e("Forme", "Reminder scheduling failed", it) }
             runCatching { ciqual.ensureLoaded() }.onFailure { Log.e("Forme", "Ciqual load failed", it) }

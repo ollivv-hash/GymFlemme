@@ -20,6 +20,17 @@ data class TrainingGoals(
     val maxSets: Int = SettingsRepository.DEFAULT_MAX_SETS,
 )
 
+/**
+ * Automatic backup: the JSON file chosen once with the system picker (typically in Google Drive), rewritten after
+ * each finished session and once a day. Times are epoch millis.
+ */
+data class AutoBackupState(
+    val targetUri: String? = null,
+    val lastSuccessAt: Long? = null,
+    val lastAttemptAt: Long? = null,
+    val lastError: String? = null,
+)
+
 /** Rest timer state, persisted so the countdown survives a process kill. */
 data class RestTimerState(val endsAtMillis: Long, val totalSec: Int)
 
@@ -44,6 +55,38 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
             minSets = prefs[MIN_SETS] ?: DEFAULT_MIN_SETS,
             maxSets = prefs[MAX_SETS] ?: DEFAULT_MAX_SETS,
         )
+    }
+
+    val autoBackup: Flow<AutoBackupState> = dataStore.data.map { prefs ->
+        AutoBackupState(
+            targetUri = prefs[AUTO_BACKUP_URI],
+            lastSuccessAt = prefs[AUTO_BACKUP_SUCCESS_AT],
+            lastAttemptAt = prefs[AUTO_BACKUP_ATTEMPT_AT],
+            lastError = prefs[AUTO_BACKUP_ERROR],
+        )
+    }
+
+    /** Sets (or clears with null) the backup target; the previous status is reset. */
+    suspend fun setAutoBackupTarget(uri: String?) {
+        dataStore.edit { prefs ->
+            if (uri == null) prefs.remove(AUTO_BACKUP_URI) else prefs[AUTO_BACKUP_URI] = uri
+            prefs.remove(AUTO_BACKUP_SUCCESS_AT)
+            prefs.remove(AUTO_BACKUP_ATTEMPT_AT)
+            prefs.remove(AUTO_BACKUP_ERROR)
+        }
+    }
+
+    /** Records the outcome of an automatic backup to the target: [error] null means success. */
+    suspend fun recordAutoBackup(atMillis: Long, error: String?) {
+        dataStore.edit { prefs ->
+            prefs[AUTO_BACKUP_ATTEMPT_AT] = atMillis
+            if (error == null) {
+                prefs[AUTO_BACKUP_SUCCESS_AT] = atMillis
+                prefs.remove(AUTO_BACKUP_ERROR)
+            } else {
+                prefs[AUTO_BACKUP_ERROR] = error
+            }
+        }
     }
 
     suspend fun setTrainingGoals(goals: TrainingGoals) {
@@ -90,5 +133,9 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         private val SESSIONS_PER_WEEK = intPreferencesKey("goal_sessions_per_week")
         private val MIN_SETS = intPreferencesKey("goal_min_sets_per_group")
         private val MAX_SETS = intPreferencesKey("goal_max_sets_per_group")
+        private val AUTO_BACKUP_URI = stringPreferencesKey("auto_backup_uri")
+        private val AUTO_BACKUP_SUCCESS_AT = longPreferencesKey("auto_backup_success_at")
+        private val AUTO_BACKUP_ATTEMPT_AT = longPreferencesKey("auto_backup_attempt_at")
+        private val AUTO_BACKUP_ERROR = stringPreferencesKey("auto_backup_error")
     }
 }

@@ -23,8 +23,8 @@ android {
         applicationId = "fr.olivier.forme"
         minSdk = 28
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.1.2"
+        versionCode = 5
+        versionName = "1.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -115,6 +115,7 @@ dependencies {
     ksp(libs.room.compiler)
 
     implementation(libs.datastore.preferences)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.reorderable)
@@ -131,6 +132,7 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.room.testing)
+    testImplementation(libs.androidx.work.testing)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
 
