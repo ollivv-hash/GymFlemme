@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -82,6 +84,7 @@ fun ActiveSessionScreen(
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val rest by viewModel.restTimerState.collectAsStateWithLifecycle()
     val catalog by viewModel.catalog.collectAsStateWithLifecycle()
+    val noted by viewModel.notedThisSession.collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
     var picking by remember { mutableStateOf(false) }
     var finishing by remember { mutableStateOf(false) }
@@ -113,11 +116,18 @@ fun ActiveSessionScreen(
     ) { padding ->
         LazyColumn(Modifier.padding(padding)) {
             items(ui.exercises, key = { it.line.id }) { item ->
+                val partner = item.line.supersetGroup?.let { g ->
+                    ui.exercises.firstOrNull { it.line.supersetGroup == g && it.line.id != item.line.id }
+                }
                 ExerciseCard(
                     item = item,
-                    expanded = ui.expandedLineId == item.line.id,
+                    // Both exercises of a superset are open together.
+                    expanded = ui.expandedLineId == item.line.id || (partner != null && ui.expandedLineId == partner.line.id),
+                    partner = partner,
+                    linkedWithNext = partner != null && partner.line.position > item.line.position,
                     isFirst = item == ui.exercises.first(),
                     isLast = item == ui.exercises.last(),
+                    notedThisSession = noted,
                     viewModel = viewModel,
                 )
             }
@@ -199,11 +209,53 @@ private fun RestBar(state: RestTimerState, onExtend: (Int) -> Unit, onStop: () -
 }
 
 @Composable
-private fun ExerciseCard(item: ExerciseUi, expanded: Boolean, isFirst: Boolean, isLast: Boolean, viewModel: ActiveSessionViewModel) {
+private fun ExerciseCard(
+    item: ExerciseUi,
+    expanded: Boolean,
+    isFirst: Boolean,
+    isLast: Boolean,
+    partner: ExerciseUi?,
+    linkedWithNext: Boolean,
+    notedThisSession: Set<Long>,
+    viewModel: ActiveSessionViewModel,
+) {
     val skipped = item.line.status == SessionExerciseStatus.SKIPPED
     var menu by remember { mutableStateOf(false) }
+    var noting by remember { mutableStateOf(false) }
+    var replacing by remember { mutableStateOf(false) }
+    if (replacing) {
+        val all by viewModel.allExercises.collectAsStateWithLifecycle()
+        val inSession = viewModel.ui.collectAsStateWithLifecycle().value.exercises.map { it.exercise.id }.toSet()
+        ReplaceDialog(
+            current = item.exercise,
+            candidates = all.filter { !it.archived && it.id !in inSession },
+            onPick = {
+                viewModel.replace(item, it.id)
+                replacing = false
+            },
+            onDismiss = { replacing = false },
+        )
+    }
+    if (noting) {
+        NoteDialog(
+            exerciseName = item.exercise.name,
+            initial = item.exercise.nextNote.orEmpty(),
+            onDismiss = { noting = false },
+            onSave = {
+                viewModel.saveNote(item, it)
+                noting = false
+            },
+        )
+    }
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        // Superset members: framed in orange and drawn close together.
+        modifier = Modifier.fillMaxWidth().padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = if (partner != null && !linkedWithNext) 0.dp else 4.dp,
+            bottom = if (linkedWithNext) 2.dp else 4.dp,
+        ),
+        border = partner?.let { androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary) },
         colors = CardDefaults.cardColors(
             containerColor = if (expanded) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer,
         ),
@@ -220,7 +272,17 @@ private fun ExerciseCard(item: ExerciseUi, expanded: Boolean, isFirst: Boolean, 
                     color = if (item.finished) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                 )
                 Text(targetLabel(item), style = MaterialTheme.typography.bodySmall)
+                partner?.let {
+                    Text("⇄ Superset avec ${it.exercise.name}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.tertiary)
+                }
+                item.line.replacedExerciseId?.let { id ->
+                    val all by viewModel.allExercises.collectAsStateWithLifecycle()
+                    all.firstOrNull { it.id == id }?.let {
+                        Text("remplace ${it.name}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+                    }
+                }
             }
+            IconButton(onClick = { noting = true }) { Icon(Icons.Filled.Edit, contentDescription = "Note pour la prochaine fois") }
             IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "Actions") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 if (!isFirst) DropdownMenuItem(text = { Text("Monter") }, onClick = { menu = false; viewModel.move(item, -1) })
@@ -230,11 +292,25 @@ private fun ExerciseCard(item: ExerciseUi, expanded: Boolean, isFirst: Boolean, 
                 } else {
                     DropdownMenuItem(text = { Text("Reprendre") }, onClick = { menu = false; viewModel.reopen(item) })
                 }
+                if (linkedWithNext) {
+                    DropdownMenuItem(text = { Text("Délier le superset") }, onClick = { menu = false; viewModel.toggleSuperset(item) })
+                } else if (!isLast) {
+                    DropdownMenuItem(text = { Text("⇄ Lier au suivant (superset)") }, onClick = { menu = false; viewModel.toggleSuperset(item) })
+                }
+                DropdownMenuItem(text = { Text("Remplacer… (machine occupée)") }, onClick = { menu = false; replacing = true })
                 DropdownMenuItem(text = { Text("Retirer de la séance") }, onClick = { menu = false; viewModel.remove(item) })
             }
         }
+        val note = item.exercise.nextNote
+        val notedNow = item.exercise.id in notedThisSession
+        if (note != null && !notedNow) {
+            NoteBanner(note, onDismiss = { viewModel.dismissNote(item) })
+        }
         if (expanded) {
             Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                if (note != null && notedNow) {
+                    Text("📝 Note enregistrée pour la prochaine fois : $note", style = MaterialTheme.typography.bodySmall)
+                }
                 item.exercise.settingsNote?.let { Text("Réglages : $it", style = MaterialTheme.typography.bodySmall) }
                 item.exercise.loadNote?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 if (item.exercise.type == ExerciseType.CARDIO) CardioEditor(item, viewModel) else SetEditor(item, viewModel)
@@ -444,5 +520,92 @@ private fun FinishDialog(onDismiss: () -> Unit, onConfirm: (Int?, String) -> Uni
         },
         confirmButton = { TextButton(onClick = { onConfirm(feeling, notes) }) { Text("Terminer") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Continuer") } },
+    )
+}
+
+/** Phrases offered as one-tap notes. */
+private val notePresets = listOf("Monter la charge", "Trop dur, rester", "Douleur / gêne", "Changer le réglage")
+
+@Composable
+private fun NoteDialog(exerciseName: String, initial: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var text by rememberSaveable { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Pour la prochaine fois") },
+        text = {
+            Column {
+                Text(exerciseName, style = MaterialTheme.typography.titleSmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    notePresets.forEach { preset ->
+                        FilterChip(selected = text == preset, onClick = { text = preset }, label = { Text(preset) })
+                    }
+                }
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    label = { Text("Note (facultatif)") },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(text) }, enabled = text.isNotBlank()) { Text("Enregistrer") } },
+        dismissButton = {
+            Row {
+                if (initial.isNotEmpty()) TextButton(onClick = { onSave("") }) { Text("Effacer") }
+                TextButton(onClick = onDismiss) { Text("Annuler") }
+            }
+        },
+    )
+}
+
+/** Note left at the previous session, until dismissed. */
+@Composable
+private fun NoteBanner(note: String, onDismiss: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Row(Modifier.padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("📝 $note", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+            TextButton(onClick = onDismiss) { Text("Vu ✓", color = MaterialTheme.colorScheme.tertiary) }
+        }
+    }
+}
+
+/** Same muscle group first; "Tous les exercices" widens the list. */
+@Composable
+private fun ReplaceDialog(
+    current: fr.olivier.forme.feature.sport.data.ExerciseEntity,
+    candidates: List<fr.olivier.forme.feature.sport.data.ExerciseEntity>,
+    onPick: (fr.olivier.forme.feature.sport.data.ExerciseEntity) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var showAll by remember { mutableStateOf(false) }
+    val sameGroup = candidates.filter { it.muscleGroup == current.muscleGroup }
+    val list = if (showAll || sameGroup.isEmpty()) candidates else sameGroup
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Remplacer ${current.name}") },
+        text = {
+            Column {
+                Text(
+                    if (list === sameGroup) "Même groupe : ${current.muscleGroup.label}" else "Tous les exercices",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                    items(list, key = { it.id }) { ex ->
+                        Text(
+                            ex.name + if (list !== sameGroup) " · ${ex.muscleGroup.label}" else "",
+                            modifier = Modifier.fillMaxWidth().clickable { onPick(ex) }.padding(vertical = 12.dp),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+                if (!showAll && sameGroup.isNotEmpty()) TextButton(onClick = { showAll = true }) { Text("Tous les exercices") }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
     )
 }

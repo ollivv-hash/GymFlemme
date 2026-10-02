@@ -43,6 +43,9 @@ import fr.olivier.forme.feature.sport.data.SessionEntity
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.TemplateRepository
 import fr.olivier.forme.feature.sport.domain.Fmt
+import fr.olivier.forme.feature.sport.domain.WeeklyStats
+import fr.olivier.forme.core.settings.SettingsRepository
+import kotlinx.coroutines.flow.combine
 import fr.olivier.forme.feature.sport.ui.templates.title
 import fr.olivier.forme.ui.components.FormeTopBar
 import fr.olivier.forme.ui.components.SectionTitle
@@ -65,6 +68,7 @@ class HomeViewModel @Inject constructor(
     private val sessions: SessionRepository,
     templates: TemplateRepository,
     private val weights: BodyWeightRepository,
+    settings: SettingsRepository,
     private val clock: Clock,
 ) : ViewModel() {
     private fun <T> kotlinx.coroutines.flow.Flow<T>.state(initial: T) =
@@ -78,6 +82,12 @@ class HomeViewModel @Inject constructor(
         val last = entries.maxByOrNull { it.date } ?: return@map null
         val avg = MovingAverage.sevenDays(entries.map { WeightPoint(it.date, it.weightKg) }).last().weightKg
         WeightSummary(last.weightKg, last.date, avg)
+    }.state(null)
+
+    /** "2/3": finished sessions this week (Monday → Sunday) vs the weekly goal. */
+    val weekProgress = combine(sessions.observeFinished(), settings.trainingGoals) { finished, goals ->
+        val start = WeeklyStats.weekStart(LocalDate.now(clock))
+        finished.count { WeeklyStats.weekStart(it.startedAt.atZone(clock.zone).toLocalDate()) == start } to goals.sessionsPerWeek
     }.state(null)
 
     fun today(): LocalDate = LocalDate.now(clock)
@@ -113,6 +123,7 @@ fun HomeScreen(
     val active by viewModel.active.collectAsStateWithLifecycle()
     val recent by viewModel.recent.collectAsStateWithLifecycle()
     val weight by viewModel.weight.collectAsStateWithLifecycle()
+    val weekProgress by viewModel.weekProgress.collectAsStateWithLifecycle()
     var addingWeight by remember { mutableStateOf(false) }
 
     Scaffold(topBar = { FormeTopBar("Forme") }) { padding ->
@@ -138,6 +149,13 @@ fun HomeScreen(
                     Column(Modifier.padding(16.dp)) {
                         Text("Séance proposée", style = MaterialTheme.typography.labelLarge)
                         Text(proposed?.title() ?: "Aucun modèle en rotation", style = MaterialTheme.typography.headlineSmall)
+                        weekProgress?.let { (done, goal) ->
+                            Text(
+                                "Cette semaine : $done/$goal séances" + if (done >= goal) " ✓" else "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (done >= goal) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
                         Button(
                             colors = accentButtonColors(),
                             onClick = { viewModel.start(proposed?.id, onOpenSession) },

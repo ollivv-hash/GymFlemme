@@ -23,7 +23,8 @@ import java.time.LocalDate
 
 /**
  * Full backup file. [schemaVersion] is the backup format version (independent from the Room version):
- * v1 = sport + body weight, v2 adds the `nutrition` section (absent in v1 files → empty).
+ * v1 = sport + body weight, v2 adds the `nutrition` section (absent in v1 files → empty),
+ * v3 adds supersets, replacements and exercise notes (optional fields, absent → null).
  * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual reference table is not exported.
  */
 @Serializable
@@ -119,6 +120,7 @@ data class ExerciseDto(
     val loadNote: String? = null,
     val photoUri: String? = null,
     val archived: Boolean,
+    val nextNote: String? = null,
 )
 
 @Serializable
@@ -136,6 +138,7 @@ data class TemplateExerciseDto(
     val targetDurationSec: Int? = null,
     val optional: Boolean,
     val restSec: Int? = null,
+    val supersetGroup: Int? = null,
 )
 
 @Serializable
@@ -164,6 +167,8 @@ data class SessionExerciseDto(
     val targetDurationSec: Int? = null,
     val restSec: Int? = null,
     val optional: Boolean,
+    val supersetGroup: Int? = null,
+    val replacedExerciseId: Long? = null,
 )
 
 @Serializable
@@ -198,11 +203,11 @@ data class BodyWeightDto(val id: Long, val date: String, val weightKg: Double)
 
 fun ExerciseEntity.toDto() = ExerciseDto(
     id, name, muscleGroup, type, perSide, loadIncrementKg, defaultTargetSets, defaultRepsMin, defaultRepsMax,
-    defaultDurationSec, settingsNote, loadNote, photoUri, archived,
+    defaultDurationSec, settingsNote, loadNote, photoUri, archived, nextNote,
 )
 fun ExerciseDto.toEntity() = ExerciseEntity(
     id, name, muscleGroup, type, perSide, loadIncrementKg, defaultTargetSets, defaultRepsMin, defaultRepsMax,
-    defaultDurationSec, settingsNote, loadNote, photoUri, archived,
+    defaultDurationSec, settingsNote, loadNote, photoUri, archived, nextNote,
 )
 
 fun WorkoutTemplateEntity.toDto() = TemplateDto(id, name, code, orderInRotation, archived)
@@ -210,9 +215,11 @@ fun TemplateDto.toEntity() = WorkoutTemplateEntity(id, name, code, orderInRotati
 
 fun TemplateExerciseEntity.toDto() = TemplateExerciseDto(
     id, templateId, exerciseId, position, targetSets, targetRepsMin, targetRepsMax, targetDurationSec, optional, restSec,
+    supersetGroup,
 )
 fun TemplateExerciseDto.toEntity() = TemplateExerciseEntity(
     id, templateId, exerciseId, position, targetSets, targetRepsMin, targetRepsMax, targetDurationSec, optional, restSec,
+    supersetGroup,
 )
 
 fun SessionEntity.toDto() = SessionDto(
@@ -226,9 +233,11 @@ fun SessionDto.toEntity() = SessionEntity(
 
 fun SessionExerciseEntity.toDto() = SessionExerciseDto(
     id, sessionId, exerciseId, position, status, targetSets, targetRepsMin, targetRepsMax, targetDurationSec, restSec, optional,
+    supersetGroup, replacedExerciseId,
 )
 fun SessionExerciseDto.toEntity() = SessionExerciseEntity(
     id, sessionId, exerciseId, position, status, targetSets, targetRepsMin, targetRepsMax, targetDurationSec, restSec, optional,
+    supersetGroup, replacedExerciseId,
 )
 
 fun SetEntryEntity.toDto() = SetEntryDto(

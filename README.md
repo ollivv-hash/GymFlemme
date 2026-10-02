@@ -3,8 +3,8 @@
 Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé via `adb install`, sans Play Store.
 
-> **Statut : V1.0 (Sport) validée sur le téléphone. V1.1 (Nutrition) implémentée** : build, Lint et tests JVM au vert,
-> reste à valider sur le téléphone (scan code-barres, rappel créatine).
+> **Statut : V1.0 (Sport) et V1.1 (Nutrition) validées sur le téléphone. V1.1.1 (améliorations séance) implémentée** :
+> build, Lint et tests JVM au vert, reste à valider sur le téléphone.
 
 - Package : `fr.olivier.forme` — nom d'app provisoire : **Forme**
 - Interface en français, code (identifiants, commentaires) en anglais
@@ -19,6 +19,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 |---|---|
 | **V1.0** ✅ | Socle technique + module Sport (séances, timer de repos, historique, records, poids, sauvegarde JSON) |
 | **V1.1** ✅ | Profil, repas (code-barres Open Food Facts, table Ciqual 2025 embarquée, favoris), jauge protéines (1,8 g/kg/j, modifiable), glucides / lipides / kcal, whey 1 dose/jour, créatine + rappel |
+| **V1.1.1** ✅ | Volume hebdo par groupe musculaire + régularité (onglet Semaine), remplacement d'une machine occupée, supersets (2 exercices), note « pour la prochaine fois » |
 | V1.2 | Synchronisation Google Drive (backup JSON + exports Markdown), API Drive v3, scope `drive.file` |
 | V2.x | Partage des bilans vers l'app Claude, Health Connect (Xiaomi Watch S4 via Mi Fitness), fréquence cardiaque BLE (profil Heart Rate standard) |
 
@@ -93,17 +94,17 @@ Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv`
 
 ---
 
-## Modèle de données (Room, version 2)
+## Modèle de données (Room, version 3)
 
 Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distances en mètres. `Instant` ↔ epoch millis, `LocalDate` ↔ epochDay. Les enums sont stockées en texte.
 
 | Table | Colonnes principales | Remarques |
 |---|---|---|
-| `exercise` | id, name, muscleGroup, type, perSide, loadIncrementKg (2,5), **defaultTargetSets, defaultRepsMin, defaultRepsMax, defaultDurationSec**, settingsNote, loadNote, photoUri, archived | Cible par défaut utilisée à l'ajout de l'exercice dans un modèle ou une séance libre. Archivé = masqué des choix, historique conservé. |
+| `exercise` | id, name, muscleGroup, type, perSide, loadIncrementKg (2,5), **defaultTargetSets, defaultRepsMin, defaultRepsMax, defaultDurationSec**, settingsNote, loadNote, photoUri, archived, nextNote (v3) | Cible par défaut utilisée à l'ajout de l'exercice dans un modèle ou une séance libre. Archivé = masqué des choix, historique conservé. |
 | `workout_template` | id, name, code, orderInRotation (nullable = hors rotation), archived | |
-| `template_exercise` | id, templateId, exerciseId, position, targetSets, targetRepsMin, targetRepsMax, targetDurationSec, optional, restSec (nullable → réglage par défaut) | Le modèle fait foi sur la cible du catalogue. |
+| `template_exercise` | id, templateId, exerciseId, position, targetSets, targetRepsMin, targetRepsMax, targetDurationSec, optional, restSec (nullable → réglage par défaut), supersetGroup (v3) | Le modèle fait foi sur la cible du catalogue. |
 | `session` | id, templateId (nullable, SET NULL), templateNameSnapshot, startedAt, endedAt (null = en cours), feeling 1–5, notes, isSeed | La séance en cours est persistée en base → reprise après kill du process. |
-| `session_exercise` | id, sessionId, exerciseId, position, status (PENDING/DONE/SKIPPED), copie des cibles (sets, reps min/max, durée, repos, optionnel) | Copie figée au démarrage : modifier ou archiver un modèle n'altère **jamais** une séance passée. Porte aussi réordonnancement / saut / ajout en cours de séance. |
+| `session_exercise` | id, sessionId, exerciseId, position, status (PENDING/DONE/SKIPPED), copie des cibles (sets, reps min/max, durée, repos, optionnel), supersetGroup, replacedExerciseId (v3) | Copie figée au démarrage : modifier ou archiver un modèle n'altère **jamais** une séance passée. Porte aussi réordonnancement / saut / ajout en cours de séance. |
 | `set_entry` | id, sessionId, exerciseId, setIndex, loadKg, reps, durationSec, rir (0–5), isWarmup, completedAt | |
 | `cardio_entry` | id, sessionId, exerciseId, durationSec, distanceM, pacePer500mSec, caloriesDisplayed | Allure calculée depuis durée/distance, modifiable. |
 | `body_weight_entry` | id, date (unique), weightKg | Une pesée par jour (une nouvelle saisie remplace). |
@@ -119,6 +120,9 @@ Tables Nutrition (V1.1, migration explicite 1 → 2) :
 | `food` | id, source (CIQUAL / OFF / CUSTOM), sourceCode (code Ciqual ou code-barres), nom, marque, valeurs /100 g, portion, favori, dernière utilisation | « Mes aliments » : perso, cache Open Food Facts, aliments Ciqual déjà utilisés (récents / favoris). |
 | `meal_entry` | id, date, mealType, foodId?, nom, quantité (g), protéines, kcal, glucides, lipides, isWhey, heure | **Copie des valeurs** : modifier ou supprimer un aliment ne change jamais l'historique. |
 | `creatine_entry` | id, date (unique), dose, heure | Une prise par jour. |
+
+Migration explicite **2 → 3** (V1.1.1) : 4 colonnes nullables ajoutées (`exercise.nextNote`, `template_exercise.supersetGroup`,
+`session_exercise.supersetGroup`, `session_exercise.replacedExerciseId`), aucune donnée modifiée.
 
 ---
 
@@ -136,6 +140,22 @@ Tables Nutrition (V1.1, migration explicite 1 → 2) :
 - **Timer de repos** : démarré à la validation d'une série ; notification avec compte à rebours visible écran verrouillé + alarme exacte (son/vibration) en fin de repos, robuste au kill du process. Repos par défaut : 90 s.
 - **Bilan texte** de fin de séance (date, modèle, exercices, séries, volume, comparaison avec la séance précédente du même modèle, records) copiable dans le presse-papiers — format réutilisé en V2 (partage Claude, export Markdown).
 - **Unités** : kg uniquement.
+
+### Améliorations séance (V1.1.1)
+
+- **Onglet Historique → Semaine** : séries de travail (hors échauffement, hors cardio, hors séance d'amorce) par **groupe musculaire principal**
+  de la semaine (lundi → dimanche), comparées à une zone repère **10 à 20 séries** (modifiable dans Configuration → Objectifs d'entraînement).
+  Séances de la semaine / objectif (**3 par défaut**, modifiable), série de semaines consécutives où l'objectif est tenu,
+  calendrier des 12 dernières semaines. L'accueil affiche « Cette semaine : x/3 séances ».
+- **Remplacer une machine occupée** (menu ⋮ d'un exercice en séance) : pour **cette séance uniquement**, le modèle n'est pas modifié.
+  Choix proposés : même groupe musculaire d'abord, puis tous les exercices. Cibles du créneau conservées si le type d'exercice est identique,
+  sinon cibles par défaut du remplaçant. Si des séries sont déjà faites, l'original reste « fait » et le remplaçant est inséré juste après.
+  Bilan : « Pull down (remplace Pull down prise neutre) ».
+- **Supersets** de **2 exercices** adjacents, liés dans l'éditeur de modèle ou en séance (« Lier au suivant »). Pas de repos entre A et B ;
+  le repos démarre après la série de B (ou dès que le partenaire est terminé). Déplacer ou retirer un exercice délie automatiquement la paire.
+  Bilan : « (superset avec X) ».
+- **Note pour la prochaine fois** (icône crayon d'un exercice) : choix rapides (« Monter la charge », « Trop dur, rester », « Douleur / gêne »,
+  « Changer le réglage ») ou texte libre. Affichée en bandeau orange à la séance suivante jusqu'à « Vu ✓ », et dans l'historique de l'exercice.
 
 ### Nutrition (V1.1)
 
@@ -194,8 +214,8 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 ## Sauvegarde (export / import JSON)
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
-- Format versionné : `{ "schemaVersion": 2, "exportedAt": "…", "sport": { … }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" } }`.
-  Les fichiers **v1** (V1.0) restent importables (section nutrition vide). La table Ciqual n'est pas exportée (elle est dans l'APK).
+- Format versionné : `{ "schemaVersion": 3, "exportedAt": "…", "sport": { … }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" } }`.
+  Les fichiers **v1** (V1.0) et **v2** (V1.1) restent importables (champs absents = valeurs par défaut). La table Ciqual n'est pas exportée (elle est dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 
@@ -254,15 +274,15 @@ Tests :
 
 ```bat
 gradlew testDebugUnitTest       :: règles métier, sauvegarde, Room (Robolectric), parcours UI — sans téléphone
-gradlew connectedAndroidTest    :: tests Room instrumentés (DAO, migration 1 → 1) sur le téléphone branché
+gradlew connectedAndroidTest    :: tests Room instrumentés (DAO, migrations 1 → 2 → 3) sur le téléphone branché
 gradlew lintDebug               :: analyse statique Android
 ```
 
 Couverture : règle de progression, rotation (ajout / archivage / réordonnancement), records et volume,
 moyenne mobile 7 jours, pré-remplissage, bilan texte, export/import JSON (aller-retour sans perte, en mémoire
-et via la base), seed, DAO et repositories, validation du schéma Room v1.
+et via la base), seed, DAO et repositories, migrations Room 1 → 2 → 3, supersets (normalisation), statistiques hebdomadaires, remplacement d'exercice.
 
-Les tests de fumée (`AppSmokeTest`, `RecapSmokeTest`) écrivent des captures d'écran dans `app/build/smoke-screens/`.
+Les tests de fumée (`AppSmokeTest`, `RecapSmokeTest`, `FeaturesSmokeTest`, …) écrivent des captures d'écran dans `app/build/smoke-screens/`.
 
 ---
 

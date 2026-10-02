@@ -14,6 +14,7 @@ import fr.olivier.forme.feature.sport.domain.ReportSet
 import fr.olivier.forme.feature.sport.domain.SessionExerciseStatus
 import fr.olivier.forme.feature.sport.domain.SessionReport
 import fr.olivier.forme.feature.sport.domain.SessionSets
+import fr.olivier.forme.feature.sport.domain.SupersetRules
 import fr.olivier.forme.feature.sport.domain.VolumeCalculator
 import fr.olivier.forme.feature.sport.domain.WorkSet
 import kotlinx.coroutines.flow.Flow
@@ -48,6 +49,8 @@ class SessionRepository @Inject constructor(
     fun observeRecent(limit: Int): Flow<List<SessionEntity>> = dao.observeRecentSessions(limit)
     fun observeFinished(): Flow<List<SessionEntity>> = dao.observeFinishedSessions()
     fun observeExerciseHistory(exerciseId: Long): Flow<List<ExerciseSetRow>> = dao.observeExerciseHistory(exerciseId)
+    fun observeWorkingSetsSince(from: java.time.Instant): Flow<List<WorkingSetRow>> =
+        dao.observeWorkingSetsSince(from.toEpochMilli())
     fun observeCardioHistory(exerciseId: Long): Flow<List<CardioEntryEntity>> = dao.observeCardioHistory(exerciseId)
 
     /** Starts a session from a template (null = free session); resumes the running one if any. */
@@ -75,6 +78,7 @@ class SessionRepository @Inject constructor(
                         targetDurationSec = line.targetDurationSec,
                         restSec = line.restSec,
                         optional = line.optional,
+                        supersetGroup = line.supersetGroup,
                     )
                 },
             )
@@ -108,13 +112,66 @@ class SessionRepository @Inject constructor(
         val to = from + delta
         if (from < 0 || to !in lines.indices) return@withTransaction
         lines.add(to, lines.removeAt(from))
-        dao.updateSessionExercises(lines.mapIndexed { index, line -> line.copy(position = index) })
+        dao.updateSessionExercises(withNormalizedSupersets(lines))
+    }
+
+    /** Links a line with the next one as a superset, or unlinks them (running session only). */
+    suspend fun toggleSuperset(sessionId: Long, lineId: Long) = db.withTransaction {
+        val lines = dao.getSessionLines(sessionId).map { it.line }
+        val index = lines.indexOfFirst { it.id == lineId }
+        val groups = SupersetRules.toggleWithNext(lines.map { it.supersetGroup }, index)
+        dao.updateSessionExercises(lines.mapIndexed { i, l -> l.copy(position = i, supersetGroup = groups[i]) })
+    }
+
+    private fun withNormalizedSupersets(lines: List<SessionExerciseEntity>): List<SessionExerciseEntity> {
+        val groups = SupersetRules.normalize(lines.map { it.supersetGroup })
+        return lines.mapIndexed { i, l -> l.copy(position = i, supersetGroup = groups[i]) }
+    }
+
+    /**
+     * Busy machine: replaces [line]'s exercise by [newExerciseId] in this session only (the template is untouched).
+     * Targets of the slot are kept when both exercises have the same type, otherwise the new exercise's defaults
+     * are used. If working sets were already done on the original, it is kept (marked done) and the replacement
+     * is inserted right after it.
+     */
+    suspend fun replaceExercise(sessionId: Long, line: SessionExerciseEntity, newExerciseId: Long) = db.withTransaction {
+        val old = exerciseDao.getById(line.exerciseId) ?: return@withTransaction
+        val new = exerciseDao.getById(newExerciseId) ?: return@withTransaction
+        val targets = if (old.type == new.type) {
+            line
+        } else {
+            line.copy(
+                targetSets = new.defaultTargetSets,
+                targetRepsMin = new.defaultRepsMin,
+                targetRepsMax = new.defaultRepsMax,
+                targetDurationSec = new.defaultDurationSec,
+            )
+        }
+        val replacement = targets.copy(
+            exerciseId = new.id,
+            status = SessionExerciseStatus.PENDING,
+            replacedExerciseId = line.replacedExerciseId ?: line.exerciseId,
+        )
+        val sets = dao.getSets(sessionId).filter { it.exerciseId == old.id }
+        val started = sets.any { !it.isWarmup } || dao.getCardio(sessionId).any { it.exerciseId == old.id }
+        if (!started) {
+            dao.deleteSetsOf(sessionId, old.id) // warm-ups of the machine that was abandoned
+            dao.updateSessionExercises(listOf(replacement))
+        } else {
+            val lines = dao.getSessionLines(sessionId).map { it.line }.toMutableList()
+            val index = lines.indexOfFirst { it.id == line.id }
+            lines[index] = line.copy(status = SessionExerciseStatus.DONE)
+            val newId = dao.insertSessionExercise(replacement.copy(id = 0, position = index + 1))
+            lines.add(index + 1, replacement.copy(id = newId))
+            dao.updateSessionExercises(withNormalizedSupersets(lines))
+        }
     }
 
     /** Removes an exercise from the running session together with its sets. */
     suspend fun removeLine(sessionId: Long, line: SessionExerciseEntity) = db.withTransaction {
         dao.deleteSetsOf(sessionId, line.exerciseId)
         dao.deleteSessionExercise(line.id)
+        dao.updateSessionExercises(withNormalizedSupersets(dao.getSessionLines(sessionId).map { it.line }))
     }
 
     suspend fun logSet(set: SetEntryEntity): Long = dao.insertSet(set.copy(completedAt = clock.instant()))
@@ -177,7 +234,9 @@ class SessionRepository @Inject constructor(
             }
             ExerciseReport(
                 exerciseId = exercise.id,
-                name = exercise.name,
+                name = exercise.name +
+                    (line.replacedExerciseId?.let { exerciseDao.getById(it) }?.let { " (remplace ${it.name})" } ?: "") +
+                    (supersetPartner(lines, line)?.let { " (superset avec ${it.name})" } ?: ""),
                 muscleGroup = exercise.muscleGroup,
                 type = exercise.type,
                 perSide = exercise.perSide,
@@ -211,6 +270,9 @@ class SessionRepository @Inject constructor(
             previous = previous,
         )
     }
+
+    private fun supersetPartner(lines: List<SessionLineWithExercise>, line: SessionExerciseEntity): ExerciseEntity? =
+        line.supersetGroup?.let { g -> lines.firstOrNull { it.line.supersetGroup == g && it.line.id != line.id }?.exercise }
 
     private suspend fun volumeOf(sessionId: Long): fr.olivier.forme.feature.sport.domain.SessionVolume {
         val sets = dao.getSets(sessionId).filterNot { it.isWarmup }

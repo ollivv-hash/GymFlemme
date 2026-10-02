@@ -143,6 +143,68 @@ class SportDataTest {
     }
 
     @Test
+    fun replacingABusyMachineKeepsTheSlotAndTheTemplate() = runTest {
+        val id = sessions.start(SeedData.templateC.id)
+        val chestLine = db.sessionDao().getSessionLines(id).first { it.exercise.id == SeedData.chestPress.id }.line
+        sessions.replaceExercise(id, chestLine, SeedData.pecMachine.id)
+        val replaced = db.sessionDao().getSessionLines(id).first { it.line.id == chestLine.id }.line
+        assertEquals(SeedData.pecMachine.id, replaced.exerciseId)
+        assertEquals(SeedData.chestPress.id, replaced.replacedExerciseId)
+        assertEquals(chestLine.targetSets, replaced.targetSets)
+        assertTrue(templates.getLines(SeedData.templateC.id).any { it.exercise.id == SeedData.chestPress.id })
+
+        // Pec machine prefill comes from its own history (seed: 10 kg).
+        assertEquals(10.0, sessions.lastWorkingSets(SeedData.pecMachine.id, id).first().loadKg!!, 0.0)
+        val report = run {
+            sessions.logSet(SetEntryEntity(sessionId = id, exerciseId = SeedData.pecMachine.id, setIndex = 0, loadKg = 10.0, reps = 10, completedAt = Instant.EPOCH))
+            sessions.finish(id, null, null)
+            sessions.buildReport(id)!!
+        }
+        assertTrue(report.exercises.any { it.name == "Pec machine (remplace Chest press)" })
+    }
+
+    @Test
+    fun replacingAfterSetsInsertsTheReplacementAfterTheOriginal() = runTest {
+        val id = sessions.start(SeedData.templateC.id)
+        val chestLine = db.sessionDao().getSessionLines(id).first { it.exercise.id == SeedData.chestPress.id }.line
+        sessions.logSet(SetEntryEntity(sessionId = id, exerciseId = SeedData.chestPress.id, setIndex = 0, loadKg = 15.0, reps = 10, completedAt = Instant.EPOCH))
+        sessions.replaceExercise(id, chestLine, SeedData.pecMachine.id)
+        val lines = db.sessionDao().getSessionLines(id).map { it.line }
+        val i = lines.indexOfFirst { it.id == chestLine.id }
+        assertEquals(SessionExerciseStatus.DONE, lines[i].status)
+        assertEquals(SeedData.pecMachine.id, lines[i + 1].exerciseId)
+        assertEquals(lines.indices.toList(), lines.map { it.position })
+    }
+
+    @Test
+    fun supersetIsCopiedFromTemplateAndDissolvedWhenSplit() = runTest {
+        val lines = templates.getLines(SeedData.templateB.id).map { it.line }
+        // Link "Chaise romaine" (index 3) with "Planche latérale" (index 4).
+        templates.save(SeedData.templateB, lines.mapIndexed { i, l -> if (i == 3 || i == 4) l.copy(supersetGroup = 1) else l })
+        val id = sessions.start(SeedData.templateB.id)
+        val sessionLines = db.sessionDao().getSessionLines(id).map { it.line }
+        assertEquals(listOf(null, null, null, 1, 1, null), sessionLines.map { it.supersetGroup })
+
+        // Moving one member away breaks the pair.
+        sessions.moveLine(id, sessionLines[4].id, 1)
+        assertTrue(db.sessionDao().getSessionLines(id).all { it.line.supersetGroup == null })
+
+        // Linking in the session itself.
+        val first = db.sessionDao().getSessionLines(id).first().line
+        sessions.toggleSuperset(id, first.id)
+        assertEquals(listOf(1, 1, null, null, null, null), db.sessionDao().getSessionLines(id).map { it.line.supersetGroup })
+    }
+
+    @Test
+    fun nextNoteIsStoredOnTheExerciseUntilCleared() = runTest {
+        val repo = fr.olivier.forme.feature.sport.data.ExerciseRepository(db.exerciseDao(), context())
+        repo.setNextNote(SeedData.chestPress.id, "  Monter la charge ")
+        assertEquals("Monter la charge", repo.get(SeedData.chestPress.id)!!.nextNote)
+        repo.setNextNote(SeedData.chestPress.id, "")
+        assertNull(repo.get(SeedData.chestPress.id)!!.nextNote)
+    }
+
+    @Test
     fun bodyWeightKeepsOneEntryPerDay() = runTest {
         val repo = BodyWeightRepository(db.bodyWeightDao())
         val day = LocalDate.of(2026, 10, 1)

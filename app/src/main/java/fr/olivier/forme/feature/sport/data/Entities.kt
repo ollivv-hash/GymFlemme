@@ -28,6 +28,8 @@ data class ExerciseEntity(
     /** Absolute path of a copy stored in the app private files. */
     val photoUri: String? = null,
     val archived: Boolean = false,
+    /** "For next time" note, shown in the next session containing the exercise until dismissed. */
+    val nextNote: String? = null,
 )
 
 @Entity(tableName = "workout_template")
@@ -70,6 +72,8 @@ data class TemplateExerciseEntity(
     val optional: Boolean = false,
     /** Null = default rest from settings. */
     val restSec: Int? = null,
+    /** Lines sharing a group number form a superset (2 exercises, alternated, rest after the last). */
+    val supersetGroup: Int? = null,
 )
 
 @Entity(
@@ -130,6 +134,9 @@ data class SessionExerciseEntity(
     val targetDurationSec: Int? = null,
     val restSec: Int? = null,
     val optional: Boolean = false,
+    val supersetGroup: Int? = null,
+    /** Exercise of the template replaced in this session (busy machine). */
+    val replacedExerciseId: Long? = null,
 )
 
 @Entity(

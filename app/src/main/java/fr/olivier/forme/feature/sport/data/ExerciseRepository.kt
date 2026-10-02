@@ -28,6 +28,9 @@ class ExerciseRepository @Inject constructor(
 
     suspend fun setArchived(id: Long, archived: Boolean) = dao.setArchived(id, archived)
 
+    /** Null or blank clears the note. */
+    suspend fun setNextNote(id: Long, note: String?) = dao.setNextNote(id, note?.trim()?.ifEmpty { null })
+
     /**
      * Copies a picked photo into private storage (the picker grant is temporary), downscaled
      * to keep the file small. Returns the absolute path to store in [ExerciseEntity.photoUri].

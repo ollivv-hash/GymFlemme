@@ -111,6 +111,14 @@ fun ExerciseHistoryScreen(onBack: () -> Unit, viewModel: ExerciseHistoryViewMode
                 return@LazyColumn
             }
 
+            exercise.nextNote?.let { note ->
+                item {
+                    Column {
+                        SectionTitle("Note pour la prochaine fois")
+                        Text("📝 $note")
+                    }
+                }
+            }
             item {
                 Column {
                     SectionTitle("Records")

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -49,6 +50,7 @@ import fr.olivier.forme.feature.sport.data.TemplateRepository
 import fr.olivier.forme.feature.sport.data.WorkoutTemplateEntity
 import fr.olivier.forme.feature.sport.domain.ExerciseType
 import fr.olivier.forme.feature.sport.domain.Fmt
+import fr.olivier.forme.feature.sport.domain.SupersetRules
 import fr.olivier.forme.ui.components.FormeTopBar
 import fr.olivier.forme.ui.components.SmallStepper
 import fr.olivier.forme.ui.navigation.TemplateEditRoute
@@ -73,6 +75,7 @@ data class DraftLine(
     val optional: Boolean,
     /** Null = default rest from settings. */
     val restSec: Int?,
+    val supersetGroup: Int? = null,
 )
 
 data class TemplateDraft(
@@ -126,7 +129,7 @@ class TemplateEditViewModel @Inject constructor(
     }
 
     private fun TemplateExerciseEntity.toDraft(exercise: ExerciseEntity) =
-        DraftLine(nextKey++, exercise, targetSets, targetRepsMin, targetRepsMax, targetDurationSec, optional, restSec)
+        DraftLine(nextKey++, exercise, targetSets, targetRepsMin, targetRepsMax, targetDurationSec, optional, restSec, supersetGroup)
 
     fun rename(name: String) = _draft.update { it.copy(template = it.template.copy(name = name)) }
     fun recode(code: String) = _draft.update { it.copy(template = it.template.copy(code = code.uppercase())) }
@@ -134,12 +137,24 @@ class TemplateEditViewModel @Inject constructor(
     fun updateLine(key: Long, transform: (DraftLine) -> DraftLine) =
         _draft.update { d -> d.copy(lines = d.lines.map { if (it.key == key) transform(it) else it }) }
 
-    fun removeLine(key: Long) = _draft.update { d -> d.copy(lines = d.lines.filterNot { it.key == key }) }
+    fun removeLine(key: Long) = _draft.update { d -> d.copy(lines = normalized(d.lines.filterNot { it.key == key })) }
 
     fun move(fromKey: Any, toKey: Any) = _draft.update { d ->
         val from = d.lines.indexOfFirst { it.key == fromKey }
         val to = d.lines.indexOfFirst { it.key == toKey }
-        if (from < 0 || to < 0) d else d.copy(lines = d.lines.toMutableList().apply { add(to, removeAt(from)) })
+        if (from < 0 || to < 0) d else d.copy(lines = normalized(d.lines.toMutableList().apply { add(to, removeAt(from)) }))
+    }
+
+    /** Links the line with the next one as a superset, or unlinks them. */
+    fun toggleSuperset(key: Long) = _draft.update { d ->
+        val index = d.lines.indexOfFirst { it.key == key }
+        val groups = SupersetRules.toggleWithNext(d.lines.map { it.supersetGroup }, index)
+        d.copy(lines = d.lines.mapIndexed { i, l -> l.copy(supersetGroup = groups[i]) })
+    }
+
+    private fun normalized(lines: List<DraftLine>): List<DraftLine> {
+        val groups = SupersetRules.normalize(lines.map { it.supersetGroup })
+        return lines.mapIndexed { i, l -> l.copy(supersetGroup = groups[i]) }
     }
 
     fun add(exercise: ExerciseEntity) = _draft.update { d ->
@@ -173,6 +188,7 @@ class TemplateEditViewModel @Inject constructor(
                     targetDurationSec = it.durationSec,
                     optional = it.optional,
                     restSec = it.restSec,
+                    supersetGroup = it.supersetGroup,
                 )
             },
         )
@@ -221,10 +237,20 @@ fun TemplateEditScreen(onDone: () -> Unit, viewModel: TemplateEditViewModel = hi
                 modifier = Modifier.padding(16.dp, 8.dp),
             )
             LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
-                items(draft.lines, key = { it.key }) { line ->
+                itemsIndexed(draft.lines, key = { _, it -> it.key }) { index, line ->
+                    val next = draft.lines.getOrNull(index + 1)
+                    val previous = draft.lines.getOrNull(index - 1)
                     ReorderableItem(reorderState, key = line.key) { dragging ->
                         LineCard(
                             line = line,
+                            supersetWith = when {
+                                line.supersetGroup == null -> null
+                                next?.supersetGroup == line.supersetGroup -> next.exercise.name
+                                previous?.supersetGroup == line.supersetGroup -> previous.exercise.name
+                                else -> null
+                            },
+                            linkedWithNext = line.supersetGroup != null && next?.supersetGroup == line.supersetGroup,
+                            onToggleSuperset = if (next != null) ({ viewModel.toggleSuperset(line.key) }) else null,
                             elevated = dragging,
                             handle = {
                                 IconButton(onClick = {}, modifier = Modifier.draggableHandle()) {
@@ -249,6 +275,9 @@ fun TemplateEditScreen(onDone: () -> Unit, viewModel: TemplateEditViewModel = hi
 @Composable
 private fun LineCard(
     line: DraftLine,
+    supersetWith: String?,
+    linkedWithNext: Boolean,
+    onToggleSuperset: (() -> Unit)?,
     elevated: Boolean,
     handle: @Composable () -> Unit,
     onChange: ((DraftLine) -> DraftLine) -> Unit,
@@ -263,6 +292,14 @@ private fun LineCard(
                 handle()
                 Text(line.exercise.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 IconButton(onClick = onRemove) { Icon(Icons.Filled.Close, contentDescription = "Retirer") }
+            }
+            supersetWith?.let {
+                Text(
+                    "⇄ Superset avec $it",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
             }
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                 SmallStepper(
@@ -320,6 +357,11 @@ private fun LineCard(
                     onCheckedChange = { v -> onChange { it.copy(optional = v) } },
                     modifier = Modifier.padding(start = 8.dp),
                 )
+            }
+            onToggleSuperset?.let { toggle ->
+                TextButton(onClick = toggle) {
+                    Text(if (linkedWithNext) "Délier le superset" else "⇄ Lier au suivant (superset)")
+                }
             }
         }
     }

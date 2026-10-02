@@ -18,6 +18,7 @@ import fr.olivier.forme.feature.sport.domain.Prefill
 import fr.olivier.forme.feature.sport.domain.ProgressionRule
 import fr.olivier.forme.feature.sport.domain.SessionExerciseStatus
 import fr.olivier.forme.feature.sport.domain.SetTarget
+import fr.olivier.forme.feature.sport.domain.SupersetRules
 import fr.olivier.forme.feature.sport.domain.Suggestion
 import fr.olivier.forme.feature.sport.domain.WorkSet
 import fr.olivier.forme.feature.sport.timer.RestTimer
@@ -69,7 +70,7 @@ data class ActiveSessionUi(
 @HiltViewModel
 class ActiveSessionViewModel @Inject constructor(
     private val sessions: SessionRepository,
-    exercises: ExerciseRepository,
+    private val exercises: ExerciseRepository,
     private val settings: SettingsRepository,
     private val restTimer: RestTimer,
 ) : ViewModel() {
@@ -78,6 +79,10 @@ class ActiveSessionViewModel @Inject constructor(
     private val drafts = MutableStateFlow<Map<Long, WorkSet>>(emptyMap())
     private val cardioDrafts = MutableStateFlow<Map<Long, CardioDraft>>(emptyMap())
     private val manualExpanded = MutableStateFlow<Long?>(null)
+
+    /** Exercises whose note was written during this session: shown at the next session, not now. */
+    private val _notedThisSession = MutableStateFlow<Set<Long>>(emptySet())
+    val notedThisSession: StateFlow<Set<Long>> = _notedThisSession
 
     val restTimerState: StateFlow<RestTimerState?> =
         restTimer.state.stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -196,6 +201,13 @@ class ActiveSessionViewModel @Inject constructor(
             sessions.setStatus(item.line.id, SessionExerciseStatus.DONE)
             manualExpanded.value = null
         }
+        val partner = partnerOf(item)
+        if (partner != null) {
+            val partnerFinished = partner.finished || partner.workingSets.size >= partner.line.targetSets
+            val isLast = item.line.position > partner.line.position
+            // Superset: go straight to the other exercise, rest only after the pair.
+            if (!SupersetRules.restAfterSet(isLast, partnerFinished)) return@launch
+        }
         startRest(item, doneCount, completesExercise)
     }
 
@@ -208,6 +220,15 @@ class ActiveSessionViewModel @Inject constructor(
             "${item.exercise.name} — série ${doneCount + 1}"
         }
         restTimer.start(rest, label)
+    }
+
+    /** The other exercise of the superset, if [item] belongs to one. */
+    fun partnerOf(item: ExerciseUi): ExerciseUi? = item.line.supersetGroup?.let { g ->
+        ui.value.exercises.firstOrNull { it.line.supersetGroup == g && it.line.id != item.line.id }
+    }
+
+    fun toggleSuperset(item: ExerciseUi) = viewModelScope.launch {
+        session.value?.id?.let { sessions.toggleSuperset(it, item.line.id) }
     }
 
     fun deleteSet(set: SetEntryEntity) = viewModelScope.launch { sessions.deleteSet(set.id) }
@@ -239,6 +260,22 @@ class ActiveSessionViewModel @Inject constructor(
     fun reopen(item: ExerciseUi) = viewModelScope.launch {
         sessions.setStatus(item.line.id, SessionExerciseStatus.PENDING)
         manualExpanded.value = item.line.id
+    }
+
+    fun saveNote(item: ExerciseUi, note: String) = viewModelScope.launch {
+        exercises.setNextNote(item.exercise.id, note)
+        _notedThisSession.update { if (note.isBlank()) it - item.exercise.id else it + item.exercise.id }
+    }
+
+    fun dismissNote(item: ExerciseUi) = viewModelScope.launch { exercises.setNextNote(item.exercise.id, null) }
+
+    /** All exercises (archived included), to name the replaced one. */
+    val allExercises = exercises.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun replace(item: ExerciseUi, exerciseId: Long) = viewModelScope.launch {
+        session.value?.id?.let { sessions.replaceExercise(it, item.line, exerciseId) }
+        manualExpanded.value = null
     }
 
     fun move(item: ExerciseUi, delta: Int) = viewModelScope.launch {

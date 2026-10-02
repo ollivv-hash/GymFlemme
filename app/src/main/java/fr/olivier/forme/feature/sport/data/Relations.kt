@@ -16,6 +16,12 @@ data class SessionLineWithExercise(
     val exercise: ExerciseEntity,
 )
 
+data class WorkingSetRow(
+    val startedAt: Instant,
+    val muscleGroup: fr.olivier.forme.feature.sport.domain.MuscleGroup,
+    val type: fr.olivier.forme.feature.sport.domain.ExerciseType,
+)
+
 /** One working set of an exercise, with the context of the session it belongs to. */
 data class ExerciseSetRow(
     val sessionId: Long,
