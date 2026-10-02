@@ -3,7 +3,7 @@
 Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé via `adb install`, sans Play Store.
 
-> **Statut : V1.0 (Sport) et V1.1 (Nutrition) validées sur le téléphone. V1.1.1 (améliorations séance) implémentée** :
+> **Statut : V1.0, V1.1 et V1.1.x validées sur le téléphone. V1.2 (sauvegarde automatique vers Drive) implémentée** :
 > build, Lint et tests JVM au vert, reste à valider sur le téléphone.
 
 - Package : `fr.olivier.forme` — nom d'app provisoire : **Forme**
@@ -20,7 +20,8 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V1.0** ✅ | Socle technique + module Sport (séances, timer de repos, historique, records, poids, sauvegarde JSON) |
 | **V1.1** ✅ | Profil, repas (code-barres Open Food Facts, table Ciqual 2025 embarquée, favoris), jauge protéines (1,8 g/kg/j, modifiable), glucides / lipides / kcal, whey 1 dose/jour, créatine + rappel |
 | **V1.1.1** ✅ | Volume hebdo par groupe musculaire + régularité (onglet Semaine), remplacement d'une machine occupée, supersets (2 exercices), note « pour la prochaine fois » |
-| V1.2 | Synchronisation Google Drive (backup JSON + exports Markdown), API Drive v3, scope `drive.file` |
+| **V1.2** ✅ | Sauvegarde automatique : fichier JSON choisi une fois (ex. dossier Google Drive), réécrit après chaque séance et chaque jour ; 3 copies locales |
+| plus tard | Intégration Drive complète (API Drive v3, `drive.file`, copies datées, bilans Markdown) — en réflexion |
 | V2.x | Partage des bilans vers l'app Claude, Health Connect (Xiaomi Watch S4 via Mi Fitness), fréquence cardiaque BLE (profil Heart Rate standard) |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
@@ -89,7 +90,7 @@ app_sport/
         └── androidTest/
 ```
 
-V1.1 a ajouté `feature/nutrition/` (data · domain · reminder · ui) et la migration Room 1 → 2 ; V1.2 ajoutera `core/sync/`.
+V1.1 a ajouté `feature/nutrition/` (data · domain · reminder · ui) et la migration Room 1 → 2 ; V1.2 a ajouté la sauvegarde automatique dans `core/backup/` (`AutoBackupManager`, worker WorkManager).
 Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv` depuis le fichier Excel publié par l'ANSES.
 
 ---
@@ -213,6 +214,21 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 
 ## Sauvegarde (export / import JSON)
 
+### Sauvegarde automatique (V1.2)
+
+- **Réglages → Sauvegarde automatique → Choisir l'emplacement…** : le sélecteur Android (Storage Access Framework) s'ouvre ;
+  choisir **Google Drive**, le dossier voulu, et valider `forme-sauvegarde.json`. L'app garde un droit d'écriture
+  **persistant sur ce seul fichier** : aucun compte Google dans l'app, aucun projet Google Cloud, aucune clé.
+- Le fichier est **réécrit en place** après chaque **séance terminée**, **une fois par jour** (WorkManager) et via
+  « Sauvegarder maintenant ». L'app Drive se charge de l'envoi (différé si hors ligne) et conserve les **versions
+  précédentes** (⋮ → Gérer les versions).
+- Les **3 dernières sauvegardes** sont aussi gardées dans le stockage privé de l'app (`files/auto-backups/`).
+- Dernière sauvegarde réussie et erreur éventuelle affichées dans les réglages ; si le fichier est supprimé, déplacé ou
+  si le droit est perdu : message clair, il suffit de rechoisir l'emplacement.
+- **Restaurer** : « Importer une sauvegarde… » puis choisir le fichier dans Drive (même import que ci-dessous).
+
+### Export / import manuel
+
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
 - Format versionné : `{ "schemaVersion": 3, "exportedAt": "…", "sport": { … }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" } }`.
   Les fichiers **v1** (V1.0) et **v2** (V1.1) restent importables (champs absents = valeurs par défaut). La table Ciqual n'est pas exportée (elle est dans l'APK).
@@ -257,7 +273,7 @@ La configuration `release` lit un fichier `keystore.properties` à la racine, **
 
 > ⚠️ **Sauvegarder le `.jks` et ses mots de passe hors du poste** (gestionnaire de mots de passe + copie hors ligne).
 > Sans cette clé, impossible de mettre à jour l'app installée sans la désinstaller (et donc perdre les données locales).
-> Son empreinte SHA-1 sera aussi nécessaire pour créer le client OAuth Google en V1.2 :
+> Son empreinte SHA-1 serait nécessaire pour une future intégration Drive complète (client OAuth Google) :
 > `keytool -list -v -keystore forme-release.jks -alias forme`
 
 ---
