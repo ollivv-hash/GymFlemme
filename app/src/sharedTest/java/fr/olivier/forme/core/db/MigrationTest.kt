@@ -8,6 +8,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,6 +47,26 @@ class MigrationTest {
             query("SELECT COUNT(*) FROM meal_entry").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
             close()
         }
+    }
+
+    @Test
+    fun migrate2To3AddsSupersetReplacementAndNoteColumns() {
+        helper.createDatabase(dbName, 2).apply {
+            execSQL("INSERT INTO exercise (id, name, muscleGroup, type, perSide, loadIncrementKg, defaultTargetSets, archived) VALUES (1, 'Test', 'DOS', 'WEIGHTED', 0, 2.5, 3, 0)")
+            execSQL("INSERT INTO meal_entry (id, date, mealType, name, quantityG, proteinG, isWhey, eatenAt) VALUES (1, 20000, 'LUNCH', 'Skyr', 150, 15, 0, 0)")
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 3, true, Migrations.MIGRATION_2_3).apply {
+            query("SELECT nextNote FROM exercise WHERE id = 1").use { it.moveToFirst(); assertTrue(it.isNull(0)) }
+            query("SELECT COUNT(*) FROM meal_entry").use { it.moveToFirst(); assertEquals(1, it.getInt(0)) }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To3() {
+        helper.createDatabase(dbName, 1).close()
+        helper.runMigrationsAndValidate(dbName, 3, true, *Migrations.ALL).close()
     }
 
     @Test

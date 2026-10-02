@@ -65,5 +65,15 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2)
+    /** V1.2a: supersets, busy-machine replacement, "for next time" note. Nullable columns only. */
+    val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `exercise` ADD COLUMN `nextNote` TEXT")
+            db.execSQL("ALTER TABLE `template_exercise` ADD COLUMN `supersetGroup` INTEGER")
+            db.execSQL("ALTER TABLE `session_exercise` ADD COLUMN `supersetGroup` INTEGER")
+            db.execSQL("ALTER TABLE `session_exercise` ADD COLUMN `replacedExerciseId` INTEGER")
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 }
