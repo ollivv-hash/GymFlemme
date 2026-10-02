@@ -14,6 +14,12 @@ import javax.inject.Singleton
 
 enum class ThemeMode(val label: String) { DARK("Sombre"), LIGHT("Clair"), SYSTEM("Système") }
 
+data class TrainingGoals(
+    val sessionsPerWeek: Int = SettingsRepository.DEFAULT_SESSIONS_PER_WEEK,
+    val minSets: Int = SettingsRepository.DEFAULT_MIN_SETS,
+    val maxSets: Int = SettingsRepository.DEFAULT_MAX_SETS,
+)
+
 /** Rest timer state, persisted so the countdown survives a process kill. */
 data class RestTimerState(val endsAtMillis: Long, val totalSec: Int)
 
@@ -29,6 +35,23 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
     val restTimer: Flow<RestTimerState?> = dataStore.data.map { prefs ->
         val endsAt = prefs[REST_ENDS_AT] ?: return@map null
         RestTimerState(endsAt, prefs[REST_TOTAL] ?: 0)
+    }
+
+    /** Weekly goals: sessions per week and the recommended band of working sets per muscle group. */
+    val trainingGoals: Flow<TrainingGoals> = dataStore.data.map { prefs ->
+        TrainingGoals(
+            sessionsPerWeek = prefs[SESSIONS_PER_WEEK] ?: DEFAULT_SESSIONS_PER_WEEK,
+            minSets = prefs[MIN_SETS] ?: DEFAULT_MIN_SETS,
+            maxSets = prefs[MAX_SETS] ?: DEFAULT_MAX_SETS,
+        )
+    }
+
+    suspend fun setTrainingGoals(goals: TrainingGoals) {
+        dataStore.edit {
+            it[SESSIONS_PER_WEEK] = goals.sessionsPerWeek.coerceIn(1, 7)
+            it[MIN_SETS] = goals.minSets.coerceIn(1, 40)
+            it[MAX_SETS] = goals.maxSets.coerceIn(goals.minSets.coerceIn(1, 40), 60)
+        }
     }
 
     suspend fun currentDefaultRestSec(): Int = defaultRestSec.first()
@@ -61,5 +84,11 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         private val THEME = stringPreferencesKey("theme_mode")
         private val REST_ENDS_AT = longPreferencesKey("rest_ends_at")
         private val REST_TOTAL = intPreferencesKey("rest_total_sec")
+        const val DEFAULT_SESSIONS_PER_WEEK = 3
+        const val DEFAULT_MIN_SETS = 10
+        const val DEFAULT_MAX_SETS = 20
+        private val SESSIONS_PER_WEEK = intPreferencesKey("goal_sessions_per_week")
+        private val MIN_SETS = intPreferencesKey("goal_min_sets_per_group")
+        private val MAX_SETS = intPreferencesKey("goal_max_sets_per_group")
     }
 }

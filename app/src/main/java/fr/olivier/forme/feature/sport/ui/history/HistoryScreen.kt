@@ -58,6 +58,11 @@ fun HistoryScreen(onOpenSession: (Long) -> Unit, onOpenExercise: (Long) -> Unit,
             PrimaryTabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Séances") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Exercices") })
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Semaine") })
+            }
+            if (tab == 2) {
+                WeekContent()
+                return@Column
             }
             LazyColumn {
                 if (tab == 0) {

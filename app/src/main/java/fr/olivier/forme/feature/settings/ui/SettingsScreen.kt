@@ -34,6 +34,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import fr.olivier.forme.core.backup.BackupRepository
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.core.settings.ThemeMode
+import fr.olivier.forme.core.settings.TrainingGoals
 import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.ui.components.ConfirmDialog
 import fr.olivier.forme.ui.components.FormeTopBar
@@ -54,12 +55,14 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
     val restSec = settings.defaultRestSec.stateIn(viewModelScope, SharingStarted.Eagerly, SettingsRepository.DEFAULT_REST_SEC)
     val theme = settings.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.DARK)
+    val goals = settings.trainingGoals.stateIn(viewModelScope, SharingStarted.Eagerly, TrainingGoals())
 
     private val _messages = Channel<String>(Channel.BUFFERED)
     val messages = _messages.receiveAsFlow()
 
     fun setRest(seconds: Int) = viewModelScope.launch { settings.setDefaultRestSec(seconds) }
     fun setTheme(mode: ThemeMode) = viewModelScope.launch { settings.setThemeMode(mode) }
+    fun setGoals(goals: TrainingGoals) = viewModelScope.launch { settings.setTrainingGoals(goals) }
     fun suggestedFileName() = backup.suggestedFileName()
 
     fun export(uri: Uri) = viewModelScope.launch {
@@ -84,6 +87,7 @@ class SettingsViewModel @Inject constructor(
 fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val rest by viewModel.restSec.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
+    val goals by viewModel.goals.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var pendingImport by remember { mutableStateOf<Uri?>(null) }
 
@@ -112,6 +116,31 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMo
                 onValueEntered = { text -> parseDuration(text)?.let(viewModel::setRest) },
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            SectionTitle("Objectifs d'entraînement")
+            Stepper(
+                label = "Séances par semaine",
+                valueText = "${goals.sessionsPerWeek}",
+                onMinus = { viewModel.setGoals(goals.copy(sessionsPerWeek = goals.sessionsPerWeek - 1)) },
+                onPlus = { viewModel.setGoals(goals.copy(sessionsPerWeek = goals.sessionsPerWeek + 1)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Stepper(
+                    label = "Séries / groupe : min",
+                    valueText = "${goals.minSets}",
+                    onMinus = { viewModel.setGoals(goals.copy(minSets = goals.minSets - 1)) },
+                    onPlus = { viewModel.setGoals(goals.copy(minSets = goals.minSets + 1, maxSets = maxOf(goals.maxSets, goals.minSets + 1))) },
+                    modifier = Modifier.weight(1f),
+                )
+                Stepper(
+                    label = "max",
+                    valueText = "${goals.maxSets}",
+                    onMinus = { viewModel.setGoals(goals.copy(maxSets = maxOf(goals.minSets, goals.maxSets - 1))) },
+                    onPlus = { viewModel.setGoals(goals.copy(maxSets = goals.maxSets + 1)) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
 
             SectionTitle("Thème")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

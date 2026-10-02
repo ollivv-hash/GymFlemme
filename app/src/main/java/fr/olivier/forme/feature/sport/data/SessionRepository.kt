@@ -49,6 +49,8 @@ class SessionRepository @Inject constructor(
     fun observeRecent(limit: Int): Flow<List<SessionEntity>> = dao.observeRecentSessions(limit)
     fun observeFinished(): Flow<List<SessionEntity>> = dao.observeFinishedSessions()
     fun observeExerciseHistory(exerciseId: Long): Flow<List<ExerciseSetRow>> = dao.observeExerciseHistory(exerciseId)
+    fun observeWorkingSetsSince(from: java.time.Instant): Flow<List<WorkingSetRow>> =
+        dao.observeWorkingSetsSince(from.toEpochMilli())
     fun observeCardioHistory(exerciseId: Long): Flow<List<CardioEntryEntity>> = dao.observeCardioHistory(exerciseId)
 
     /** Starts a session from a template (null = free session); resumes the running one if any. */
