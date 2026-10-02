@@ -50,7 +50,7 @@ fun ProteinGauge(totals: DayTotals, targetG: Double?, modifier: Modifier = Modif
             LinearProgressIndicator(
                 progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(12.dp).padding(vertical = 2.dp),
-                color = if (progress >= 1f) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.tertiary,
             )
             val left = targetG - totals.proteinG
             Text(

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -31,6 +32,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -166,12 +168,18 @@ private fun RestBar(state: RestTimerState, onExtend: (Int) -> Unit, onStop: () -
         }
     }
     val remaining = ((state.endsAtMillis - now) / 1000).coerceAtLeast(0).toInt()
-    Surface(color = if (remaining == 0) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer) {
+    // Orange = attention: the rest countdown, solid orange once the rest is over.
+    val done = remaining == 0
+    Surface(
+        color = if (done) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = if (done) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onTertiaryContainer,
+    ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
             if (state.totalSec > 0) {
                 LinearProgressIndicator(
                     progress = { 1f - remaining.toFloat() / state.totalSec },
                     modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.tertiary,
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -181,8 +189,9 @@ private fun RestBar(state: RestTimerState, onExtend: (Int) -> Unit, onStop: () -
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = { onExtend(-15) }) { Text("−15") }
-                TextButton(onClick = { onExtend(15) }) { Text("+15") }
+                val barContent = LocalContentColor.current
+                TextButton(onClick = { onExtend(-15) }) { Text("−15", color = barContent) }
+                TextButton(onClick = { onExtend(15) }) { Text("+15", color = barContent) }
                 IconButton(onClick = onStop) { Icon(Icons.Filled.Close, contentDescription = "Arrêter") }
             }
         }
@@ -281,6 +290,7 @@ private fun SetEditor(item: ExerciseUi, viewModel: ActiveSessionViewModel) {
     }
     item.hint?.suggestion?.let { s ->
         AssistChip(
+            colors = AssistChipDefaults.assistChipColors(labelColor = MaterialTheme.colorScheme.tertiary),
             onClick = { viewModel.applySuggestion(item) },
             label = {
                 Text(

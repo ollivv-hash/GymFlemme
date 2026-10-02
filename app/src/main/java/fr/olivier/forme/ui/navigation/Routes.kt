@@ -23,6 +23,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object SettingsRoute
 
 // --- Nutrition (V1.1) ---
+/** [tab]: 0 = journal, 1 = body weight. */
 @Serializable data class NutritionRoute(val tab: Int = 0)
 @Serializable data class AddFoodRoute(val epochDay: Long, val meal: String)
 @Serializable data class ScanRoute(val epochDay: Long, val meal: String)

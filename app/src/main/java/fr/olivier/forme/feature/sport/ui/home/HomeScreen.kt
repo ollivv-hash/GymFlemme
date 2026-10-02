@@ -46,6 +46,7 @@ import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.feature.sport.ui.templates.title
 import fr.olivier.forme.ui.components.FormeTopBar
 import fr.olivier.forme.ui.components.SectionTitle
+import fr.olivier.forme.ui.theme.accentButtonColors
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -127,7 +128,7 @@ fun HomeScreen(
                     Column(Modifier.padding(16.dp)) {
                         Text("Séance en cours", style = MaterialTheme.typography.labelLarge)
                         Text(running.label(), style = MaterialTheme.typography.headlineSmall)
-                        Button(onClick = onOpenSession, modifier = Modifier.fillMaxWidth().height(56.dp).padding(top = 8.dp)) {
+                        Button(onClick = onOpenSession, colors = accentButtonColors(), modifier = Modifier.fillMaxWidth().height(56.dp).padding(top = 8.dp)) {
                             Text("Reprendre")
                         }
                     }
@@ -138,6 +139,7 @@ fun HomeScreen(
                         Text("Séance proposée", style = MaterialTheme.typography.labelLarge)
                         Text(proposed?.title() ?: "Aucun modèle en rotation", style = MaterialTheme.typography.headlineSmall)
                         Button(
+                            colors = accentButtonColors(),
                             onClick = { viewModel.start(proposed?.id, onOpenSession) },
                             enabled = proposed != null,
                             modifier = Modifier.fillMaxWidth().height(64.dp).padding(top = 12.dp),

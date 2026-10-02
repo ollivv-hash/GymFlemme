@@ -85,8 +85,8 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
                 HomeScreen(
                     onOpenSession = { nav.navigate(ActiveSessionRoute) },
                     onOpenSessionDetail = { nav.navigate(SessionDetailRoute(it)) },
-                    onOpenWeight = { nav.navigateFresh(NutritionRoute(tab = 1)) },
-                    onOpenNutrition = { nav.navigateFresh(NutritionRoute(tab = 0)) },
+                    onOpenWeight = { nav.switchTab(NutritionRoute(tab = 1)) },
+                    onOpenNutrition = { nav.switchTab(NutritionRoute(tab = 0)) },
                 )
             }
             composable<HistoryRoute> {
@@ -177,10 +177,14 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
     }
 }
 
-/** Top-level destination opened with fresh arguments (e.g. a given tab), not the saved state. */
-private fun NavHostController.navigateFresh(route: Any) {
+/**
+ * Switches to a bottom-bar tab with explicit arguments (e.g. the weight sub-tab from a home card).
+ * Same stack handling as the bottom bar, so the "Accueil" button brings home back; the arguments
+ * are applied instead of restoring the tab's saved state.
+ */
+private fun NavHostController.switchTab(route: Any) {
     navigate(route) {
-        popUpTo(graph.findStartDestination().id)
+        popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
     }
 }
