@@ -9,11 +9,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -184,7 +185,7 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
                 Text("Pas de rappel si la prise du jour est déjà notée.", style = MaterialTheme.typography.bodySmall)
             }
 
-            Button(onClick = { viewModel.save(onDone) }, modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp)) { Text("Enregistrer") }
+            Spacer(Modifier.height(24.dp)) // Saving is done with "Enregistrer" in the top bar.
         }
     }
 
