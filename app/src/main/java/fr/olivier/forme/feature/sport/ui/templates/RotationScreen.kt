@@ -1,6 +1,6 @@
 package fr.olivier.forme.feature.sport.ui.templates
 
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -56,6 +56,7 @@ fun RotationScreen(onBack: () -> Unit, viewModel: RotationViewModel = hiltViewMo
     LaunchedEffect(active) {
         rotation = active.filter { it.orderInRotation != null }.sortedBy { it.orderInRotation }
     }
+    val outside = active.filter { t -> rotation.none { it.id == t.id } }
     val listState = rememberLazyListState()
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
         val f = rotation.indexOfFirst { it.id == from.key }
@@ -67,36 +68,41 @@ fun RotationScreen(onBack: () -> Unit, viewModel: RotationViewModel = hiltViewMo
     }
 
     Scaffold(topBar = { FormeTopBar("Rotation", onBack) }) { padding ->
-        Column(Modifier.padding(padding).padding(horizontal = 16.dp)) {
-            Text(
-                "Prochaine séance proposée : ${proposed?.title() ?: "aucune"}",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(vertical = 8.dp),
-            )
-            SectionTitle("Dans la rotation (glisser ☰ pour l'ordre)")
-            LazyColumn(state = listState) {
-                items(rotation, key = { it.id }) { template ->
-                    ReorderableItem(reorderState, key = template.id) {
-                        Card(Modifier.padding(vertical = 4.dp)) {
-                            ListItem(
-                                leadingContent = {
-                                    IconButton(onClick = {}, modifier = Modifier.draggableHandle()) {
-                                        Icon(Icons.Filled.Menu, contentDescription = "Déplacer")
-                                    }
-                                },
-                                headlineContent = { Text(template.title()) },
-                                trailingContent = {
-                                    Switch(checked = true, onCheckedChange = {
-                                        viewModel.save(rotation.map { it.id } - template.id)
-                                    })
-                                },
-                            )
-                        }
+        // One scrolling list for the whole screen: headers, reorderable rotation, then templates outside it.
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.padding(padding),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            item(key = "proposed") {
+                Text(
+                    "Prochaine séance proposée : ${proposed?.title() ?: "aucune"}",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+            }
+            item(key = "in-header") { SectionTitle("Dans la rotation (glisser ☰ pour l'ordre)") }
+            items(rotation, key = { it.id }) { template ->
+                ReorderableItem(reorderState, key = template.id) {
+                    Card(Modifier.padding(vertical = 4.dp)) {
+                        ListItem(
+                            leadingContent = {
+                                IconButton(onClick = {}, modifier = Modifier.draggableHandle()) {
+                                    Icon(Icons.Filled.Menu, contentDescription = "Déplacer")
+                                }
+                            },
+                            headlineContent = { Text(template.title()) },
+                            trailingContent = {
+                                Switch(checked = true, onCheckedChange = {
+                                    viewModel.save(rotation.map { it.id } - template.id)
+                                })
+                            },
+                        )
                     }
                 }
             }
-            SectionTitle("Hors rotation")
-            active.filter { t -> rotation.none { it.id == t.id } }.forEach { template ->
+            item(key = "out-header") { SectionTitle("Hors rotation") }
+            items(outside, key = { "out-${it.id}" }) { template ->
                 ListItem(
                     headlineContent = { Text(template.title()) },
                     trailingContent = {
