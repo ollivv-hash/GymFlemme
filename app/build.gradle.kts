@@ -78,6 +78,11 @@ android {
         }
     }
 
+    lint {
+        // Personal phone-only app: no ChromeOS (x86_64) target for the arm64-only release.
+        disable += "ChromeOsAbiSupport"
+    }
+
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }
