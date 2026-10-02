@@ -18,6 +18,7 @@ import fr.olivier.forme.feature.sport.domain.Prefill
 import fr.olivier.forme.feature.sport.domain.ProgressionRule
 import fr.olivier.forme.feature.sport.domain.SessionExerciseStatus
 import fr.olivier.forme.feature.sport.domain.SetTarget
+import fr.olivier.forme.feature.sport.domain.SupersetRules
 import fr.olivier.forme.feature.sport.domain.Suggestion
 import fr.olivier.forme.feature.sport.domain.WorkSet
 import fr.olivier.forme.feature.sport.timer.RestTimer
@@ -200,6 +201,13 @@ class ActiveSessionViewModel @Inject constructor(
             sessions.setStatus(item.line.id, SessionExerciseStatus.DONE)
             manualExpanded.value = null
         }
+        val partner = partnerOf(item)
+        if (partner != null) {
+            val partnerFinished = partner.finished || partner.workingSets.size >= partner.line.targetSets
+            val isLast = item.line.position > partner.line.position
+            // Superset: go straight to the other exercise, rest only after the pair.
+            if (!SupersetRules.restAfterSet(isLast, partnerFinished)) return@launch
+        }
         startRest(item, doneCount, completesExercise)
     }
 
@@ -212,6 +220,15 @@ class ActiveSessionViewModel @Inject constructor(
             "${item.exercise.name} — série ${doneCount + 1}"
         }
         restTimer.start(rest, label)
+    }
+
+    /** The other exercise of the superset, if [item] belongs to one. */
+    fun partnerOf(item: ExerciseUi): ExerciseUi? = item.line.supersetGroup?.let { g ->
+        ui.value.exercises.firstOrNull { it.line.supersetGroup == g && it.line.id != item.line.id }
+    }
+
+    fun toggleSuperset(item: ExerciseUi) = viewModelScope.launch {
+        session.value?.id?.let { sessions.toggleSuperset(it, item.line.id) }
     }
 
     fun deleteSet(set: SetEntryEntity) = viewModelScope.launch { sessions.deleteSet(set.id) }

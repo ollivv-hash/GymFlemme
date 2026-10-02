@@ -116,9 +116,15 @@ fun ActiveSessionScreen(
     ) { padding ->
         LazyColumn(Modifier.padding(padding)) {
             items(ui.exercises, key = { it.line.id }) { item ->
+                val partner = item.line.supersetGroup?.let { g ->
+                    ui.exercises.firstOrNull { it.line.supersetGroup == g && it.line.id != item.line.id }
+                }
                 ExerciseCard(
                     item = item,
-                    expanded = ui.expandedLineId == item.line.id,
+                    // Both exercises of a superset are open together.
+                    expanded = ui.expandedLineId == item.line.id || (partner != null && ui.expandedLineId == partner.line.id),
+                    partner = partner,
+                    linkedWithNext = partner != null && partner.line.position > item.line.position,
                     isFirst = item == ui.exercises.first(),
                     isLast = item == ui.exercises.last(),
                     notedThisSession = noted,
@@ -208,6 +214,8 @@ private fun ExerciseCard(
     expanded: Boolean,
     isFirst: Boolean,
     isLast: Boolean,
+    partner: ExerciseUi?,
+    linkedWithNext: Boolean,
     notedThisSession: Set<Long>,
     viewModel: ActiveSessionViewModel,
 ) {
@@ -240,7 +248,14 @@ private fun ExerciseCard(
         )
     }
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        // Superset members: framed in orange and drawn close together.
+        modifier = Modifier.fillMaxWidth().padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = if (partner != null && !linkedWithNext) 0.dp else 4.dp,
+            bottom = if (linkedWithNext) 2.dp else 4.dp,
+        ),
+        border = partner?.let { androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary) },
         colors = CardDefaults.cardColors(
             containerColor = if (expanded) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer,
         ),
@@ -257,6 +272,9 @@ private fun ExerciseCard(
                     color = if (item.finished) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                 )
                 Text(targetLabel(item), style = MaterialTheme.typography.bodySmall)
+                partner?.let {
+                    Text("⇄ Superset avec ${it.exercise.name}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.tertiary)
+                }
                 item.line.replacedExerciseId?.let { id ->
                     val all by viewModel.allExercises.collectAsStateWithLifecycle()
                     all.firstOrNull { it.id == id }?.let {
@@ -273,6 +291,11 @@ private fun ExerciseCard(
                     DropdownMenuItem(text = { Text("Sauter") }, onClick = { menu = false; viewModel.setSkipped(item, true) })
                 } else {
                     DropdownMenuItem(text = { Text("Reprendre") }, onClick = { menu = false; viewModel.reopen(item) })
+                }
+                if (linkedWithNext) {
+                    DropdownMenuItem(text = { Text("Délier le superset") }, onClick = { menu = false; viewModel.toggleSuperset(item) })
+                } else if (!isLast) {
+                    DropdownMenuItem(text = { Text("⇄ Lier au suivant (superset)") }, onClick = { menu = false; viewModel.toggleSuperset(item) })
                 }
                 DropdownMenuItem(text = { Text("Remplacer… (machine occupée)") }, onClick = { menu = false; replacing = true })
                 DropdownMenuItem(text = { Text("Retirer de la séance") }, onClick = { menu = false; viewModel.remove(item) })

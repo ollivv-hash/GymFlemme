@@ -63,6 +63,7 @@ class TemplateRepository @Inject constructor(
                 targetDurationSec = line.targetDurationSec,
                 optional = line.optional,
                 restSec = line.restSec,
+                supersetGroup = line.supersetGroup,
             )
         }
 }
