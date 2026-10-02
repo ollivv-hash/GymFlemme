@@ -27,7 +27,7 @@ fun ConfigScreen(
             Entry("Rotation", "Modèles de la rotation et leur ordre", onRotation)
             Entry("Profil nutrition", "Objectif protéines, whey, créatine et rappel", onProfile)
             Entry("Mes aliments", "Aliments perso, produits scannés, favoris", onFoods)
-            Entry("Réglages et sauvegarde", "Repos par défaut, thème, export / import JSON", onSettings)
+            Entry("Réglages et sauvegarde", "Repos, thème, objectifs, sauvegarde auto (Drive), export / import", onSettings)
         }
     }
 }
