@@ -4,6 +4,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.olivier.forme.core.backup.BackupCodec
 import fr.olivier.forme.core.backup.BackupRepository
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
+import fr.olivier.forme.feature.nutrition.data.FoodEntity
+import fr.olivier.forme.feature.nutrition.data.NutritionRepository
+import fr.olivier.forme.feature.nutrition.data.OpenFoodFactsClient
+import fr.olivier.forme.feature.nutrition.data.ProfileEntity
+import fr.olivier.forme.feature.nutrition.domain.FoodSource
+import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.sport.data.CardioEntryEntity
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.SetEntryEntity
@@ -28,6 +34,15 @@ class BackupRoundTripTest {
         sessions.saveCardio(CardioEntryEntity(sessionId = id, exerciseId = SeedData.rower.id, durationSec = 300, distanceM = 1200, pacePer500mSec = 125, caloriesDisplayed = 55))
         sessions.finish(id, 5, "Bonne séance")
         BodyWeightRepository(source.bodyWeightDao()).save(LocalDate.of(2026, 10, 2), 81.7)
+        val nutrition = NutritionRepository(
+            source, source.profileDao(), source.ciqualDao(), source.foodDao(), source.mealDao(), source.creatineDao(),
+            source.sessionDao(), OpenFoodFactsClient(), clock,
+        )
+        nutrition.saveProfile(ProfileEntity(proteinTargetGPerKg = 2.0, wheyProteinPer100g = 80.0))
+        val foodId = nutrition.saveFood(FoodEntity(source = FoodSource.OFF, sourceCode = "123", name = "Skyr", proteinPer100g = 10.5, favorite = true))
+        nutrition.addFood(nutrition.food(foodId)!!, LocalDate.of(2026, 10, 2), MealType.EXTRA, 150.0)
+        nutrition.addWheyDose(LocalDate.of(2026, 10, 2), MealType.SNACK)
+        nutrition.setCreatineTaken(LocalDate.of(2026, 10, 2), true)
 
         val exported = BackupRepository(source, context(), clock).snapshot()
         val text = BackupCodec.encode(exported)
@@ -38,6 +53,7 @@ class BackupRoundTripTest {
         targetBackup.restore(BackupCodec.decode(text))
         val reimported = targetBackup.snapshot()
 
+        assertEquals(2, exported.nutrition.meals.size)
         assertEquals(exported, reimported)
         assertEquals(text, BackupCodec.encode(reimported))
         source.close()

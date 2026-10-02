@@ -1,6 +1,12 @@
 package fr.olivier.forme.core.backup
 
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightEntity
+import fr.olivier.forme.feature.nutrition.data.CreatineEntryEntity
+import fr.olivier.forme.feature.nutrition.data.FoodEntity
+import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
+import fr.olivier.forme.feature.nutrition.data.ProfileEntity
+import fr.olivier.forme.feature.nutrition.domain.FoodSource
+import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.sport.data.CardioEntryEntity
 import fr.olivier.forme.feature.sport.data.ExerciseEntity
 import fr.olivier.forme.feature.sport.data.SessionEntity
@@ -16,9 +22,9 @@ import java.time.Instant
 import java.time.LocalDate
 
 /**
- * Full backup file. [schemaVersion] is the backup format version (independent from the Room version);
- * V1.1 will add an optional `nutrition` section and keep reading version 1 files.
- * Instants are epoch milliseconds, dates are ISO-8601 strings.
+ * Full backup file. [schemaVersion] is the backup format version (independent from the Room version):
+ * v1 = sport + body weight, v2 adds the `nutrition` section (absent in v1 files → empty).
+ * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual reference table is not exported.
  */
 @Serializable
 data class BackupFile(
@@ -27,7 +33,64 @@ data class BackupFile(
     val app: String = "fr.olivier.forme",
     val sport: SportBackup,
     val bodyWeight: List<BodyWeightDto>,
+    val nutrition: NutritionBackup = NutritionBackup(),
 )
+
+@Serializable
+data class NutritionBackup(
+    val profile: ProfileDto? = null,
+    val foods: List<FoodDto> = emptyList(),
+    val meals: List<MealEntryDto> = emptyList(),
+    val creatine: List<CreatineDto> = emptyList(),
+)
+
+@Serializable
+data class ProfileDto(
+    val proteinTargetGPerKg: Double,
+    val wheyProteinPer100g: Double? = null,
+    val wheyKcalPer100g: Double? = null,
+    val wheyCarbsPer100g: Double? = null,
+    val wheyFatPer100g: Double? = null,
+    val wheyScoopG: Double,
+    val creatineDoseG: Double,
+    val creatineReminderEnabled: Boolean,
+    val creatineReminderMinutes: Int,
+)
+
+@Serializable
+data class FoodDto(
+    val id: Long,
+    val source: FoodSource,
+    val sourceCode: String? = null,
+    val name: String,
+    val brand: String? = null,
+    val kcalPer100g: Double? = null,
+    val proteinPer100g: Double,
+    val carbsPer100g: Double? = null,
+    val fatPer100g: Double? = null,
+    val defaultPortionG: Double? = null,
+    val favorite: Boolean,
+    val lastUsedAt: Long? = null,
+)
+
+@Serializable
+data class MealEntryDto(
+    val id: Long,
+    val date: String,
+    val mealType: MealType,
+    val foodId: Long? = null,
+    val name: String,
+    val quantityG: Double,
+    val proteinG: Double,
+    val kcal: Double? = null,
+    val carbsG: Double? = null,
+    val fatG: Double? = null,
+    val isWhey: Boolean,
+    val eatenAt: Long,
+)
+
+@Serializable
+data class CreatineDto(val id: Long, val date: String, val doseG: Double, val takenAt: Long)
 
 @Serializable
 data class SportBackup(
@@ -180,3 +243,31 @@ fun CardioEntryDto.toEntity() = CardioEntryEntity(id, sessionId, exerciseId, dur
 
 fun BodyWeightEntity.toDto() = BodyWeightDto(id, date.toString(), weightKg)
 fun BodyWeightDto.toEntity() = BodyWeightEntity(id, LocalDate.parse(date), weightKg)
+
+fun ProfileEntity.toDto() = ProfileDto(
+    proteinTargetGPerKg, wheyProteinPer100g, wheyKcalPer100g, wheyCarbsPer100g, wheyFatPer100g, wheyScoopG,
+    creatineDoseG, creatineReminderEnabled, creatineReminderMinutes,
+)
+fun ProfileDto.toEntity() = ProfileEntity(
+    1, proteinTargetGPerKg, wheyProteinPer100g, wheyKcalPer100g, wheyCarbsPer100g, wheyFatPer100g, wheyScoopG,
+    creatineDoseG, creatineReminderEnabled, creatineReminderMinutes,
+)
+
+fun FoodEntity.toDto() = FoodDto(
+    id, source, sourceCode, name, brand, kcalPer100g, proteinPer100g, carbsPer100g, fatPer100g, defaultPortionG,
+    favorite, lastUsedAt?.toEpochMilli(),
+)
+fun FoodDto.toEntity() = FoodEntity(
+    id, source, sourceCode, name, brand, kcalPer100g, proteinPer100g, carbsPer100g, fatPer100g, defaultPortionG,
+    favorite, lastUsedAt?.let(Instant::ofEpochMilli),
+)
+
+fun MealEntryEntity.toDto() = MealEntryDto(
+    id, date.toString(), mealType, foodId, name, quantityG, proteinG, kcal, carbsG, fatG, isWhey, eatenAt.toEpochMilli(),
+)
+fun MealEntryDto.toEntity() = MealEntryEntity(
+    id, LocalDate.parse(date), mealType, foodId, name, quantityG, proteinG, kcal, carbsG, fatG, isWhey, Instant.ofEpochMilli(eatenAt),
+)
+
+fun CreatineEntryEntity.toDto() = CreatineDto(id, date.toString(), doseG, takenAt.toEpochMilli())
+fun CreatineDto.toEntity() = CreatineEntryEntity(id, LocalDate.parse(date), doseG, Instant.ofEpochMilli(takenAt))

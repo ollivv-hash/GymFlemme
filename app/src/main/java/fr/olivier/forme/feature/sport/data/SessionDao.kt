@@ -50,6 +50,10 @@ interface SessionDao {
     )
     suspend fun getPreviousSessionOfTemplate(templateId: Long, beforeMillis: Long): SessionEntity?
 
+    /** Real sessions (running or finished) started in [fromMillis, toMillis). */
+    @Query("SELECT COUNT(*) FROM session WHERE isSeed = 0 AND startedAt >= :fromMillis AND startedAt < :toMillis")
+    fun observeSessionCount(fromMillis: Long, toMillis: Long): Flow<Int>
+
     @Query("DELETE FROM session WHERE id = :id")
     suspend fun deleteSession(id: Long)
 

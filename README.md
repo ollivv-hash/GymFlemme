@@ -1,14 +1,15 @@
 # Forme — App Sport & Nutrition (Android, usage personnel)
 
-Application Android native de suivi des séances en salle (module **Sport**) puis de nutrition (module **Nutrition**, V1.1).
+Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé via `adb install`, sans Play Store.
 
-> **Statut : V1.0 (module Sport) implémentée.** Build, Lint et tests JVM au vert ; reste à valider sur le téléphone
-> (`connectedAndroidTest` + usage réel en salle).
+> **Statut : V1.0 (Sport) validée sur le téléphone. V1.1 (Nutrition) implémentée** : build, Lint et tests JVM au vert,
+> reste à valider sur le téléphone (scan code-barres, rappel créatine).
 
 - Package : `fr.olivier.forme` — nom d'app provisoire : **Forme**
 - Interface en français, code (identifiants, commentaires) en anglais
-- **Hors ligne total** : aucune fonction V1.0 ne dépend du réseau ; aucune API IA, aucun service payant, aucune clé d'API dans le code
+- **Hors ligne d'abord** : tout fonctionne sans réseau ; seule la recherche d'un produit **jamais scanné** interroge Open Food Facts.
+  Aucune API IA, aucun service payant, aucune clé d'API dans le code
 
 ---
 
@@ -16,12 +17,12 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 
 | Version | Contenu |
 |---|---|
-| **V1.0** | Socle technique + module Sport (séances, timer de repos, historique, records, poids, sauvegarde JSON) |
-| V1.1 | Profil, repas (code-barres Open Food Facts, table Ciqual embarquée, favoris), jauge protéines (1,6 g/kg/j), dose whey, suivi créatine |
+| **V1.0** ✅ | Socle technique + module Sport (séances, timer de repos, historique, records, poids, sauvegarde JSON) |
+| **V1.1** ✅ | Profil, repas (code-barres Open Food Facts, table Ciqual 2025 embarquée, favoris), jauge protéines (1,8 g/kg/j, modifiable), glucides / lipides / kcal, whey 1 dose/jour, créatine + rappel |
 | V1.2 | Synchronisation Google Drive (backup JSON + exports Markdown), API Drive v3, scope `drive.file` |
 | V2.x | Partage des bilans vers l'app Claude, Health Connect (Xiaomi Watch S4 via Mi Fitness), fréquence cardiaque BLE (profil Heart Rate standard) |
 
-Hors périmètre V1.0 : Nutrition, Drive, Health Connect, BLE, partage vers Claude, rappels créatine, widgets, Wear OS, multi-utilisateur, analyse photo.
+Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
 ---
 
@@ -87,11 +88,12 @@ app_sport/
         └── androidTest/
 ```
 
-V1.1 ajoutera `feature/nutrition/` et une migration Room 1 → 2 ; V1.2 ajoutera `core/sync/`.
+V1.1 a ajouté `feature/nutrition/` (data · domain · reminder · ui) et la migration Room 1 → 2 ; V1.2 ajoutera `core/sync/`.
+Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv` depuis le fichier Excel publié par l'ANSES.
 
 ---
 
-## Modèle de données (Room, version 1)
+## Modèle de données (Room, version 2)
 
 Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distances en mètres. `Instant` ↔ epoch millis, `LocalDate` ↔ epochDay. Les enums sont stockées en texte.
 
@@ -107,6 +109,16 @@ Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distanc
 | `body_weight_entry` | id, date (unique), weightKg | Une pesée par jour (une nouvelle saisie remplace). |
 
 Les exercices ne sont jamais supprimés (clés étrangères `RESTRICT`), seulement archivés.
+
+Tables Nutrition (V1.1, migration explicite 1 → 2) :
+
+| Table | Colonnes principales | Remarques |
+|---|---|---|
+| `profile` | id = 1, proteinTargetGPerKg (1,8), whey (prot./kcal/glucides/lipides pour 100 g, dose 30 g), creatineDoseG (5), rappel (actif, heure) | Ligne absente = valeurs par défaut. |
+| `ciqual_food` + `ciqual_fts` | code, nom, groupe, kcal, protéines, glucides, lipides pour 100 g ; index plein texte | Référentiel ANSES en lecture seule, chargé depuis l'APK ; recherche insensible aux accents. **Non exporté.** |
+| `food` | id, source (CIQUAL / OFF / CUSTOM), sourceCode (code Ciqual ou code-barres), nom, marque, valeurs /100 g, portion, favori, dernière utilisation | « Mes aliments » : perso, cache Open Food Facts, aliments Ciqual déjà utilisés (récents / favoris). |
+| `meal_entry` | id, date, mealType, foodId?, nom, quantité (g), protéines, kcal, glucides, lipides, isWhey, heure | **Copie des valeurs** : modifier ou supprimer un aliment ne change jamais l'historique. |
+| `creatine_entry` | id, date (unique), dose, heure | Une prise par jour. |
 
 ---
 
@@ -124,6 +136,19 @@ Les exercices ne sont jamais supprimés (clés étrangères `RESTRICT`), seuleme
 - **Timer de repos** : démarré à la validation d'une série ; notification avec compte à rebours visible écran verrouillé + alarme exacte (son/vibration) en fin de repos, robuste au kill du process. Repos par défaut : 90 s.
 - **Bilan texte** de fin de séance (date, modèle, exercices, séries, volume, comparaison avec la séance précédente du même modèle, records) copiable dans le presse-papiers — format réutilisé en V2 (partage Claude, export Markdown).
 - **Unités** : kg uniquement.
+
+### Nutrition (V1.1)
+
+- **Objectif protéines** = facteur du profil (1,8 g/kg par défaut, modifiable de 0,8 à 3,0) × **dernier poids saisi**.
+- **Jauge du jour** : consommé / objectif et reste à manger ; kcal, glucides et lipides du jour avec la répartition énergétique (4 / 4 / 9 kcal par g).
+- **Repas** : petit-déjeuner, déjeuner, collation, dîner, plus des **collations supplémentaires** horodatées.
+- **Whey** : 1 dose fixe par jour (valeurs de l'étiquette saisies dans le profil). Moment conseillé : **juste après la séance** les jours d'entraînement, au petit-déjeuner ou en collation les jours de repos.
+- **Créatine** : 5 g/jour par défaut, case « prise » avec série de jours consécutifs. **Rappel** quotidien à l'heure choisie (20:00 par défaut), **non envoyé si la prise est déjà notée**, avec bouton « C'est pris » dans la notification ; reprogrammé après redémarrage du téléphone.
+- **Code-barres** : scan caméra (CameraX + ML Kit embarqué, hors ligne) puis Open Food Facts ; chaque produit trouvé est mis en cache et reste disponible hors ligne. Produit inconnu, sans protéines, ou réseau absent : création depuis l'étiquette ou recherche Ciqual.
+- **Ciqual** : table ANSES 2025 (3 484 aliments) embarquée. Quand un aliment Ciqual est utilisé, il rejoint « Mes aliments » (récents, favoris).
+
+Source des données de composition : *Anses. 2025. Table de composition nutritionnelle des aliments Ciqual* —
+[ciqual.anses.fr](https://ciqual.anses.fr/), Licence Ouverte / Etalab 2.0. Produits scannés : [Open Food Facts](https://world.openfoodfacts.org/) (ODbL).
 
 ---
 
@@ -169,7 +194,8 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 ## Sauvegarde (export / import JSON)
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
-- Format versionné : `{ "schemaVersion": 1, "exportedAt": "…", "sport": { … }, "bodyWeight": [ … ] }` — la section `nutrition` s'ajoutera en V1.1, l'ancien format restant importable.
+- Format versionné : `{ "schemaVersion": 2, "exportedAt": "…", "sport": { … }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" } }`.
+  Les fichiers **v1** (V1.0) restent importables (section nutrition vide). La table Ciqual n'est pas exportée (elle est dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 
@@ -276,3 +302,7 @@ adb pull /sdcard/Android/data/fr.olivier.forme/files/backups/
   sinon la même série de la dernière fois. Toucher une valeur permet de la saisir au clavier.
 - **Records** : un record doit battre strictement la meilleure valeur précédente ; une première fois n'est pas un record.
 - **Variante de build debug** : `fr.olivier.forme.debug`, installable à côté de la release sans conflit de données.
+- **Permissions demandées** : notifications (timer de repos, rappel créatine), caméra (uniquement à l'ouverture du scanner),
+  Internet (uniquement pour Open Food Facts), alarmes exactes (fin de repos), démarrage (reprogrammer le rappel créatine).
+- **APK release** limité à l'architecture `arm64-v8a` (tous les téléphones 64 bits récents) pour économiser ~15 Mo
+  de code natif ML Kit ; le build debug garde toutes les architectures (émulateurs).

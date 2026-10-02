@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object HomeRoute
 @Serializable data object HistoryRoute
-@Serializable data object WeightRoute
 @Serializable data object ConfigRoute
 
 @Serializable data object ActiveSessionRoute
@@ -22,3 +21,12 @@ import kotlinx.serialization.Serializable
 )
 @Serializable data object RotationRoute
 @Serializable data object SettingsRoute
+
+// --- Nutrition (V1.1) ---
+@Serializable data class NutritionRoute(val tab: Int = 0)
+@Serializable data class AddFoodRoute(val epochDay: Long, val meal: String)
+@Serializable data class ScanRoute(val epochDay: Long, val meal: String)
+@Serializable data object FoodsRoute
+/** foodId = 0 → new food, optionally linked to a scanned [barcode] and pre-filled with [name]. */
+@Serializable data class FoodEditRoute(val foodId: Long = 0, val barcode: String = "", val name: String = "")
+@Serializable data object ProfileRoute

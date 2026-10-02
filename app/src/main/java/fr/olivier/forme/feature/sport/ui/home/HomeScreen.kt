@@ -36,6 +36,9 @@ import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
 import fr.olivier.forme.feature.bodyweight.domain.MovingAverage
 import fr.olivier.forme.feature.bodyweight.domain.WeightPoint
 import fr.olivier.forme.feature.bodyweight.ui.WeightEntryDialog
+import fr.olivier.forme.feature.nutrition.ui.JournalViewModel
+import fr.olivier.forme.feature.nutrition.ui.ProteinGauge
+import androidx.compose.material3.Checkbox
 import fr.olivier.forme.feature.sport.data.SessionEntity
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.TemplateRepository
@@ -99,8 +102,11 @@ fun HomeScreen(
     onOpenSession: () -> Unit,
     onOpenSessionDetail: (Long) -> Unit,
     onOpenWeight: () -> Unit,
+    onOpenNutrition: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
+    journal: JournalViewModel = hiltViewModel(),
 ) {
+    val nutrition by journal.ui.collectAsStateWithLifecycle()
     val proposed by viewModel.proposed.collectAsStateWithLifecycle()
     val templates by viewModel.templates.collectAsStateWithLifecycle()
     val active by viewModel.active.collectAsStateWithLifecycle()
@@ -144,6 +150,17 @@ fun HomeScreen(
                         FilledTonalButton(onClick = { viewModel.start(template.id, onOpenSession) }) { Text(template.title()) }
                     }
                     OutlinedButton(onClick = { viewModel.start(null, onOpenSession) }) { Text("Séance libre") }
+                }
+            }
+
+            SectionTitle("Nutrition du jour")
+            Card(Modifier.fillMaxWidth().clickable(onClick = onOpenNutrition)) {
+                Column(Modifier.padding(16.dp)) {
+                    ProteinGauge(nutrition.totals, nutrition.proteinTargetG)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = nutrition.creatineTaken, onCheckedChange = journal::setCreatine)
+                        Text("Créatine ${Fmt.number(nutrition.profile.creatineDoseG)} g prise")
+                    }
                 }
             }
 

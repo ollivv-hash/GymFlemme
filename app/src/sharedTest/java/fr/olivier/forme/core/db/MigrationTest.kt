@@ -5,14 +5,16 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Validates the exported schema (app/schemas/.../1.json) against the entities: "migration 1 → 1".
- * Every future migration (1 → 2 for Nutrition) gets its own test here.
+ * Validates every exported schema against the entities and every migration path.
+ * Schema files: app/schemas/fr.olivier.forme.core.db.FormeDatabase/<version>.json.
  */
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
@@ -27,22 +29,39 @@ class MigrationTest {
     )
 
     @Test
-    fun schemaVersion1MatchesEntities() {
+    fun schemaVersion1IsValid() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, FormeDatabase.VERSION, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 1, true).close()
     }
 
     @Test
-    fun databaseCreatedFromSchema1OpensWithTheRealBuilder() {
+    fun migrate1To2KeepsSportDataAndCreatesNutritionTables() {
         helper.createDatabase(dbName, 1).apply {
             execSQL("INSERT INTO exercise (id, name, muscleGroup, type, perSide, loadIncrementKg, defaultTargetSets, archived) VALUES (1, 'Test', 'DOS', 'WEIGHTED', 0, 2.5, 3, 0)")
+            execSQL("INSERT INTO body_weight_entry (id, date, weightKg) VALUES (1, 20000, 81.5)")
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 2, true, Migrations.MIGRATION_1_2).apply {
+            query("SELECT COUNT(*) FROM exercise").use { it.moveToFirst(); assertEquals(1, it.getInt(0)) }
+            query("SELECT COUNT(*) FROM meal_entry").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+            close()
+        }
+    }
+
+    @Test
+    fun migratedDatabaseOpensWithTheRealBuilder() {
+        helper.createDatabase(dbName, 1).apply {
+            execSQL("INSERT INTO body_weight_entry (id, date, weightKg) VALUES (1, 20000, 81.5)")
             close()
         }
         val db = Room.databaseBuilder(InstrumentationRegistry.getInstrumentation().targetContext, FormeDatabase::class.java, dbName)
             .addMigrations(*Migrations.ALL)
             .allowMainThreadQueries()
             .build()
-        assertEquals(1, db.openHelper.readableDatabase.query("SELECT COUNT(*) FROM exercise").use { it.moveToFirst(); it.getInt(0) })
+        runBlocking {
+            assertEquals(81.5, db.bodyWeightDao().getLatest()!!.weightKg, 0.0)
+            assertNull(db.profileDao().get())
+        }
         db.close()
     }
 }

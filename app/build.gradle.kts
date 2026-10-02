@@ -23,8 +23,8 @@ android {
         applicationId = "fr.olivier.forme"
         minSdk = 28
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -45,6 +45,8 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
+            // Single target phone (64-bit ARM): drops ~15 MB of ML Kit native code for other ABIs.
+            ndk { abiFilters += "arm64-v8a" }
         }
         debug {
             applicationIdSuffix = ".debug"
@@ -74,6 +76,11 @@ android {
             kotlin.directories += "src/sharedTest/java"
             assets.directories += "$projectDir/schemas"
         }
+    }
+
+    lint {
+        // Personal phone-only app: no ChromeOS (x86_64) target for the arm64-only release.
+        disable += "ChromeOsAbiSupport"
     }
 
     testOptions {
@@ -111,6 +118,11 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.reorderable)
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+    implementation(libs.mlkit.barcode.scanning)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

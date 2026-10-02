@@ -12,12 +12,21 @@ import androidx.compose.ui.Modifier
 import fr.olivier.forme.ui.components.FormeTopBar
 
 @Composable
-fun ConfigScreen(onCatalog: () -> Unit, onTemplates: () -> Unit, onRotation: () -> Unit, onSettings: () -> Unit) {
+fun ConfigScreen(
+    onCatalog: () -> Unit,
+    onTemplates: () -> Unit,
+    onRotation: () -> Unit,
+    onSettings: () -> Unit,
+    onProfile: () -> Unit,
+    onFoods: () -> Unit,
+) {
     Scaffold(topBar = { FormeTopBar("Configuration") }) { padding ->
         Column(Modifier.padding(padding)) {
             Entry("Catalogue des exercices", "Machines, réglages, photos, archivage", onCatalog)
             Entry("Modèles de séance", "Créer, dupliquer, modifier, archiver", onTemplates)
             Entry("Rotation", "Modèles de la rotation et leur ordre", onRotation)
+            Entry("Profil nutrition", "Objectif protéines, whey, créatine et rappel", onProfile)
+            Entry("Mes aliments", "Aliments perso, produits scannés, favoris", onFoods)
             Entry("Réglages et sauvegarde", "Repos par défaut, thème, export / import JSON", onSettings)
         }
     }
