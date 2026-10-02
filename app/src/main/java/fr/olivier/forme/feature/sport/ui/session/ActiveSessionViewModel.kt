@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import fr.olivier.forme.core.settings.RestTimerState
+import fr.olivier.forme.core.backup.AutoBackupScheduler
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.feature.sport.data.CardioEntryEntity
 import fr.olivier.forme.feature.sport.data.ExerciseEntity
@@ -73,6 +74,7 @@ class ActiveSessionViewModel @Inject constructor(
     private val exercises: ExerciseRepository,
     private val settings: SettingsRepository,
     private val restTimer: RestTimer,
+    private val autoBackup: AutoBackupScheduler,
 ) : ViewModel() {
 
     private val hints = MutableStateFlow<Map<Long, ExerciseHistoryHint>>(emptyMap())
@@ -301,6 +303,7 @@ class ActiveSessionViewModel @Inject constructor(
         val id = session.value?.id ?: return@launch
         restTimer.cancel()
         sessions.finish(id, feeling, notes)
+        autoBackup.requestNow()
         then(id)
     }
 
