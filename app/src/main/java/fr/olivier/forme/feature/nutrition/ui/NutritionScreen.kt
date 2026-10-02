@@ -59,12 +59,13 @@ private val timeFormat = DateTimeFormatter.ofPattern("HH:mm", Fmt.locale)
 @Composable
 fun NutritionScreen(
     initialTab: Int,
+    onBack: (() -> Unit)?,
     onAddFood: (LocalDate, MealType) -> Unit,
     onScan: (LocalDate, MealType) -> Unit,
     onProfile: () -> Unit,
 ) {
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
-    Scaffold(topBar = { FormeTopBar("Nutrition") { TextButton(onClick = onProfile) { Text("Profil") } } }) { padding ->
+    Scaffold(topBar = { FormeTopBar("Nutrition", onBack) { TextButton(onClick = onProfile) { Text("Profil") } } }) { padding ->
         Column(Modifier.padding(padding)) {
             PrimaryTabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Journal") })

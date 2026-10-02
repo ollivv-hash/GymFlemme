@@ -72,7 +72,7 @@ fun WeightScreen(showTopBar: Boolean = true, viewModel: WeightViewModel = hiltVi
     Scaffold(
         topBar = { if (showTopBar) FormeTopBar("Poids") },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Pesée") })
+            ExtendedFloatingActionButton(containerColor = MaterialTheme.colorScheme.tertiary, contentColor = MaterialTheme.colorScheme.onTertiary, onClick = { adding = true }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Pesée") })
         },
     ) { padding ->
         LazyColumn(Modifier.padding(padding).padding(horizontal = 16.dp)) {

@@ -23,7 +23,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object SettingsRoute
 
 // --- Nutrition (V1.1) ---
-@Serializable data class NutritionRoute(val tab: Int = 0)
+/** [fromHome] = opened from a home card: shown above home with a back arrow. */
+@Serializable data class NutritionRoute(val tab: Int = 0, val fromHome: Boolean = false)
 @Serializable data class AddFoodRoute(val epochDay: Long, val meal: String)
 @Serializable data class ScanRoute(val epochDay: Long, val meal: String)
 @Serializable data object FoodsRoute

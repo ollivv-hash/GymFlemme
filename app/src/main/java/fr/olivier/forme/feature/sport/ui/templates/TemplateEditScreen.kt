@@ -195,7 +195,7 @@ fun TemplateEditScreen(onDone: () -> Unit, viewModel: TemplateEditViewModel = hi
             }
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { picking = true }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Exercice") })
+            ExtendedFloatingActionButton(containerColor = MaterialTheme.colorScheme.tertiary, contentColor = MaterialTheme.colorScheme.onTertiary, onClick = { picking = true }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Exercice") })
         },
     ) { padding ->
         Column(Modifier.padding(padding)) {

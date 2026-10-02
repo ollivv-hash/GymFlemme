@@ -85,8 +85,8 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
                 HomeScreen(
                     onOpenSession = { nav.navigate(ActiveSessionRoute) },
                     onOpenSessionDetail = { nav.navigate(SessionDetailRoute(it)) },
-                    onOpenWeight = { nav.navigateFresh(NutritionRoute(tab = 1)) },
-                    onOpenNutrition = { nav.navigateFresh(NutritionRoute(tab = 0)) },
+                    onOpenWeight = { nav.navigate(NutritionRoute(tab = 1, fromHome = true)) },
+                    onOpenNutrition = { nav.navigate(NutritionRoute(tab = 0, fromHome = true)) },
                 )
             }
             composable<HistoryRoute> {
@@ -96,8 +96,10 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
                 )
             }
             composable<NutritionRoute> {
+                val route = it.toRoute<NutritionRoute>()
                 NutritionScreen(
-                    initialTab = it.toRoute<NutritionRoute>().tab,
+                    initialTab = route.tab,
+                    onBack = if (route.fromHome) ({ nav.popBackStack() }) else null,
                     onAddFood = { date, meal -> nav.navigate(AddFoodRoute(date.toEpochDay(), meal.name)) },
                     onScan = { date, meal -> nav.navigate(ScanRoute(date.toEpochDay(), meal.name)) },
                     onProfile = { nav.navigate(ProfileRoute) },
@@ -174,14 +176,6 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
             composable<RotationRoute> { RotationScreen(onBack = { nav.popBackStack() }) }
             composable<SettingsRoute> { SettingsScreen(onBack = { nav.popBackStack() }) }
         }
-    }
-}
-
-/** Top-level destination opened with fresh arguments (e.g. a given tab), not the saved state. */
-private fun NavHostController.navigateFresh(route: Any) {
-    navigate(route) {
-        popUpTo(graph.findStartDestination().id)
-        launchSingleTop = true
     }
 }
 

@@ -26,8 +26,8 @@ private val DarkColors = darkColorScheme(
     onSecondary = Color(0xFF15273B),
     secondaryContainer = Color(0xFF22324A),
     onSecondaryContainer = Color(0xFFD6E5F7),
-    tertiary = Color(0xFFFF9A3C),
-    onTertiary = Color(0xFF3B1C00),
+    tertiary = Color(0xFFFF8C1A),
+    onTertiary = Color(0xFF2E1500),
     tertiaryContainer = Color(0xFF5A2D00),
     onTertiaryContainer = Color(0xFFFFDCC2),
     background = Color(0xFF0E1217),
@@ -55,7 +55,7 @@ private val LightColors = lightColorScheme(
     onSecondary = Color.White,
     secondaryContainer = Color(0xFFDCE6F2),
     onSecondaryContainer = Color(0xFF0B1D2E),
-    tertiary = Color(0xFFE8710A),
+    tertiary = Color(0xFFF07400),
     onTertiary = Color.White,
     tertiaryContainer = Color(0xFFFFE0C7),
     onTertiaryContainer = Color(0xFF331400),
@@ -87,3 +87,10 @@ fun FormeTheme(mode: ThemeMode, content: @Composable () -> Unit) {
         content = content,
     )
 }
+
+/** Vivid orange button for the main call to action (start / resume a session). */
+@Composable
+fun accentButtonColors() = androidx.compose.material3.ButtonDefaults.buttonColors(
+    containerColor = MaterialTheme.colorScheme.tertiary,
+    contentColor = MaterialTheme.colorScheme.onTertiary,
+)

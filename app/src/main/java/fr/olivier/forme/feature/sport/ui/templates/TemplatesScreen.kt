@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -56,7 +57,7 @@ fun TemplatesScreen(
     Scaffold(
         topBar = { FormeTopBar("Modèles de séance", onBack) { TextButton(onClick = onRotation) { Text("Rotation") } } },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = onCreate, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Modèle") })
+            ExtendedFloatingActionButton(containerColor = MaterialTheme.colorScheme.tertiary, contentColor = MaterialTheme.colorScheme.onTertiary, onClick = onCreate, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Modèle") })
         },
     ) { padding ->
         LazyColumn(Modifier.padding(padding)) {

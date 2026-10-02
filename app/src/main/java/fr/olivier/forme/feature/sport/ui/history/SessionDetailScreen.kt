@@ -111,7 +111,10 @@ fun SessionDetailScreen(
 
             if (r.records.isNotEmpty()) {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary,
+                        contentColor = MaterialTheme.colorScheme.onTertiary,
+                    ),
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                 ) {
                     Column(Modifier.padding(12.dp)) {

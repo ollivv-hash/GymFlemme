@@ -71,7 +71,7 @@ fun FoodsScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: FoodsView
     Scaffold(
         topBar = { FormeTopBar("Mes aliments", onBack) },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { onEdit(0) }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Aliment") })
+            ExtendedFloatingActionButton(containerColor = MaterialTheme.colorScheme.tertiary, contentColor = MaterialTheme.colorScheme.onTertiary, onClick = { onEdit(0) }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Aliment") })
         },
     ) { padding ->
         LazyColumn(Modifier.padding(padding)) {
