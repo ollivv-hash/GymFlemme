@@ -45,6 +45,8 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
+            // Single target phone (64-bit ARM): drops ~15 MB of ML Kit native code for other ABIs.
+            ndk { abiFilters += "arm64-v8a" }
         }
         debug {
             applicationIdSuffix = ".debug"

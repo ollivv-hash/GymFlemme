@@ -1,5 +1,7 @@
 package fr.olivier.forme.core.backup
 
+import fr.olivier.forme.feature.nutrition.domain.FoodSource
+import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.sport.domain.ExerciseType
 import fr.olivier.forme.feature.sport.domain.MuscleGroup
 import fr.olivier.forme.feature.sport.domain.SessionExerciseStatus
@@ -9,7 +11,7 @@ import org.junit.Test
 
 class BackupCodecTest {
     private val sample = BackupFile(
-        schemaVersion = 1,
+        schemaVersion = 2,
         exportedAt = 1_790_000_000_000,
         sport = SportBackup(
             exercises = listOf(
@@ -24,6 +26,12 @@ class BackupCodecTest {
             cardio = listOf(CardioEntryDto(1, 1, 1, 300, 1250, 120, 60)),
         ),
         bodyWeight = listOf(BodyWeightDto(1, "2026-10-01", 81.3)),
+        nutrition = NutritionBackup(
+            profile = ProfileDto(1.8, 78.0, 380.0, 6.0, 7.5, 30.0, 5.0, true, 1200),
+            foods = listOf(FoodDto(1, FoodSource.OFF, "3017624010701", "Skyr", "Siggi's", 63.0, 10.5, 4.1, 0.2, 150.0, true, 1_790_000_000_000)),
+            meals = listOf(MealEntryDto(1, "2026-10-02", MealType.EXTRA, 1, "Skyr (Siggi's)", 150.0, 15.75, 94.5, null, 0.3, false, 1_790_000_100_000)),
+            creatine = listOf(CreatineDto(1, "2026-10-02", 5.0, 1_790_000_200_000)),
+        ),
     )
 
     @Test
@@ -35,6 +43,16 @@ class BackupCodecTest {
     fun `unknown sections are ignored (forward compatibility)`() {
         val withExtra = BackupCodec.encode(sample).replaceFirst("{", "{\"nutrition\": {\"meals\": []},")
         assertEquals(sample, BackupCodec.decode(withExtra))
+    }
+
+    @Test
+    fun `version 1 files without nutrition section are still readable`() {
+        val v1 = BackupCodec.encode(sample.copy(schemaVersion = 1, nutrition = NutritionBackup()))
+            .replace(Regex(",\\s*\"nutrition\": \\{[^}]*\\}"), "")
+        val decoded = BackupCodec.decode(v1)
+        assertEquals(1, decoded.schemaVersion)
+        assertEquals(NutritionBackup(), decoded.nutrition)
+        assertEquals(sample.sport, decoded.sport)
     }
 
     @Test

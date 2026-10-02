@@ -40,17 +40,27 @@ class BackupRepository @Inject constructor(
                     cardio = sessions.getAllCardio().sortedBy { it.id }.map { it.toDto() },
                 ),
                 bodyWeight = db.bodyWeightDao().getAll().sortedBy { it.id }.map { it.toDto() },
+                nutrition = NutritionBackup(
+                    profile = db.profileDao().get()?.toDto(),
+                    foods = db.foodDao().getAll().sortedBy { it.id }.map { it.toDto() },
+                    meals = db.mealDao().getAll().sortedBy { it.id }.map { it.toDto() },
+                    creatine = db.creatineDao().getAll().sortedBy { it.id }.map { it.toDto() },
+                ),
             )
         }
     }
 
-    /** Replaces the whole database content with [file], atomically (all or nothing). */
+    /** Replaces the whole database content with [file], atomically (all or nothing). Ciqual is left untouched. */
     suspend fun restore(file: BackupFile) {
         db.withTransaction {
             db.sessionDao().deleteAllSessions() // cascades to session lines, sets and cardio
             db.templateDao().deleteAll() // cascades to template lines
             db.exerciseDao().deleteAll()
             db.bodyWeightDao().deleteAll()
+            db.mealDao().deleteAll()
+            db.creatineDao().deleteAll()
+            db.foodDao().deleteAll()
+            db.profileDao().deleteAll()
 
             val sport = file.sport
             db.exerciseDao().insertAll(sport.exercises.map { it.toEntity() })
@@ -61,6 +71,11 @@ class BackupRepository @Inject constructor(
             db.sessionDao().insertSets(sport.sets.map { it.toEntity() })
             db.sessionDao().insertCardios(sport.cardio.map { it.toEntity() })
             db.bodyWeightDao().insertAll(file.bodyWeight.map { it.toEntity() })
+            val nutrition = file.nutrition
+            nutrition.profile?.let { db.profileDao().upsert(it.toEntity()) }
+            db.foodDao().insertAll(nutrition.foods.map { it.toEntity() })
+            db.mealDao().insertAll(nutrition.meals.map { it.toEntity() })
+            db.creatineDao().insertAll(nutrition.creatine.map { it.toEntity() })
         }
     }
 
