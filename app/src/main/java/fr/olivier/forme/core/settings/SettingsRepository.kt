@@ -31,6 +31,9 @@ data class AutoBackupState(
     val lastError: String? = null,
 )
 
+/** Heart rate device (watch broadcasting its heart rate, or a chest strap) chosen once in Config. */
+data class HrDevice(val address: String, val name: String?)
+
 /** Rest timer state, persisted so the countdown survives a process kill. */
 data class RestTimerState(val endsAtMillis: Long, val totalSec: Int)
 
@@ -89,6 +92,22 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         }
     }
 
+    val hrDevice: Flow<HrDevice?> = dataStore.data.map { prefs ->
+        prefs[HR_DEVICE_ADDRESS]?.let { HrDevice(it, prefs[HR_DEVICE_NAME]) }
+    }
+
+    suspend fun setHrDevice(device: HrDevice?) {
+        dataStore.edit { prefs ->
+            if (device == null) {
+                prefs.remove(HR_DEVICE_ADDRESS)
+                prefs.remove(HR_DEVICE_NAME)
+            } else {
+                prefs[HR_DEVICE_ADDRESS] = device.address
+                if (device.name == null) prefs.remove(HR_DEVICE_NAME) else prefs[HR_DEVICE_NAME] = device.name
+            }
+        }
+    }
+
     suspend fun setTrainingGoals(goals: TrainingGoals) {
         dataStore.edit {
             it[SESSIONS_PER_WEEK] = goals.sessionsPerWeek.coerceIn(1, 7)
@@ -133,6 +152,8 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         private val SESSIONS_PER_WEEK = intPreferencesKey("goal_sessions_per_week")
         private val MIN_SETS = intPreferencesKey("goal_min_sets_per_group")
         private val MAX_SETS = intPreferencesKey("goal_max_sets_per_group")
+        private val HR_DEVICE_ADDRESS = stringPreferencesKey("hr_device_address")
+        private val HR_DEVICE_NAME = stringPreferencesKey("hr_device_name")
         private val AUTO_BACKUP_URI = stringPreferencesKey("auto_backup_uri")
         private val AUTO_BACKUP_SUCCESS_AT = longPreferencesKey("auto_backup_success_at")
         private val AUTO_BACKUP_ATTEMPT_AT = longPreferencesKey("auto_backup_attempt_at")

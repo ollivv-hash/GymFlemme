@@ -19,6 +19,7 @@ fun ConfigScreen(
     onSettings: () -> Unit,
     onProfile: () -> Unit,
     onFoods: () -> Unit,
+    onWatch: () -> Unit,
 ) {
     Scaffold(topBar = { FormeTopBar("Configuration") }) { padding ->
         Column(Modifier.padding(padding)) {
@@ -27,6 +28,7 @@ fun ConfigScreen(
             Entry("Rotation", "Modèles de la rotation et leur ordre", onRotation)
             Entry("Profil nutrition", "Objectif protéines, whey, créatine et rappel", onProfile)
             Entry("Mes aliments", "Aliments perso, produits scannés, favoris", onFoods)
+            Entry("Montre cardio (test)", "FC en direct par Bluetooth, lecture Health Connect", onWatch)
             Entry("Réglages et sauvegarde", "Repos, thème, objectifs, sauvegarde auto (Drive), export / import", onSettings)
         }
     }

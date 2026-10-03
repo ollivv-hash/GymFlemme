@@ -23,8 +23,8 @@ android {
         applicationId = "fr.olivier.forme"
         minSdk = 28
         targetSdk = 37
-        versionCode = 6
-        versionName = "1.2.1"
+        versionCode = 7
+        versionName = "2.1.0-test"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -116,6 +116,7 @@ dependencies {
 
     implementation(libs.datastore.preferences)
     implementation(libs.androidx.work.runtime)
+    implementation(libs.health.connect.client)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.reorderable)
