@@ -11,6 +11,7 @@ import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import dagger.hilt.android.qualifiers.ApplicationContext
+import fr.olivier.forme.feature.heart.domain.KcalInterval
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
@@ -18,6 +19,15 @@ import javax.inject.Singleton
 import kotlin.reflect.KClass
 
 enum class HealthConnectAvailability { AVAILABLE, UPDATE_REQUIRED, UNAVAILABLE }
+
+/** Heart rate and active calories written by the watch app for a time window. */
+data class HealthConnectData(val samples: List<Pair<Instant, Int>>, val activeKcal: List<KcalInterval>)
+
+/** Read access to Health Connect, behind an interface so the sync logic can be tested without it. */
+interface HealthConnectSource {
+    /** Null when Health Connect is unavailable or heart rate reading is not allowed. */
+    suspend fun read(from: Instant, to: Instant): HealthConnectData?
+}
 
 /** What Health Connect holds for a time window: used by the lot 0 test screen to judge data density and sources. */
 data class HealthConnectProbe(
@@ -37,14 +47,13 @@ data class HealthConnectProbe(
 }
 
 @Singleton
-class HealthConnectReader @Inject constructor(@ApplicationContext private val context: Context) {
+class HealthConnectReader @Inject constructor(@ApplicationContext private val context: Context) : HealthConnectSource {
 
     val readPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(HeartRateRecord::class),
         HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
         HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
         HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND,
-        HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY,
     )
 
     fun availability(): HealthConnectAvailability = when (HealthConnectClient.getSdkStatus(context)) {
@@ -80,6 +89,21 @@ class HealthConnectReader @Inject constructor(@ApplicationContext private val co
             totalRecords = total.size,
             calorieOrigins = (active.map { it.metadata.dataOrigin.packageName } + total.map { it.metadata.dataOrigin.packageName }).toSet(),
         )
+    }
+
+    override suspend fun read(from: Instant, to: Instant): HealthConnectData? {
+        if (availability() != HealthConnectAvailability.AVAILABLE) return null
+        val granted = grantedPermissions()
+        if (HealthPermission.getReadPermission(HeartRateRecord::class) !in granted) return null
+        val samples = readAll(HeartRateRecord::class, from, to)
+            .flatMap { r -> r.samples.map { it.time to it.beatsPerMinute.toInt() } }
+            .sortedBy { it.first }
+        val kcal = if (HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class) in granted) {
+            readAll(ActiveCaloriesBurnedRecord::class, from, to).map { KcalInterval(it.startTime, it.endTime, it.energy.inKilocalories) }
+        } else {
+            emptyList()
+        }
+        return HealthConnectData(samples, kcal)
     }
 
     private suspend fun <T : Record> readAll(type: KClass<T>, from: Instant, to: Instant): List<T> {

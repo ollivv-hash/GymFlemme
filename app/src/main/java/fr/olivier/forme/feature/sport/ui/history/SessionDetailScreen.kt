@@ -41,6 +41,7 @@ import fr.olivier.forme.ui.components.ConfirmDialog
 import fr.olivier.forme.ui.components.FormeTopBar
 import fr.olivier.forme.ui.components.SectionTitle
 import fr.olivier.forme.feature.heart.data.HeartRepository
+import fr.olivier.forme.feature.heart.data.HeartSync
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import fr.olivier.forme.ui.navigation.SessionDetailRoute
@@ -56,6 +57,7 @@ class SessionDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val sessions: SessionRepository,
     heartRepository: HeartRepository,
+    private val heartSync: HeartSync,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<SessionDetailRoute>()
     val heart = heartRepository.observe(route.sessionId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -65,6 +67,8 @@ class SessionDetailViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { _report.value = sessions.buildReport(route.sessionId) }
+        // Foreground catch-up: the watch data may have reached Health Connect since the session ended.
+        viewModelScope.launch { runCatching { heartSync.sync(route.sessionId) } }
     }
 
     fun text(): String? = _report.value?.let(SessionTextFormatter::format)

@@ -52,6 +52,14 @@ class HeartRepository @Inject constructor(
     ): SessionHeartEntity? {
         val session = sessionDao.getSession(sessionId) ?: return null
         val series = HeartSeries.fromSamples(samples, session.startedAt, session.endedAt ?: clock.instant())
+        return saveSeries(sessionId, series, source, watchKcal)
+    }
+
+    /**
+     * Stores [series] (already on the session grid) with its summary computed from the current profile. Calories
+     * measured by the watch ([watchKcal]) win over the estimate. Returns null, storing nothing, if the series is empty.
+     */
+    suspend fun saveSeries(sessionId: Long, series: HeartSeries, source: HeartSource, watchKcal: Double? = null): SessionHeartEntity? {
         val summary = HeartSummary.of(series, heartProfile()) ?: return null
         val (kcal, kcalSource) = when {
             watchKcal != null && watchKcal > 0 -> watchKcal to KcalSource.WATCH

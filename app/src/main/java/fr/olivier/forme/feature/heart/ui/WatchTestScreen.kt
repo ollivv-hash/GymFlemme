@@ -409,5 +409,4 @@ private val PERMISSION_LABELS = mapOf(
     "READ_ACTIVE_CALORIES_BURNED" to "Calories actives",
     "READ_TOTAL_CALORIES_BURNED" to "Calories totales",
     "READ_HEALTH_DATA_IN_BACKGROUND" to "Lecture en arrière-plan",
-    "READ_HEALTH_DATA_HISTORY" to "Historique (> 30 jours)",
 )

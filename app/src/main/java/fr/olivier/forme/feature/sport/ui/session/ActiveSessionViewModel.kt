@@ -7,6 +7,7 @@ import fr.olivier.forme.core.settings.RestTimerState
 import fr.olivier.forme.core.backup.AutoBackupScheduler
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.feature.heart.data.HeartSessionRecorder
+import fr.olivier.forme.feature.heart.data.HeartSyncScheduler
 import fr.olivier.forme.feature.heart.data.LiveHeart
 import fr.olivier.forme.feature.sport.data.CardioEntryEntity
 import fr.olivier.forme.feature.sport.data.ExerciseEntity
@@ -81,6 +82,7 @@ class ActiveSessionViewModel @Inject constructor(
     private val restTimer: RestTimer,
     private val autoBackup: AutoBackupScheduler,
     private val heartRecorder: HeartSessionRecorder,
+    private val heartSync: HeartSyncScheduler,
 ) : ViewModel() {
 
     private val hints = MutableStateFlow<Map<Long, ExerciseHistoryHint>>(emptyMap())
@@ -322,6 +324,7 @@ class ActiveSessionViewModel @Inject constructor(
         restTimer.cancel()
         sessions.finish(id, feeling, notes)
         heartRecorder.stop(id, save = true)
+        heartSync.schedule(id)
         autoBackup.requestNow()
         then(id)
     }
