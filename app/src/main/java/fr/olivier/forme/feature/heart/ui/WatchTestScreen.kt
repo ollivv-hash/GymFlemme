@@ -168,6 +168,7 @@ class WatchTestViewModel @Inject constructor(
             is BleLink.Connecting -> "connexion à ${link.device.name ?: link.device.address}…"
             is BleLink.Connected -> "connecté à ${link.device.name ?: link.device.address}, ${link.notifications} mesures, dernière ${link.last?.bpm ?: "-"} bpm"
             is BleLink.Failed -> "échec : ${link.reason}"
+            is BleLink.Reconnecting -> "reconnexion à ${link.device.name ?: link.device.address}…"
         }
 
         fun probeText(p: HealthConnectProbe): String = buildString {
@@ -204,13 +205,13 @@ fun WatchTestScreen(onBack: () -> Unit, viewModel: WatchTestViewModel = hiltView
         viewModel.refreshHealthConnect()
     }
 
-    Scaffold(topBar = { FormeTopBar("Montre cardio (test)", onBack) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+    Scaffold(topBar = { FormeTopBar("Montre cardio", onBack) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
         Column(
             Modifier.padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
         ) {
             Text(
-                "Écran de test de la V2.1 : il vérifie que la montre peut envoyer sa FC en direct et ce que Health Connect " +
-                    "contient. Fais les deux tests puis « Copier le rapport » et colle-le dans la conversation.",
+                "Choisis ici ta montre : pendant les séances, Forme s'y connecte toute seule dès que la diffusion FC " +
+                    "est active. Les deux tests ci-dessous servent aussi au diagnostic (« Copier le rapport »).",
                 style = MaterialTheme.typography.bodyMedium,
             )
 
@@ -342,6 +343,7 @@ private fun LinkCard(link: BleLink, onDisconnect: () -> Unit) {
                     )
                 }
                 is BleLink.Failed -> Text("Échec : ${link.reason}", color = MaterialTheme.colorScheme.error)
+                is BleLink.Reconnecting -> Text("Reconnexion à ${link.device.name ?: link.device.address}…")
                 BleLink.Idle -> Unit
             }
             if (link !is BleLink.Failed) {

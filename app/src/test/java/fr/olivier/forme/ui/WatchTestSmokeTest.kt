@@ -32,7 +32,7 @@ class WatchTestSmokeTest {
     fun watchTestScreen() {
         rule.waitUntilAtLeastOneExists(hasText("Séance proposée"), 10_000)
         rule.onNode(hasText("Config") and hasClickAction()).performClick()
-        rule.onNodeWithText("Montre cardio (test)").performClick()
+        rule.onNodeWithText("Montre cardio").performClick()
         rule.waitUntilAtLeastOneExists(hasText("1. FC en direct (Bluetooth)"), 10_000)
         rule.onNodeWithText("2. Health Connect (après séance)").assertExists()
         val dir = File("build/smoke-screens").apply { mkdirs() }

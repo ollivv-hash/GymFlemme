@@ -57,6 +57,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.olivier.forme.core.settings.RestTimerState
+import fr.olivier.forme.feature.heart.data.LiveHeart
+import fr.olivier.forme.feature.heart.ui.LiveHeartStrip
+import fr.olivier.forme.feature.heart.ui.RecoveryLine
 import fr.olivier.forme.feature.sport.domain.ExerciseType
 import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.feature.sport.domain.Prefill
@@ -85,6 +88,10 @@ fun ActiveSessionScreen(
     val rest by viewModel.restTimerState.collectAsStateWithLifecycle()
     val catalog by viewModel.catalog.collectAsStateWithLifecycle()
     val noted by viewModel.notedThisSession.collectAsStateWithLifecycle()
+    val heart by viewModel.liveHeart.collectAsStateWithLifecycle()
+    val bluetoothPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        viewModel.retryHeart()
+    }
     var menuOpen by remember { mutableStateOf(false) }
     var picking by remember { mutableStateOf(false) }
     var finishing by remember { mutableStateOf(false) }
@@ -102,17 +109,24 @@ fun ActiveSessionScreen(
 
     Scaffold(
         topBar = {
-            FormeTopBar(ui.session?.label() ?: "Séance", onBack) {
-                IconButton(onClick = { menuOpen = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "Menu") }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    DropdownMenuItem(text = { Text("Abandonner la séance") }, onClick = {
-                        menuOpen = false
-                        abandoning = true
-                    })
+            Column {
+                FormeTopBar(ui.session?.label() ?: "Séance", onBack) {
+                    IconButton(onClick = { menuOpen = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "Menu") }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(text = { Text("Abandonner la séance") }, onClick = {
+                            menuOpen = false
+                            abandoning = true
+                        })
+                    }
                 }
+                LiveHeartStrip(
+                    live = heart,
+                    onGrantPermission = { bluetoothPermission.launch(BLUETOOTH_PERMISSIONS) },
+                    onRetry = viewModel::retryHeart,
+                )
             }
         },
-        bottomBar = { rest?.let { RestBar(it, onExtend = viewModel::extendRest, onStop = viewModel::stopRest) } },
+        bottomBar = { rest?.let { RestBar(it, heart, onExtend = viewModel::extendRest, onStop = viewModel::stopRest) } },
     ) { padding ->
         LazyColumn(Modifier.padding(padding)) {
             items(ui.exercises, key = { it.line.id }) { item ->
@@ -168,8 +182,15 @@ fun ActiveSessionScreen(
     }
 }
 
+private val BLUETOOTH_PERMISSIONS =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+    } else {
+        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
 @Composable
-private fun RestBar(state: RestTimerState, onExtend: (Int) -> Unit, onStop: () -> Unit) {
+private fun RestBar(state: RestTimerState, heart: LiveHeart, onExtend: (Int) -> Unit, onStop: () -> Unit) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(state) {
         while (true) {
@@ -204,6 +225,7 @@ private fun RestBar(state: RestTimerState, onExtend: (Int) -> Unit, onStop: () -
                 TextButton(onClick = { onExtend(15) }) { Text("+15", color = barContent) }
                 IconButton(onClick = onStop) { Icon(Icons.Filled.Close, contentDescription = "Arrêter") }
             }
+            RecoveryLine(heart)
         }
     }
 }

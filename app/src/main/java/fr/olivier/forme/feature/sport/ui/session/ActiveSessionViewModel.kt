@@ -6,6 +6,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import fr.olivier.forme.core.settings.RestTimerState
 import fr.olivier.forme.core.backup.AutoBackupScheduler
 import fr.olivier.forme.core.settings.SettingsRepository
+import fr.olivier.forme.feature.heart.data.HeartSessionRecorder
+import fr.olivier.forme.feature.heart.data.LiveHeart
 import fr.olivier.forme.feature.sport.data.CardioEntryEntity
 import fr.olivier.forme.feature.sport.data.ExerciseEntity
 import fr.olivier.forme.feature.sport.data.ExerciseRepository
@@ -29,6 +31,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -75,6 +80,7 @@ class ActiveSessionViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val restTimer: RestTimer,
     private val autoBackup: AutoBackupScheduler,
+    private val heartRecorder: HeartSessionRecorder,
 ) : ViewModel() {
 
     private val hints = MutableStateFlow<Map<Long, ExerciseHistoryHint>>(emptyMap())
@@ -92,6 +98,18 @@ class ActiveSessionViewModel @Inject constructor(
     val catalog = exercises.observeActive().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val session = sessions.observeActive().stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Live heart rate from the watch (V2.1); recording starts with the session and keeps going off screen. */
+    val liveHeart: StateFlow<LiveHeart> = heartRecorder.state
+
+    init {
+        viewModelScope.launch {
+            session.filterNotNull().map { it.id }.distinctUntilChanged().collect { heartRecorder.start(it) }
+        }
+    }
+
+    /** After the Bluetooth permission was granted (or Bluetooth turned on). */
+    fun retryHeart() = viewModelScope.launch { heartRecorder.retry() }
 
     private data class Raw(
         val session: SessionEntity?,
@@ -303,6 +321,7 @@ class ActiveSessionViewModel @Inject constructor(
         val id = session.value?.id ?: return@launch
         restTimer.cancel()
         sessions.finish(id, feeling, notes)
+        heartRecorder.stop(id, save = true)
         autoBackup.requestNow()
         then(id)
     }
@@ -310,6 +329,7 @@ class ActiveSessionViewModel @Inject constructor(
     fun abandon(then: () -> Unit) = viewModelScope.launch {
         val id = session.first()?.id ?: return@launch
         restTimer.cancel()
+        heartRecorder.stop(id, save = false)
         sessions.delete(id)
         then()
     }

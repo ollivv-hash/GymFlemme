@@ -20,7 +20,10 @@ import android.os.ParcelUuid
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import fr.olivier.forme.feature.heart.domain.HeartRateMeasurement
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -37,6 +40,8 @@ sealed interface BleLink {
     data object Idle : BleLink
     data class Connecting(val device: BleDevice) : BleLink
     data class Connected(val device: BleDevice, val last: HeartRateMeasurement?, val notifications: Int, val lastAtMillis: Long?) : BleLink
+    /** Session mode: the link dropped and Android reconnects as soon as the watch broadcasts again. */
+    data class Reconnecting(val device: BleDevice) : BleLink
     data class Failed(val device: BleDevice?, val reason: String) : BleLink
 }
 
@@ -64,6 +69,12 @@ class BleHeartRateMonitor @Inject constructor(
 
     private var gatt: BluetoothGatt? = null
     private var scanCallback: ScanCallback? = null
+    /** Session mode: keep (re)connecting until [disconnect]. */
+    @Volatile private var persistent = false
+
+    /** Every heart rate received (epoch millis, bpm), skipping those flagged "no skin contact". */
+    private val _measurements = MutableSharedFlow<Pair<Long, Int>>(extraBufferCapacity = 64)
+    val measurements: SharedFlow<Pair<Long, Int>> = _measurements.asSharedFlow()
 
     fun requiredPermissions(): Array<String> =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -71,6 +82,9 @@ class BleHeartRateMonitor @Inject constructor(
         } else {
             arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
         }
+
+    @SuppressLint("MissingPermission")
+    fun isEnabled(): Boolean = manager?.adapter?.isEnabled == true
 
     fun hasPermissions(): Boolean = requiredPermissions().all {
         ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
@@ -130,25 +144,43 @@ class BleHeartRateMonitor @Inject constructor(
         if (!known) log("Trouvé : ${device.name ?: "(sans nom)"} ${device.address} ${device.rssi} dBm${if (advertisesHr) " ♥ service FC" else ""}")
     }
 
+    /**
+     * Connects to [device]. With [persistent] (session mode) Android's auto-connect is used: no timeout, the link is
+     * made whenever the watch broadcasts, and it is re-established after every drop until [disconnect].
+     */
     @SuppressLint("MissingPermission")
-    fun connect(device: BleDevice) {
+    fun connect(device: BleDevice, persistent: Boolean = false) {
         val adapter = manager?.adapter ?: return
         if (!hasPermissions()) return log("Autorisation Bluetooth manquante")
+        if (!adapter.isEnabled) return log("Bluetooth désactivé")
         stopScan()
         disconnect()
+        this.persistent = persistent
         _state.update { it.copy(link = BleLink.Connecting(device)) }
-        log("Connexion à ${device.name ?: device.address}…")
+        log("Connexion à ${device.name ?: device.address}${if (persistent) " (attente de la diffusion)" else ""}…")
         gatt = adapter.getRemoteDevice(device.address)
-            .connectGatt(context, false, GattCallback(device), BluetoothDevice.TRANSPORT_LE)
+            .connectGatt(context, persistent, GattCallback(device), BluetoothDevice.TRANSPORT_LE)
     }
 
     @SuppressLint("MissingPermission")
     fun disconnect() {
+        persistent = false
         val g = gatt ?: return
         gatt = null
         if (hasPermissions()) runCatching { g.disconnect(); g.close() }
         _state.update { it.copy(link = BleLink.Idle) }
         log("Déconnecté")
+    }
+
+    /** Session mode: drops [g] and waits for the watch again. */
+    @SuppressLint("MissingPermission")
+    private fun reconnect(g: BluetoothGatt, device: BleDevice) {
+        runCatching { g.close() }
+        if (!persistent || gatt != g || !hasPermissions()) return
+        _state.update { it.copy(link = BleLink.Reconnecting(device)) }
+        log("Reconnexion automatique dès que la montre diffuse…")
+        gatt = manager?.adapter?.getRemoteDevice(device.address)
+            ?.connectGatt(context, true, GattCallback(device), BluetoothDevice.TRANSPORT_LE)
     }
 
     private inner class GattCallback(private val device: BleDevice) : BluetoothGattCallback() {
@@ -161,9 +193,13 @@ class BleHeartRateMonitor @Inject constructor(
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     log("Connexion perdue (statut $status)")
-                    _state.update { it.copy(link = BleLink.Failed(device, "Connexion perdue (statut $status)")) }
-                    if (gatt == g) gatt = null
-                    runCatching { g.close() }
+                    if (persistent && gatt == g) {
+                        reconnect(g, device)
+                    } else {
+                        _state.update { it.copy(link = BleLink.Failed(device, "Connexion perdue (statut $status)")) }
+                        if (gatt == g) gatt = null
+                        runCatching { g.close() }
+                    }
                 }
             }
         }
@@ -175,7 +211,11 @@ class BleHeartRateMonitor @Inject constructor(
             val characteristic = g.getService(HR_SERVICE)?.getCharacteristic(HR_MEASUREMENT)
             if (characteristic == null) {
                 log("Service FC (180D) absent : la diffusion de la FC n'est pas active sur la montre ?")
-                _state.update { it.copy(link = BleLink.Failed(device, "Service FC absent")) }
+                if (persistent && gatt == g) {
+                    reconnect(g, device)
+                } else {
+                    _state.update { it.copy(link = BleLink.Failed(device, "Service FC absent")) }
+                }
                 return
             }
             g.setCharacteristicNotification(characteristic, true)
@@ -214,7 +254,9 @@ class BleHeartRateMonitor @Inject constructor(
         private fun onMeasurement(value: ByteArray) {
             val measurement = HeartRateMeasurement.parse(value) ?: return log("Mesure illisible : ${value.toHex()}")
             val count = ((_state.value.link as? BleLink.Connected)?.notifications ?: 0) + 1
-            _state.update { it.copy(link = BleLink.Connected(device, measurement, count, clock.millis())) }
+            val now = clock.millis()
+            _state.update { it.copy(link = BleLink.Connected(device, measurement, count, now)) }
+            if (measurement.sensorContact != false && measurement.bpm > 0) _measurements.tryEmit(now to measurement.bpm)
             if (count == 1) log("Première mesure : ${measurement.bpm} bpm (brut ${value.toHex()})")
         }
     }

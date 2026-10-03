@@ -28,7 +28,7 @@ fun ConfigScreen(
             Entry("Rotation", "Modèles de la rotation et leur ordre", onRotation)
             Entry("Profil", "Âge, sexe, FC max, objectif protéines, whey, créatine", onProfile)
             Entry("Mes aliments", "Aliments perso, produits scannés, favoris", onFoods)
-            Entry("Montre cardio (test)", "FC en direct par Bluetooth, lecture Health Connect", onWatch)
+            Entry("Montre cardio", "Choisir la montre, tester la FC en direct et Health Connect", onWatch)
             Entry("Réglages et sauvegarde", "Repos, thème, objectifs, sauvegarde auto (Drive), export / import", onSettings)
         }
     }

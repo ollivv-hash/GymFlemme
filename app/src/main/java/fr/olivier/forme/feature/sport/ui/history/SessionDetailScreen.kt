@@ -40,6 +40,9 @@ import fr.olivier.forme.feature.sport.domain.SessionTextFormatter
 import fr.olivier.forme.ui.components.ConfirmDialog
 import fr.olivier.forme.ui.components.FormeTopBar
 import fr.olivier.forme.ui.components.SectionTitle
+import fr.olivier.forme.feature.heart.data.HeartRepository
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import fr.olivier.forme.ui.navigation.SessionDetailRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,8 +55,10 @@ import kotlin.math.roundToInt
 class SessionDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val sessions: SessionRepository,
+    heartRepository: HeartRepository,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<SessionDetailRoute>()
+    val heart = heartRepository.observe(route.sessionId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     val justFinished = route.justFinished
     private val _report = MutableStateFlow<SessionReport?>(null)
     val report = _report.asStateFlow()
@@ -80,6 +85,7 @@ fun SessionDetailScreen(
     viewModel: SessionDetailViewModel = hiltViewModel(),
 ) {
     val report by viewModel.report.collectAsStateWithLifecycle()
+    val heart by viewModel.heart.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var deleting by remember { mutableStateOf(false) }
 
@@ -129,6 +135,18 @@ fun SessionDetailScreen(
                         }
                     }
                 }
+            }
+
+            heart?.let { h ->
+                SectionTitle("Fréquence cardiaque")
+                Text("♥ moyenne ${h.avgBpm} · max ${h.maxBpm} · min ${h.minBpm} bpm")
+                Text(
+                    listOfNotNull(
+                        h.kcal?.let { "${it.roundToInt()} kcal (${h.kcalSource?.label})" },
+                        "source : ${h.source.label}",
+                    ).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
 
             SectionTitle("Volume")

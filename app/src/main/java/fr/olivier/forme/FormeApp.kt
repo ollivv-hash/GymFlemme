@@ -3,6 +3,7 @@ package fr.olivier.forme
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
 import fr.olivier.forme.core.AppStartup
+import fr.olivier.forme.feature.heart.service.HeartRateService
 import fr.olivier.forme.feature.nutrition.reminder.CreatineReminder
 import fr.olivier.forme.feature.sport.timer.RestTimer
 import javax.inject.Inject
@@ -15,6 +16,7 @@ class FormeApp : Application() {
         super.onCreate()
         RestTimer.createChannels(this)
         CreatineReminder.createChannel(this)
+        HeartRateService.createChannel(this)
         startup.run()
     }
 }
