@@ -1,6 +1,10 @@
 package fr.olivier.forme.core.backup
 
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightEntity
+import fr.olivier.forme.feature.heart.data.SessionHeartEntity
+import fr.olivier.forme.feature.heart.domain.HeartSource
+import fr.olivier.forme.feature.heart.domain.KcalSource
+import fr.olivier.forme.feature.heart.domain.Sex
 import fr.olivier.forme.feature.nutrition.data.CreatineEntryEntity
 import fr.olivier.forme.feature.nutrition.data.FoodEntity
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
@@ -56,6 +60,9 @@ data class ProfileDto(
     val creatineDoseG: Double,
     val creatineReminderEnabled: Boolean,
     val creatineReminderMinutes: Int,
+    val birthYear: Int? = null,
+    val sex: Sex? = null,
+    val hrMaxOverride: Int? = null,
 )
 
 @Serializable
@@ -102,6 +109,24 @@ data class SportBackup(
     val sessionExercises: List<SessionExerciseDto>,
     val sets: List<SetEntryDto>,
     val cardio: List<CardioEntryDto>,
+    /** V2.1 (backup v4): heart rate of sessions; absent in older files. */
+    val heart: List<SessionHeartDto> = emptyList(),
+)
+
+@Serializable
+data class SessionHeartDto(
+    val sessionId: Long,
+    val source: HeartSource,
+    val seriesStart: Long,
+    val intervalSec: Int,
+    val bpmSeries: String,
+    val avgBpm: Int,
+    val minBpm: Int,
+    val maxBpm: Int,
+    val hrMax: Int? = null,
+    val zoneSeconds: List<Int>,
+    val kcal: Double? = null,
+    val kcalSource: KcalSource? = null,
 )
 
 @Serializable
@@ -255,11 +280,11 @@ fun BodyWeightDto.toEntity() = BodyWeightEntity(id, LocalDate.parse(date), weigh
 
 fun ProfileEntity.toDto() = ProfileDto(
     proteinTargetGPerKg, wheyProteinPer100g, wheyKcalPer100g, wheyCarbsPer100g, wheyFatPer100g, wheyScoopG,
-    creatineDoseG, creatineReminderEnabled, creatineReminderMinutes,
+    creatineDoseG, creatineReminderEnabled, creatineReminderMinutes, birthYear, sex, hrMaxOverride,
 )
 fun ProfileDto.toEntity() = ProfileEntity(
     1, proteinTargetGPerKg, wheyProteinPer100g, wheyKcalPer100g, wheyCarbsPer100g, wheyFatPer100g, wheyScoopG,
-    creatineDoseG, creatineReminderEnabled, creatineReminderMinutes,
+    creatineDoseG, creatineReminderEnabled, creatineReminderMinutes, birthYear, sex, hrMaxOverride,
 )
 
 fun FoodEntity.toDto() = FoodDto(
@@ -280,3 +305,15 @@ fun MealEntryDto.toEntity() = MealEntryEntity(
 
 fun CreatineEntryEntity.toDto() = CreatineDto(id, date.toString(), doseG, takenAt.toEpochMilli())
 fun CreatineDto.toEntity() = CreatineEntryEntity(id, LocalDate.parse(date), doseG, Instant.ofEpochMilli(takenAt))
+
+fun SessionHeartEntity.toDto() = SessionHeartDto(
+    sessionId, source, seriesStart.toEpochMilli(), intervalSec, bpmSeries, avgBpm, minBpm, maxBpm, hrMax, zoneSeconds, kcal, kcalSource,
+)
+
+fun SessionHeartDto.toEntity(): SessionHeartEntity {
+    val z = (zoneSeconds + List(5) { 0 }).take(5)
+    return SessionHeartEntity(
+        sessionId, source, Instant.ofEpochMilli(seriesStart), intervalSec, bpmSeries, avgBpm, minBpm, maxBpm, hrMax,
+        z[0], z[1], z[2], z[3], z[4], kcal, kcalSource,
+    )
+}

@@ -26,7 +26,7 @@ fun ConfigScreen(
             Entry("Catalogue des exercices", "Machines, réglages, photos, archivage", onCatalog)
             Entry("Modèles de séance", "Créer, dupliquer, modifier, archiver", onTemplates)
             Entry("Rotation", "Modèles de la rotation et leur ordre", onRotation)
-            Entry("Profil nutrition", "Objectif protéines, whey, créatine et rappel", onProfile)
+            Entry("Profil", "Âge, sexe, FC max, objectif protéines, whey, créatine", onProfile)
             Entry("Mes aliments", "Aliments perso, produits scannés, favoris", onFoods)
             Entry("Montre cardio (test)", "FC en direct par Bluetooth, lecture Health Connect", onWatch)
             Entry("Réglages et sauvegarde", "Repos, thème, objectifs, sauvegarde auto (Drive), export / import", onSettings)

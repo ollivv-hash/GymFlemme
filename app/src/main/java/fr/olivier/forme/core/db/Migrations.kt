@@ -75,5 +75,23 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+    /** V2.1: heart rate of sessions, and age / sex / maximum heart rate in the profile. */
+    val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `profile` ADD COLUMN `birthYear` INTEGER")
+            db.execSQL("ALTER TABLE `profile` ADD COLUMN `sex` TEXT")
+            db.execSQL("ALTER TABLE `profile` ADD COLUMN `hrMaxOverride` INTEGER")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `session_heart` (`sessionId` INTEGER NOT NULL, `source` TEXT NOT NULL, " +
+                    "`seriesStart` INTEGER NOT NULL, `intervalSec` INTEGER NOT NULL, `bpmSeries` TEXT NOT NULL, " +
+                    "`avgBpm` INTEGER NOT NULL, `minBpm` INTEGER NOT NULL, `maxBpm` INTEGER NOT NULL, `hrMax` INTEGER, " +
+                    "`zone1Sec` INTEGER NOT NULL, `zone2Sec` INTEGER NOT NULL, `zone3Sec` INTEGER NOT NULL, " +
+                    "`zone4Sec` INTEGER NOT NULL, `zone5Sec` INTEGER NOT NULL, `kcal` REAL, `kcalSource` TEXT, " +
+                    "PRIMARY KEY(`sessionId`), FOREIGN KEY(`sessionId`) REFERENCES `session`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
 }
