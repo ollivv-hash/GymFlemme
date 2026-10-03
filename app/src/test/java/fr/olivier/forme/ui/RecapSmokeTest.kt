@@ -75,6 +75,8 @@ class RecapSmokeTest {
 
         ActivityScenario.launch(MainActivity::class.java).use {
             waitFor("Dernières séances")
+            // The session row can arrive a frame after the section title: wait for the row itself.
+            waitFor(" min")
             shot("6-home-after")
             rule.onNode(hasText(" min", substring = true)).performScrollTo().performClick()
             waitFor("Copier le bilan texte")

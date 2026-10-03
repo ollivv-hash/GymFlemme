@@ -4,6 +4,8 @@
 
     <!-- Rest timer: notification + exact alarm at the end of the rest. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 16 "Live Updates": rest countdown and heart rate promoted to the status bar / lock screen. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission

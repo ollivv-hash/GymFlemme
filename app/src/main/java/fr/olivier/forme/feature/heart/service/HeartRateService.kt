@@ -75,14 +75,20 @@ class HeartRateService : Service() {
     }
 
     companion object {
-        const val CHANNEL = "heart_live"
+        /** v2: default importance without sound, so it shows on the lock screen (see RestTimer.CHANNEL_RUNNING). */
+        const val CHANNEL = "heart_live_v2"
+        private const val CHANNEL_OLD = "heart_live"
         private const val NOTIF_ID = 3
         private const val UPDATE_EVERY_MS = 5_000L
 
         fun createChannel(context: Context) {
-            context.getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(CHANNEL, "Fréquence cardiaque en séance", NotificationManager.IMPORTANCE_LOW).apply {
+            val nm = context.getSystemService(NotificationManager::class.java)
+            nm.deleteNotificationChannel(CHANNEL_OLD)
+            nm.createNotificationChannel(
+                NotificationChannel(CHANNEL, "Fréquence cardiaque en séance", NotificationManager.IMPORTANCE_DEFAULT).apply {
                     setShowBadge(false)
+                    setSound(null, null)
+                    enableVibration(false)
                     lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                 },
             )
@@ -114,11 +120,13 @@ class HeartRateService : Service() {
                 .setContentText(text(live))
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .setSilent(true)
                 .setCategory(NotificationCompat.CATEGORY_WORKOUT)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setContentIntent(RestTimer.openAppIntent(context))
                 .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+                // Android 16 "Live Update": heart rate chip in the status bar and card on the lock screen.
+                .setRequestPromotedOngoing(true)
+                .apply { live.bpm?.takeIf { live.status == LiveHeartStatus.CONNECTED }?.let { setShortCriticalText("$it ♥") } }
                 .build()
     }
 }
