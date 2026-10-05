@@ -16,6 +16,9 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.os.ParcelUuid
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -71,6 +74,21 @@ class BleHeartRateMonitor @Inject constructor(
     private var scanCallback: ScanCallback? = null
     /** Session mode: keep (re)connecting until [disconnect]. */
     @Volatile private var persistent = false
+
+    // Session mode looks for the watch by scanning (heart rate service, then name or address) instead of
+    // auto-connecting to a stored address: the watch broadcasts with a random address, which Android cannot reach
+    // without a recent scan, and which may change from one broadcast to the next.
+    private val main = Handler(Looper.getMainLooper())
+    @Volatile private var sessionTarget: BleDevice? = null
+    private var onTargetMoved: ((BleDevice) -> Unit)? = null
+    private var sessionScan: ScanCallback? = null
+    private var lastSessionScanAt = 0L
+    private val refreshSessionScan = Runnable {
+        if (persistent && gatt == null) {
+            log("Relance de la recherche de la montre")
+            startSessionScan()
+        }
+    }
 
     /** Every heart rate received (epoch millis, bpm), skipping those flagged "no skin contact". */
     private val _measurements = MutableSharedFlow<Pair<Long, Int>>(extraBufferCapacity = 64)
@@ -144,27 +162,109 @@ class BleHeartRateMonitor @Inject constructor(
         if (!known) log("Trouvé : ${device.name ?: "(sans nom)"} ${device.address} ${device.rssi} dBm${if (advertisesHr) " ♥ service FC" else ""}")
     }
 
-    /**
-     * Connects to [device]. With [persistent] (session mode) Android's auto-connect is used: no timeout, the link is
-     * made whenever the watch broadcasts, and it is re-established after every drop until [disconnect].
-     */
+    /** Direct connection to a device just seen in a scan (Config → Montre cardio). */
     @SuppressLint("MissingPermission")
-    fun connect(device: BleDevice, persistent: Boolean = false) {
+    fun connect(device: BleDevice) {
         val adapter = manager?.adapter ?: return
         if (!hasPermissions()) return log("Autorisation Bluetooth manquante")
         if (!adapter.isEnabled) return log("Bluetooth désactivé")
         stopScan()
         disconnect()
-        this.persistent = persistent
         _state.update { it.copy(link = BleLink.Connecting(device)) }
-        log("Connexion à ${device.name ?: device.address}${if (persistent) " (attente de la diffusion)" else ""}…")
+        log("Connexion à ${device.name ?: device.address}…")
         gatt = adapter.getRemoteDevice(device.address)
-            .connectGatt(context, persistent, GattCallback(device), BluetoothDevice.TRANSPORT_LE)
+            .connectGatt(context, false, GattCallback(device), BluetoothDevice.TRANSPORT_LE)
+    }
+
+    /**
+     * Session mode: looks for [target] among the devices broadcasting a heart rate (matched by address or name),
+     * connects as soon as it shows up, and searches again after every drop, until [disconnect]. When the watch shows
+     * up with a new address, [onMoved] receives it so it can be remembered.
+     */
+    @SuppressLint("MissingPermission")
+    fun watchFor(target: BleDevice, onMoved: (BleDevice) -> Unit = {}) {
+        val adapter = manager?.adapter ?: return
+        if (!hasPermissions()) return log("Autorisation Bluetooth manquante")
+        if (!adapter.isEnabled) return log("Bluetooth désactivé")
+        stopScan()
+        disconnect()
+        persistent = true
+        sessionTarget = target
+        onTargetMoved = onMoved
+        _state.update { it.copy(link = BleLink.Connecting(target)) }
+        log("Recherche de ${target.name ?: target.address} (diffusion FC)…")
+        startSessionScan()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startSessionScan() {
+        if (!persistent) return
+        // Android blocks apps starting more than 5 scans in 30 s: keep at least 7 s between two starts.
+        val wait = lastSessionScanAt + MIN_SCAN_GAP_MS - SystemClock.elapsedRealtime()
+        if (wait > 0) {
+            main.postDelayed({ startSessionScan() }, wait)
+            return
+        }
+        stopSessionScan()
+        val scanner = manager?.adapter?.takeIf { it.isEnabled }?.bluetoothLeScanner
+        if (scanner == null || !hasPermissions()) {
+            log("Recherche impossible (Bluetooth désactivé ?), nouvel essai dans 30 s")
+            main.postDelayed({ startSessionScan() }, RETRY_MS)
+            return
+        }
+        val callback = object : ScanCallback() {
+            override fun onScanResult(callbackType: Int, result: ScanResult) = onSessionScanned(result)
+            override fun onBatchScanResults(results: MutableList<ScanResult>) = results.forEach(::onSessionScanned)
+            override fun onScanFailed(errorCode: Int) {
+                log("Échec de la recherche (code $errorCode), nouvel essai dans 30 s")
+                sessionScan = null
+                main.postDelayed({ startSessionScan() }, RETRY_MS)
+            }
+        }
+        val filters = listOf(ScanFilter.Builder().setServiceUuid(ParcelUuid(HR_SERVICE)).build())
+        val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
+        runCatching { scanner.startScan(filters, settings, callback) }
+            .onFailure { return log("Recherche refusée : ${it.message}") }
+        sessionScan = callback
+        lastSessionScanAt = SystemClock.elapsedRealtime()
+        // Long scans are degraded by Android after 30 min: restart it regularly while the watch is absent.
+        main.removeCallbacks(refreshSessionScan)
+        main.postDelayed(refreshSessionScan, SCAN_REFRESH_MS)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun stopSessionScan() {
+        main.removeCallbacks(refreshSessionScan)
+        val callback = sessionScan ?: return
+        sessionScan = null
+        if (hasPermissions()) runCatching { manager?.adapter?.bluetoothLeScanner?.stopScan(callback) }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun onSessionScanned(result: ScanResult) {
+        val target = sessionTarget ?: return
+        if (!persistent || gatt != null) return
+        val name = result.device.name ?: result.scanRecord?.deviceName
+        if (!isTarget(target, result.device.address, name)) return
+        stopSessionScan()
+        val found = BleDevice(result.device.address, name ?: target.name, result.rssi, advertisesHeartRate = true, bonded = false)
+        if (found.address != target.address) {
+            log("Nouvelle adresse de diffusion : ${found.address} (était ${target.address})")
+            sessionTarget = found
+            onTargetMoved?.invoke(found)
+        }
+        log("Montre trouvée (${result.rssi} dBm), connexion…")
+        // The device from the scan result carries the address type (random), unlike getRemoteDevice(address).
+        gatt = result.device.connectGatt(context, false, GattCallback(found), BluetoothDevice.TRANSPORT_LE)
     }
 
     @SuppressLint("MissingPermission")
     fun disconnect() {
         persistent = false
+        sessionTarget = null
+        onTargetMoved = null
+        stopSessionScan()
+        main.removeCallbacksAndMessages(null)
         val g = gatt ?: return
         gatt = null
         if (hasPermissions()) runCatching { g.disconnect(); g.close() }
@@ -172,15 +272,15 @@ class BleHeartRateMonitor @Inject constructor(
         log("Déconnecté")
     }
 
-    /** Session mode: drops [g] and waits for the watch again. */
+    /** Session mode: drops [g] and searches for the watch again. */
     @SuppressLint("MissingPermission")
-    private fun reconnect(g: BluetoothGatt, device: BleDevice) {
+    private fun reconnect(g: BluetoothGatt, device: BleDevice, delayMs: Long = RECONNECT_DELAY_MS) {
         runCatching { g.close() }
-        if (!persistent || gatt != g || !hasPermissions()) return
+        if (!persistent || gatt != g) return
+        gatt = null
         _state.update { it.copy(link = BleLink.Reconnecting(device)) }
-        log("Reconnexion automatique dès que la montre diffuse…")
-        gatt = manager?.adapter?.getRemoteDevice(device.address)
-            ?.connectGatt(context, true, GattCallback(device), BluetoothDevice.TRANSPORT_LE)
+        log("Reconnexion dès que la montre diffuse…")
+        main.postDelayed({ startSessionScan() }, delayMs)
     }
 
     private inner class GattCallback(private val device: BleDevice) : BluetoothGattCallback() {
@@ -212,7 +312,8 @@ class BleHeartRateMonitor @Inject constructor(
             if (characteristic == null) {
                 log("Service FC (180D) absent : la diffusion de la FC n'est pas active sur la montre ?")
                 if (persistent && gatt == g) {
-                    reconnect(g, device)
+                    runCatching { g.disconnect() }
+                    reconnect(g, device, delayMs = RETRY_MS)
                 } else {
                     _state.update { it.copy(link = BleLink.Failed(device, "Service FC absent")) }
                 }
@@ -271,10 +372,18 @@ class BleHeartRateMonitor @Inject constructor(
         val HR_MEASUREMENT: UUID = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb")
         val CCCD: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
         private const val LOG_LINES = 40
+        private const val MIN_SCAN_GAP_MS = 7_000L
+        private const val RETRY_MS = 30_000L
+        private const val RECONNECT_DELAY_MS = 2_000L
+        private const val SCAN_REFRESH_MS = 10 * 60_000L
         private val TIME = DateTimeFormatter.ofPattern("HH:mm:ss")
         private val DEVICE_ORDER = compareByDescending<BleDevice> { it.advertisesHeartRate }
             .thenByDescending { it.name != null }
             .thenByDescending { it.rssi ?: Int.MIN_VALUE }
+
+        /** The chosen watch, recognized by its address or, when it broadcasts under a new address, by its name. */
+        fun isTarget(target: BleDevice, address: String, name: String?): Boolean =
+            address.equals(target.address, ignoreCase = true) || (target.name != null && name == target.name)
 
         private fun shortUuid(uuid: UUID): String = uuid.toString().let { if (it.endsWith("-0000-1000-8000-00805f9b34fb")) it.substring(4, 8) else it }
         private fun ByteArray.toHex() = joinToString(" ") { "%02X".format(it) }

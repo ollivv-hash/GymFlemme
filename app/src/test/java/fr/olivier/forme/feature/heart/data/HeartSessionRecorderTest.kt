@@ -27,6 +27,15 @@ class HeartSessionRecorderTest {
     val tmp = TemporaryFolder()
 
     @Test
+    fun watchIsRecognizedByAddressOrByNameWhenItsAddressChanged() {
+        val saved = BleDevice("C6:FF:75:AA:2B:B3", "Xiaomi Watch S4 AED6", null, advertisesHeartRate = true, bonded = false)
+        assertTrue(BleHeartRateMonitor.isTarget(saved, "c6:ff:75:aa:2b:b3", null))
+        assertTrue(BleHeartRateMonitor.isTarget(saved, "D1:22:33:44:55:66", "Xiaomi Watch S4 AED6"))
+        assertTrue(!BleHeartRateMonitor.isTarget(saved, "D1:22:33:44:55:66", "Polar H10"))
+        assertTrue(!BleHeartRateMonitor.isTarget(saved.copy(name = null), "D1:22:33:44:55:66", null))
+    }
+
+    @Test
     fun sampleStoreRoundTripIgnoresBrokenLines() {
         val store = LiveSampleStore(tmp.root)
         store.append(7, 1_000, 72)

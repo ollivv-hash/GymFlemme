@@ -113,7 +113,10 @@ class WatchTestViewModel @Inject constructor(
 
     fun connectSaved() {
         val saved = savedDevice.value ?: return
-        ble.connect(BleDevice(saved.address, saved.name, null, advertisesHeartRate = false, bonded = false))
+        // Same search as during a session: found by name even if its broadcast address changed.
+        ble.watchFor(BleDevice(saved.address, saved.name, null, advertisesHeartRate = true, bonded = false)) { moved ->
+            viewModelScope.launch { settings.setHrDevice(HrDevice(moved.address, moved.name ?: saved.name)) }
+        }
     }
 
     fun setHours(hours: Int) {

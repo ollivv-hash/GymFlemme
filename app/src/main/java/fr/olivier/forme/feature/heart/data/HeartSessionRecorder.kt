@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import fr.olivier.forme.core.di.ApplicationScope
+import fr.olivier.forme.core.settings.HrDevice
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.feature.heart.domain.HeartSource
 import fr.olivier.forme.feature.heart.service.HeartRateService
@@ -122,7 +123,10 @@ class HeartSessionRecorder @Inject constructor(
         collector = scope.launch(Dispatchers.IO) {
             ble.measurements.collect { (millis, bpm) -> runCatching { store.append(sessionId, millis, bpm) } }
         }
-        ble.connect(BleDevice(device.address, device.name, null, advertisesHeartRate = true, bonded = false), persistent = true)
+        ble.watchFor(BleDevice(device.address, device.name, null, advertisesHeartRate = true, bonded = false)) { moved ->
+            // The watch broadcasts under a new address: remember it.
+            scope.launch { settings.setHrDevice(HrDevice(moved.address, moved.name ?: device.name)) }
+        }
         HeartRateService.start(context)
     }
 
