@@ -341,6 +341,37 @@ Les tests de fumée (`AppSmokeTest`, `RecapSmokeTest`, `FeaturesSmokeTest`, …)
 
 ---
 
+## CI GitHub Actions
+
+`.github/workflows/android.yml` lance à chaque pull request (et à chaque push sur `main`) :
+`testDebugUnitTest`, `lintDebug` et `assembleRelease`.
+
+- **APK de la PR** : onglet *Actions* → le run → artefact `forme-<version>-apk` (conservé 30 jours).
+- **Release** : quand une nouvelle `versionName` arrive sur `main`, une release GitHub `v<version>` est publiée
+  avec l'APK signé (une seule fois par version : penser à monter `versionCode`/`versionName`).
+  Sur le téléphone : page *Releases* du dépôt → télécharger l'APK → installer (mise à jour sans perte de données,
+  même clé que les builds locaux).
+
+Signature : quatre secrets de dépôt (*Settings → Secrets and variables → Actions*) :
+
+| Secret | Valeur |
+|---|---|
+| `FORME_KEYSTORE_BASE64` | le `.jks` encodé en base64 |
+| `FORME_STORE_PASSWORD` | mot de passe du keystore |
+| `FORME_KEY_ALIAS` | `forme` |
+| `FORME_KEY_PASSWORD` | mot de passe de la clé |
+
+Encodage du keystore sous Windows (copié dans le presse-papiers) :
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\chemin\vers\forme-release.jks")) | Set-Clipboard
+```
+
+Sans ces secrets, l'APK est construit **non signé** (non installable) et aucune release n'est publiée.
+Le keystore n'est écrit que le temps du build sur le runner, puis supprimé.
+
+---
+
 ## Installation
 
 ```bat

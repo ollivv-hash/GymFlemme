@@ -1,0 +1,118 @@
+# Tests, lint and release APK on every pull request; GitHub release on every new version merged into main.
+#
+# Release signing uses four repository secrets (Settings → Secrets and variables → Actions):
+#   FORME_KEYSTORE_BASE64  the .jks file, base64-encoded
+#   FORME_STORE_PASSWORD   keystore password
+#   FORME_KEY_ALIAS        key alias (forme)
+#   FORME_KEY_PASSWORD     key password
+# Without them the APK is built unsigned (not installable) and no release is published.
+name: Android
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.version.outputs.name }}
+      signed: ${{ steps.signing.outputs.signed }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Also validates the Gradle wrapper checksum.
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Version
+        id: version
+        run: echo "name=$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)" >> "$GITHUB_OUTPUT"
+
+      - name: Signing key
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.FORME_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.FORME_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.FORME_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.FORME_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::No signing secrets: the release APK will be unsigned."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "$RUNNER_TEMP/forme-release.jks"
+          cat > keystore.properties <<EOF
+          storeFile=$RUNNER_TEMP/forme-release.jks
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Tests, lint, release build
+        run: ./gradlew testDebugUnitTest lintDebug assembleRelease --stacktrace
+
+      - name: Remove signing key
+        if: always()
+        run: rm -f keystore.properties "$RUNNER_TEMP/forme-release.jks"
+
+      - name: Rename APK
+        run: |
+          src=$(ls app/build/outputs/apk/release/*.apk | head -1)
+          suffix=$([ "${{ steps.signing.outputs.signed }}" = true ] && echo "" || echo "-unsigned")
+          mkdir -p dist && cp "$src" "dist/forme-${{ steps.version.outputs.name }}$suffix.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forme-${{ steps.version.outputs.name }}-apk
+          path: dist/*.apk
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: reports
+          path: |
+            app/build/reports/
+            app/build/smoke-screens/
+          retention-days: 7
+
+  release:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.outputs.signed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: forme-${{ needs.build.outputs.version }}-apk
+          path: dist
+
+      - name: Publish release (once per version)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release v$VERSION already exists: bump versionName to publish a new one."
+            exit 0
+          fi
+          gh release create "v$VERSION" dist/*.apk --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Forme $VERSION" --generate-notes
