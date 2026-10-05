@@ -91,6 +91,9 @@ class TemplateListsSmokeTest {
             rule.onNode(hasText("Config") and hasClickAction()).performClick()
             rule.onNode(hasText("Rotation") and hasClickAction()).performClick()
             rule.waitUntilAtLeastOneExists(hasText("Hors rotation"), 10_000)
+            // Wait for the end of the screen transition (the Config list is scrollable too) and for the templates.
+            rule.waitUntilExactlyOneExists(hasScrollAction(), 10_000)
+            rule.waitUntilAtLeastOneExists(hasText("Extra 1", substring = true), 10_000)
             rule.onNode(hasScrollAction()).performScrollToNode(hasText("Extra 8", substring = true))
             rule.onNodeWithText("Extra 8", substring = true).assertExists()
             shot("r1-rotation-scrolled")
