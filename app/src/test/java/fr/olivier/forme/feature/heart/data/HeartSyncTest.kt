@@ -7,6 +7,7 @@ import fr.olivier.forme.core.db.testDatabase
 import fr.olivier.forme.feature.heart.domain.HeartSource
 import fr.olivier.forme.feature.heart.domain.KcalInterval
 import fr.olivier.forme.feature.heart.domain.KcalSource
+import fr.olivier.forme.feature.heart.domain.SourcedSample
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -36,6 +37,10 @@ class HeartSyncTest {
     @After
     fun close() = db.close()
 
+    private companion object {
+        const val WATCH = "com.xiaomi.wearable"
+    }
+
     /** A finished 2-minute session; returns its id and start. */
     private suspend fun session(): Pair<Long, Instant> {
         clock.advance(Duration.ofDays(1))
@@ -46,14 +51,17 @@ class HeartSyncTest {
         return id to start
     }
 
-    private fun samples(start: Instant, fromSec: Int, untilSec: Int, bpm: Int) =
-        (fromSec until untilSec).map { start.plusSeconds(it.toLong()) to bpm }
+    private fun samples(start: Instant, fromSec: Int, untilSec: Int, bpm: Int, origin: String = WATCH) =
+        (fromSec until untilSec).map { SourcedSample(start.plusSeconds(it.toLong()), bpm, origin) }
+
+    private fun kcal(start: Instant, endSec: Long, kcal: Double, origin: String = WATCH) =
+        KcalInterval(start, start.plusSeconds(endSec), kcal, origin)
 
     @Test
     fun healthConnectFillsTheLiveGapsThenWatchCaloriesEndTheSync() = runTest {
         val (id, start) = session()
         // Live curve only for the first minute.
-        heart.saveSession(id, samples(start, 0, 60, 100), HeartSource.BLE)
+        heart.saveSession(id, samples(start, 0, 60, 100).map { it.time to it.bpm }, HeartSource.BLE)
         data = HealthConnectData(samples(start, 0, 120, 130), emptyList())
 
         assertEquals(SyncOutcome.RETRY, sync.sync(id)) // no calories yet
@@ -62,7 +70,7 @@ class HeartSyncTest {
         assertEquals(List(12) { 100 } + List(12) { 130 }, merged.series.bpm) // live wins, gap filled
         assertEquals(KcalSource.ESTIMATE.takeIf { merged.kcal != null }, merged.kcalSource)
 
-        data = data!!.copy(activeKcal = listOf(KcalInterval(start, start.plusSeconds(120), 25.0)))
+        data = data!!.copy(activeKcal = listOf(kcal(start, 120, 25.0)))
         assertEquals(SyncOutcome.DONE, sync.sync(id))
         assertEquals(25.0, heart.get(id)!!.kcal!!, 1e-9)
         assertEquals(KcalSource.WATCH, heart.get(id)!!.kcalSource)
@@ -71,7 +79,7 @@ class HeartSyncTest {
     @Test
     fun withoutLiveDataHealthConnectMakesTheWholeCurve() = runTest {
         val (id, start) = session()
-        data = HealthConnectData(samples(start, 0, 120, 120), listOf(KcalInterval(start, start.plusSeconds(120), 18.0)))
+        data = HealthConnectData(samples(start, 0, 120, 120), listOf(kcal(start, 120, 18.0)))
         assertEquals(SyncOutcome.DONE, sync.sync(id))
         assertEquals(HeartSource.HEALTH_CONNECT, heart.get(id)!!.source)
     }
@@ -79,12 +87,25 @@ class HeartSyncTest {
     @Test
     fun caloriesAloneNeedACurveAndUnusableHealthConnectStops() = runTest {
         val (id, start) = session()
-        data = HealthConnectData(emptyList(), listOf(KcalInterval(start, start.plusSeconds(120), 18.0)))
+        data = HealthConnectData(emptyList(), listOf(kcal(start, 120, 18.0)))
         assertEquals(SyncOutcome.DONE, sync.sync(id))
         assertNull(heart.get(id))
 
         data = null // Health Connect unavailable or not allowed
         assertEquals(SyncOutcome.DONE, sync.sync(id))
+    }
+
+    @Test
+    fun onlyTheWatchSourceCounts() = runTest {
+        val (id, start) = session()
+        data = HealthConnectData(
+            samples(start, 0, 120, 120) + samples(start, 0, 120, 160, origin = "com.fitbit.FitbitMobile"),
+            listOf(kcal(start, 120, 20.0), kcal(start, 120, 30.0, origin = "com.fitbit.FitbitMobile"), kcal(start, 120, 9.0, origin = "android")),
+        )
+        assertEquals(SyncOutcome.DONE, sync.sync(id))
+        val saved = heart.get(id)!!
+        assertEquals(120, saved.maxBpm) // Fitbit's 160 bpm ignored
+        assertEquals(20.0, saved.kcal!!, 1e-9) // not 59
     }
 
     @Test

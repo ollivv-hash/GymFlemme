@@ -12,6 +12,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import dagger.hilt.android.qualifiers.ApplicationContext
 import fr.olivier.forme.feature.heart.domain.KcalInterval
+import fr.olivier.forme.feature.heart.domain.SourcedSample
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
@@ -21,7 +22,7 @@ import kotlin.reflect.KClass
 enum class HealthConnectAvailability { AVAILABLE, UPDATE_REQUIRED, UNAVAILABLE }
 
 /** Heart rate and active calories written by the watch app for a time window. */
-data class HealthConnectData(val samples: List<Pair<Instant, Int>>, val activeKcal: List<KcalInterval>)
+data class HealthConnectData(val samples: List<SourcedSample>, val activeKcal: List<KcalInterval>)
 
 /** Read access to Health Connect, behind an interface so the sync logic can be tested without it. */
 interface HealthConnectSource {
@@ -41,6 +42,8 @@ data class HealthConnectProbe(
     val totalKcal: Double,
     val totalRecords: Int,
     val calorieOrigins: Set<String>,
+    /** Active calories per writing app (Mi Fitness, Fitbit, the phone…), to spot double counting. */
+    val activeKcalByOrigin: Map<String, Double> = emptyMap(),
 ) {
     val medianIntervalSec: Long? = samples.map { it.first }.sorted().zipWithNext { a, b -> Duration.between(a, b).seconds }
         .sorted().let { if (it.isEmpty()) null else it[it.size / 2] }
@@ -88,6 +91,8 @@ class HealthConnectReader @Inject constructor(@ApplicationContext private val co
             totalKcal = total.sumOf { it.energy.inKilocalories },
             totalRecords = total.size,
             calorieOrigins = (active.map { it.metadata.dataOrigin.packageName } + total.map { it.metadata.dataOrigin.packageName }).toSet(),
+            activeKcalByOrigin = active.groupBy { it.metadata.dataOrigin.packageName }
+                .mapValues { (_, records) -> records.sumOf { it.energy.inKilocalories } },
         )
     }
 
@@ -96,10 +101,10 @@ class HealthConnectReader @Inject constructor(@ApplicationContext private val co
         val granted = grantedPermissions()
         if (HealthPermission.getReadPermission(HeartRateRecord::class) !in granted) return null
         val samples = readAll(HeartRateRecord::class, from, to)
-            .flatMap { r -> r.samples.map { it.time to it.beatsPerMinute.toInt() } }
-            .sortedBy { it.first }
+            .flatMap { r -> r.samples.map { SourcedSample(it.time, it.beatsPerMinute.toInt(), r.metadata.dataOrigin.packageName) } }
+            .sortedBy { it.time }
         val kcal = if (HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class) in granted) {
-            readAll(ActiveCaloriesBurnedRecord::class, from, to).map { KcalInterval(it.startTime, it.endTime, it.energy.inKilocalories) }
+            readAll(ActiveCaloriesBurnedRecord::class, from, to).map { KcalInterval(it.startTime, it.endTime, it.energy.inKilocalories, it.metadata.dataOrigin.packageName) }
         } else {
             emptyList()
         }

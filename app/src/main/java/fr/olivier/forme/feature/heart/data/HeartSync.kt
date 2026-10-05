@@ -35,9 +35,13 @@ class HeartSync @Inject constructor(
         if (clock.instant().isAfter(end.plus(GIVE_UP_AFTER))) return SyncOutcome.DONE
         val data = healthConnect.read(session.startedAt, end) ?: return SyncOutcome.DONE
         val existing = heart.get(sessionId)
-        val watchKcal = HeartMerge.kcalWithin(data.activeKcal, session.startedAt, end).takeIf { it > 0 }
+        // One source only (the watch app): Fitbit or the phone's step counter would double the calories.
+        val origin = HeartMerge.pickOrigin(data.samples.map { it.origin }, data.activeKcal.mapNotNull { it.origin }.toSet())
+        val samples = data.samples.filter { it.origin == origin }.map { it.time to it.bpm }
+        val kcalRecords = data.activeKcal.filter { it.origin == origin }
+        val watchKcal = HeartMerge.kcalWithin(kcalRecords, session.startedAt, end).takeIf { it > 0 }
             ?: existing?.kcal?.takeIf { existing.kcalSource == KcalSource.WATCH }
-        val fromHealthConnect = HeartSeries.fromSamples(data.samples, session.startedAt, end)
+        val fromHealthConnect = HeartSeries.fromSamples(samples, session.startedAt, end)
         val hasHeartRate = fromHealthConnect.bpm.any { it > 0 }
         when {
             hasHeartRate -> {

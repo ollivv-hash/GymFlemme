@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
+import fr.olivier.forme.feature.heart.data.HeartRepository
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
 import fr.olivier.forme.feature.nutrition.data.NutritionRepository
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
@@ -51,6 +52,7 @@ class JournalViewModel @Inject constructor(
     private val repository: NutritionRepository,
     private val reminder: CreatineReminder,
     weights: BodyWeightRepository,
+    heart: HeartRepository,
 ) : ViewModel() {
     private val today = repository.today()
     private val date = MutableStateFlow(today)
@@ -77,6 +79,11 @@ class JournalViewModel @Inject constructor(
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUi(today, true))
+
+    /** Calories spent in the day's sessions (heart rate, V2.1); null when none was measured. */
+    val sessionKcal: StateFlow<Double?> = date.flatMapLatest { d ->
+        heart.observeDay(d).map { list -> list.mapNotNull { it.kcal }.takeIf { it.isNotEmpty() }?.sum() }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun shiftDay(days: Long) = date.update { (it.plusDays(days)).coerceAtMost(repository.today()) }
 

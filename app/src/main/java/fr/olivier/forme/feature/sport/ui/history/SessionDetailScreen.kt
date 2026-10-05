@@ -49,26 +49,76 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
+import fr.olivier.forme.feature.heart.data.SessionHeartEntity
+import fr.olivier.forme.feature.heart.domain.SetHeart
+import fr.olivier.forme.feature.heart.ui.ExercisePeaks
+import fr.olivier.forme.feature.heart.ui.SessionHeartSection
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import java.time.Instant
 import javax.inject.Inject
 import kotlin.math.roundToInt
+
+data class HeartDetail(
+    val entity: SessionHeartEntity,
+    val setTimes: List<Instant>,
+    val peaks: List<ExercisePeaks>,
+    val suggestedHrMax: Int?,
+)
 
 @HiltViewModel
 class SessionDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val sessions: SessionRepository,
-    heartRepository: HeartRepository,
+    private val heartRepository: HeartRepository,
     private val heartSync: HeartSync,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<SessionDetailRoute>()
-    val heart = heartRepository.observe(route.sessionId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     val justFinished = route.justFinished
     private val _report = MutableStateFlow<SessionReport?>(null)
     val report = _report.asStateFlow()
+    /** Maximum heart rate currently in the profile (for the "adjust it" suggestion). */
+    private val currentHrMax = MutableStateFlow<Int?>(null)
+    private val hrMaxDismissed = MutableStateFlow(false)
+
+    val heart: StateFlow<HeartDetail?> = combine(
+        heartRepository.observe(route.sessionId),
+        sessions.observeSets(route.sessionId),
+        _report,
+        currentHrMax,
+        hrMaxDismissed,
+    ) { entity, sets, report, hrMax, dismissed ->
+        entity ?: return@combine null
+        val series = entity.series
+        val working = sets.filterNot { it.isWarmup }.sortedBy { it.completedAt }
+        val names = report?.exercises?.associate { it.exerciseId to it.name }.orEmpty()
+        val peaks = working.groupBy { it.exerciseId }.mapNotNull { (exerciseId, exSets) ->
+            val values = exSets.mapNotNull { SetHeart.peak(series, it.completedAt) }
+            if (values.isEmpty()) null else ExercisePeaks(names[exerciseId] ?: "Exercice", values)
+        }
+        HeartDetail(
+            entity = entity,
+            setTimes = working.map { it.completedAt },
+            peaks = peaks,
+            suggestedHrMax = entity.maxBpm.takeIf { hrMax != null && it > hrMax && !dismissed },
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {
         viewModelScope.launch { _report.value = sessions.buildReport(route.sessionId) }
+        viewModelScope.launch { currentHrMax.value = heartRepository.heartProfile().hrMax }
         // Foreground catch-up: the watch data may have reached Health Connect since the session ended.
         viewModelScope.launch { runCatching { heartSync.sync(route.sessionId) } }
+    }
+
+    /** [bpm] < 0 = dismissed for now. */
+    fun acceptHrMax(bpm: Int) = viewModelScope.launch {
+        if (bpm > 0) {
+            heartRepository.setHrMaxOverride(bpm)
+            currentHrMax.value = bpm
+        } else {
+            hrMaxDismissed.value = true
+        }
     }
 
     fun text(): String? = _report.value?.let(SessionTextFormatter::format)
@@ -143,14 +193,7 @@ fun SessionDetailScreen(
 
             heart?.let { h ->
                 SectionTitle("Fréquence cardiaque")
-                Text("♥ moyenne ${h.avgBpm} · max ${h.maxBpm} · min ${h.minBpm} bpm")
-                Text(
-                    listOfNotNull(
-                        h.kcal?.let { "${it.roundToInt()} kcal (${h.kcalSource?.label})" },
-                        "source : ${h.source.label}",
-                    ).joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                SessionHeartSection(h.entity, h.setTimes, h.peaks, h.suggestedHrMax, viewModel::acceptHrMax)
             }
 
             SectionTitle("Volume")

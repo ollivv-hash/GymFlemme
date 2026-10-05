@@ -187,7 +187,9 @@ class WatchTestViewModel @Inject constructor(
             }
             appendLine("     sources : ${p.heartRateOrigins.joinToString().ifEmpty { "-" }}")
             appendLine("Calories actives : ${p.activeKcal.toInt()} kcal (${p.activeRecords} enr.) · totales : ${p.totalKcal.toInt()} kcal (${p.totalRecords} enr.)")
-            append("     sources : ${p.calorieOrigins.joinToString().ifEmpty { "-" }}")
+            appendLine("     sources : ${p.calorieOrigins.joinToString().ifEmpty { "-" }}")
+            p.activeKcalByOrigin.forEach { (origin, kcal) -> appendLine("     actives ${kcal.toInt()} kcal ← $origin") }
+            append("     (en séance, seule la source de la montre est retenue)")
         }
     }
 }

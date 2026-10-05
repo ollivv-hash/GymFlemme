@@ -8,6 +8,7 @@ import fr.olivier.forme.feature.heart.domain.HeartSummary
 import fr.olivier.forme.feature.heart.domain.HeartZones
 import fr.olivier.forme.feature.heart.domain.KcalSource
 import fr.olivier.forme.feature.nutrition.data.ProfileDao
+import fr.olivier.forme.feature.nutrition.data.ProfileEntity
 import fr.olivier.forme.feature.sport.data.SessionDao
 import kotlinx.coroutines.flow.Flow
 import java.time.Clock
@@ -87,6 +88,21 @@ class HeartRepository @Inject constructor(
         )
         heartDao.upsert(entity)
         return entity
+    }
+
+    /** Accepts a higher maximum heart rate measured in session (zones of future sessions use it). */
+    suspend fun setHrMaxOverride(bpm: Int) {
+        val profile = profileDao.get() ?: ProfileEntity()
+        profileDao.upsert(profile.copy(hrMaxOverride = bpm))
+    }
+
+    /** Heart rate of the sessions started in [from, toExclusive) (weekly summary). */
+    fun observeRange(from: LocalDate, toExclusive: LocalDate): Flow<List<SessionHeartEntity>> {
+        val zone = clock.zone
+        return heartDao.observeStartedBetween(
+            from.atStartOfDay(zone).toInstant().toEpochMilli(),
+            toExclusive.atStartOfDay(zone).toInstant().toEpochMilli(),
+        )
     }
 
     /** Session calories of the day (for the nutrition balance). */

@@ -83,6 +83,7 @@ private fun JournalContent(
     viewModel: JournalViewModel = hiltViewModel(),
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
+    val sessionKcal by viewModel.sessionKcal.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<MealEntryEntity?>(null) }
 
     LazyColumn(Modifier.padding(horizontal = 12.dp)) {
@@ -106,6 +107,7 @@ private fun JournalContent(
                     ProteinGauge(ui.totals, ui.proteinTargetG)
                     Spacer(Modifier.padding(4.dp))
                     MacroSummary(ui.totals)
+                    SessionSpendLine(ui.totals.kcal, sessionKcal)
                 }
             }
         }
