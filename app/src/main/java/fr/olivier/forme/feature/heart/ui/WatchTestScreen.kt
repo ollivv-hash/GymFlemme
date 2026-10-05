@@ -102,7 +102,8 @@ class WatchTestViewModel @Inject constructor(
         refreshHealthConnect()
     }
 
-    fun scan(onlyHeartRate: Boolean) = ble.startScan(onlyHeartRate)
+    /** Only devices broadcasting a heart rate (the watch with its broadcast on, chest straps). */
+    fun scan() = ble.startScan(onlyHeartRate = true)
     fun stopScan() = ble.stopScan()
     fun disconnect() = ble.disconnect()
 
@@ -199,10 +200,9 @@ fun WatchTestScreen(onBack: () -> Unit, viewModel: WatchTestViewModel = hiltView
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var onlyHeartRate by remember { mutableStateOf(true) }
 
     val blePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        if (it.values.all { granted -> granted }) viewModel.scan(onlyHeartRate)
+        if (it.values.all { granted -> granted }) viewModel.scan()
     }
     val hcPermissionLauncher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
         viewModel.refreshHealthConnect()
@@ -227,11 +227,9 @@ fun WatchTestScreen(onBack: () -> Unit, viewModel: WatchTestViewModel = hiltView
             BleSection(
                 state = ble,
                 saved = saved,
-                onlyHeartRate = onlyHeartRate,
-                onToggleFilter = { onlyHeartRate = !onlyHeartRate },
                 onScan = {
                     if (viewModel.blePermissions.all { p -> ContextCompat.checkSelfPermission(context, p) == PackageManager.PERMISSION_GRANTED }) {
-                        viewModel.scan(onlyHeartRate)
+                        viewModel.scan()
                     } else {
                         blePermissionLauncher.launch(viewModel.blePermissions)
                     }
@@ -275,8 +273,6 @@ fun WatchTestScreen(onBack: () -> Unit, viewModel: WatchTestViewModel = hiltView
 private fun BleSection(
     state: BleState,
     saved: HrDevice?,
-    onlyHeartRate: Boolean,
-    onToggleFilter: () -> Unit,
     onScan: () -> Unit,
     onStop: () -> Unit,
     onConnect: (BleDevice) -> Unit,
@@ -294,7 +290,6 @@ private fun BleSection(
         } else {
             Button(onClick = onScan) { Text("Rechercher") }
         }
-        FilterChip(selected = onlyHeartRate, onClick = onToggleFilter, label = { Text("Service FC uniquement") })
     }
     if (!state.enabled) Text("Active le Bluetooth du téléphone.", color = MaterialTheme.colorScheme.error)
     saved?.let {
@@ -304,13 +299,19 @@ private fun BleSection(
             trailingContent = { TextButton(onClick = onConnectSaved) { Text("Connecter") } },
         )
     }
-    state.devices.forEach { device ->
+    val broadcasting = state.devices.filter { it.advertisesHeartRate }
+    broadcasting.forEach { device ->
         ListItem(
-            headlineContent = { Text((if (device.advertisesHeartRate) "♥ " else "") + (device.name ?: "(sans nom)")) },
-            supportingContent = {
-                Text(listOfNotNull(device.address, device.rssi?.let { "$it dBm" }, "appairé".takeIf { device.bonded }).joinToString(" · "))
-            },
+            headlineContent = { Text("♥ " + (device.name ?: "(sans nom)")) },
+            supportingContent = { Text(listOfNotNull(device.address, device.rssi?.let { "$it dBm" }).joinToString(" · ")) },
             modifier = Modifier.clickable { onConnect(device) },
+        )
+    }
+    if (state.scanning && broadcasting.isEmpty()) {
+        Text(
+            "Aucun appareil ne diffuse de FC pour l'instant : active la diffusion sur la montre.",
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(top = 8.dp),
         )
     }
 }

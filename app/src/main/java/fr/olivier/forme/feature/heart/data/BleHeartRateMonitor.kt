@@ -116,11 +116,14 @@ class BleHeartRateMonitor @Inject constructor(
         if (!adapter.isEnabled) return log("Bluetooth désactivé")
         if (!hasPermissions()) return log("Autorisation Bluetooth manquante")
         stopScan()
-        val bonded = adapter.bondedDevices.orEmpty().map {
-            BleDevice(it.address, it.name, null, advertisesHeartRate = false, bonded = true)
+        // Bonded devices (e.g. the watch's regular Mi Fitness link) never carry the heart rate: listed only for a full scan.
+        val bonded = if (onlyHeartRate) {
+            emptyList()
+        } else {
+            adapter.bondedDevices.orEmpty().map { BleDevice(it.address, it.name, null, advertisesHeartRate = false, bonded = true) }
         }
         _state.update { it.copy(devices = bonded, scanning = true) }
-        log("Appareils appairés : ${bonded.size}. Recherche ${if (onlyHeartRate) "(service FC uniquement)" else "(tous)"}…")
+        log("Recherche ${if (onlyHeartRate) "des appareils qui diffusent une FC" else "de tous les appareils"}…")
         val callback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) = onScanned(result)
             override fun onBatchScanResults(results: MutableList<ScanResult>) = results.forEach(::onScanned)
