@@ -3,7 +3,6 @@ package fr.olivier.forme.feature.sport.ui.home
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,6 +25,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -127,6 +136,7 @@ fun HomeScreen(
     val weight by viewModel.weight.collectAsStateWithLifecycle()
     val weekProgress by viewModel.weekProgress.collectAsStateWithLifecycle()
     var addingWeight by remember { mutableStateOf(false) }
+    var choosingSession by remember { mutableStateOf(false) }
 
     Scaffold(topBar = { FormeTopBar("Forme") }) { padding ->
         Column(
@@ -147,30 +157,23 @@ fun HomeScreen(
                     }
                 }
             } else {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("Séance proposée", style = MaterialTheme.typography.labelLarge)
-                        Text(proposed?.title() ?: "Aucun modèle en rotation", style = MaterialTheme.typography.headlineSmall)
+                        Text("Entraînement", style = MaterialTheme.typography.labelLarge)
                         weekProgress?.let { (done, goal) ->
                             Text(
                                 "Cette semaine : $done/$goal séances" + if (done >= goal) " ✓" else "",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.titleMedium,
                                 color = if (done >= goal) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                         }
                         Button(
                             colors = accentButtonColors(),
-                            onClick = { viewModel.start(proposed?.id, onOpenSession) },
-                            enabled = proposed != null,
+                            onClick = { choosingSession = true },
                             modifier = Modifier.fillMaxWidth().height(64.dp).padding(top = 12.dp),
-                        ) { Text("Démarrer", style = MaterialTheme.typography.titleLarge) }
+                        ) { Text("Nouvelle séance", style = MaterialTheme.typography.titleLarge) }
                     }
                 }
-                SectionTitle("Autres séances")
-                OtherSessions(
-                    titles = templates.filter { it.id != proposed?.id }.map { it.id to it.title() },
-                    onStart = { id -> viewModel.start(id, onOpenSession) },
-                )
             }
 
             SectionTitle("Nutrition du jour")
@@ -219,6 +222,18 @@ fun HomeScreen(
         }
     }
 
+    if (choosingSession) {
+        NewSessionSheet(
+            proposed = proposed?.let { it.id to it.title() },
+            others = templates.filter { it.id != proposed?.id }.map { it.id to it.title() },
+            onStart = { id ->
+                choosingSession = false
+                viewModel.start(id, onOpenSession)
+            },
+            onDismiss = { choosingSession = false },
+        )
+    }
+
     if (addingWeight) {
         WeightEntryDialog(
             initialKg = weight?.lastKg ?: 75.0,
@@ -232,33 +247,59 @@ fun HomeScreen(
     }
 }
 
-/** At most this many templates are visible at once; the rest scroll inside the list. */
-internal const val OTHER_SESSIONS_VISIBLE = 4
-internal const val OTHER_SESSIONS_TAG = "other-sessions"
-private val otherSessionRowHeight = 48.dp
-private val otherSessionSpacing = 8.dp
-
-/** Other templates as a vertical list capped to [OTHER_SESSIONS_VISIBLE] rows, then "Séance libre" always visible. */
+/**
+ * "Nouvelle séance" sheet: the session proposed by the rotation first, then the other templates, then a free session.
+ * Starting one closes the sheet and opens the session.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun OtherSessions(titles: List<Pair<Long, String>>, onStart: (Long?) -> Unit) {
-    val maxHeight = otherSessionRowHeight * OTHER_SESSIONS_VISIBLE + otherSessionSpacing * (OTHER_SESSIONS_VISIBLE - 1)
-    Column(
-        Modifier.fillMaxWidth().heightIn(max = maxHeight).verticalScroll(rememberScrollState()).testTag(OTHER_SESSIONS_TAG),
-        verticalArrangement = Arrangement.spacedBy(otherSessionSpacing),
-    ) {
-        titles.forEach { (id, title) ->
-            FilledTonalButton(onClick = { onStart(id) }, modifier = Modifier.fillMaxWidth().height(otherSessionRowHeight)) {
-                Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+private fun NewSessionSheet(
+    proposed: Pair<Long, String>?,
+    others: List<Pair<Long, String>>,
+    onStart: (Long?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        LazyColumn(Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag(NEW_SESSION_SHEET_TAG)) {
+            item {
+                Text("Nouvelle séance", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 12.dp))
+            }
+            if (proposed != null) {
+                item {
+                    Card(
+                        Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text("Séance proposée · suite de la rotation", style = MaterialTheme.typography.labelLarge)
+                            Text(proposed.second, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Button(
+                                onClick = { onStart(proposed.first) },
+                                colors = accentButtonColors(),
+                                modifier = Modifier.fillMaxWidth().height(56.dp).padding(top = 12.dp),
+                            ) { Text("Démarrer", style = MaterialTheme.typography.titleMedium) }
+                        }
+                    }
+                }
+            }
+            if (others.isNotEmpty()) {
+                item { SectionTitle("Autres séances") }
+                items(others, key = { it.first }) { (id, title) ->
+                    ListItem(
+                        headlineContent = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        trailingContent = { Icon(Icons.Filled.PlayArrow, contentDescription = "Démarrer $title", tint = MaterialTheme.colorScheme.tertiary) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { onStart(id) },
+                    )
+                }
+            }
+            item {
+                OutlinedButton(onClick = { onStart(null) }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 24.dp)) {
+                    Text("Séance libre")
+                }
             }
         }
     }
-    if (titles.size > OTHER_SESSIONS_VISIBLE) {
-        Text(
-            "↕ ${titles.size} modèles — faire défiler la liste",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp),
-        )
-    }
-    OutlinedButton(onClick = { onStart(null) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("Séance libre") }
 }
+
+internal const val NEW_SESSION_SHEET_TAG = "new-session-sheet"

@@ -5,7 +5,6 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -25,7 +24,7 @@ import fr.olivier.forme.core.db.SeedCallback
 import fr.olivier.forme.core.db.TestClock
 import fr.olivier.forme.core.db.context
 import fr.olivier.forme.feature.sport.data.TemplateRepository
-import fr.olivier.forme.feature.sport.ui.home.OTHER_SESSIONS_TAG
+import fr.olivier.forme.feature.sport.ui.home.NEW_SESSION_SHEET_TAG
 import fr.olivier.forme.feature.sport.data.WorkoutTemplateEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
@@ -65,17 +64,22 @@ class TemplateListsSmokeTest {
     }
 
     @Test
-    fun homeOtherSessionsAreCappedAndScroll() {
+    fun newSessionSheetListsProposedThenAllTemplates() {
         seedExtraTemplates()
         ActivityScenario.launch(MainActivity::class.java).use {
-            rule.waitUntilAtLeastOneExists(hasText("Séance proposée"), 10_000)
-            rule.waitUntilAtLeastOneExists(hasText("faire défiler", substring = true), 10_000)
-            // The capped list only shows the first templates; the last one is reached by scrolling the list itself.
-            rule.onNodeWithText("Extra 8", substring = true).assertIsNotDisplayed()
-            rule.onNodeWithTag(OTHER_SESSIONS_TAG).performScrollToNode(hasText("Extra 8", substring = true))
+            rule.waitUntilAtLeastOneExists(hasText("Nouvelle séance"), 10_000)
+            rule.onNodeWithText("Nouvelle séance").performClick()
+            rule.waitUntilAtLeastOneExists(hasText("Séance proposée", substring = true), 10_000)
+            rule.onNodeWithText("Démarrer").assertExists()
+            shot("r0-new-session-sheet")
+            // Every other template is reachable by scrolling the sheet, then the free session.
+            rule.onNodeWithTag(NEW_SESSION_SHEET_TAG).performScrollToNode(hasText("Extra 8", substring = true))
             rule.onNodeWithText("Extra 8", substring = true).assertIsDisplayed()
-            rule.onNodeWithText("Séance libre").assertExists()
-            shot("r0-home-other-sessions")
+            rule.onNodeWithTag(NEW_SESSION_SHEET_TAG).performScrollToNode(hasText("Séance libre"))
+            rule.onNodeWithText("Séance libre").assertIsDisplayed()
+            shot("r0b-new-session-sheet-scrolled")
+            rule.onNodeWithText("Extra 8", substring = true).performClick()
+            rule.waitUntilAtLeastOneExists(hasText("X8 · Extra 8"), 10_000)
         }
     }
 
@@ -83,7 +87,7 @@ class TemplateListsSmokeTest {
     fun longRotationScrolls() {
         seedExtraTemplates()
         ActivityScenario.launch(MainActivity::class.java).use {
-            rule.waitUntilAtLeastOneExists(hasText("Séance proposée"), 10_000)
+            rule.waitUntilAtLeastOneExists(hasText("Nouvelle séance"), 10_000)
             rule.onNode(hasText("Config") and hasClickAction()).performClick()
             rule.onNode(hasText("Rotation") and hasClickAction()).performClick()
             rule.waitUntilAtLeastOneExists(hasText("Hors rotation"), 10_000)

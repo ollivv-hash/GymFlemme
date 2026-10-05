@@ -43,7 +43,7 @@ class WeightNavSmokeTest {
         shot("x-weight-from-home")
         // Back to home with the bottom bar "Accueil" button.
         rule.onNode(hasText("Accueil") and androidx.compose.ui.test.hasClickAction()).performClick()
-        rule.waitUntilAtLeastOneExists(hasText("Séance proposée"), 10_000)
+        rule.waitUntilAtLeastOneExists(hasText("Nouvelle séance"), 10_000)
         shot("x-back-home")
         // The Nutrition tab still works afterwards and the system back key leaves home alone.
         rule.onNode(hasText("Nutrition") and androidx.compose.ui.test.hasClickAction()).performClick()

@@ -71,9 +71,12 @@ class AppSmokeTest {
 
     @Test
     fun mainFlow() {
-        waitFor("C · Mixte + tronc dominant")
+        waitFor("Nouvelle séance")
         shot("1-home")
 
+        rule.onNodeWithText("Nouvelle séance").performClick()
+        waitFor("C · Mixte + tronc dominant")
+        shot("1b-new-session-sheet")
         rule.onNodeWithText("Démarrer").performClick()
         waitFor("Allure")
         shot("2-session-start")

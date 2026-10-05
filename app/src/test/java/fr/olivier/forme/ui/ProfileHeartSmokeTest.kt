@@ -33,7 +33,7 @@ class ProfileHeartSmokeTest {
 
     @Test
     fun advisedMaximumHeartRate() {
-        rule.waitUntilAtLeastOneExists(hasText("Séance proposée"), 10_000)
+        rule.waitUntilAtLeastOneExists(hasText("Nouvelle séance"), 10_000)
         rule.onNode(hasText("Config") and hasClickAction()).performClick()
         rule.onNodeWithText("Profil").performClick()
         rule.waitUntilAtLeastOneExists(hasText("Toi (fréquence cardiaque)"), 10_000)

@@ -30,7 +30,7 @@ class WatchTestSmokeTest {
 
     @Test
     fun watchTestScreen() {
-        rule.waitUntilAtLeastOneExists(hasText("Séance proposée"), 10_000)
+        rule.waitUntilAtLeastOneExists(hasText("Nouvelle séance"), 10_000)
         rule.onNode(hasText("Config") and hasClickAction()).performClick()
         rule.onNodeWithText("Montre cardio").performClick()
         rule.waitUntilAtLeastOneExists(hasText("1. FC en direct (Bluetooth)"), 10_000)

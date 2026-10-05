@@ -53,7 +53,7 @@ class AutoBackupSmokeTest {
         runBlocking { manager.setTarget(Uri.fromFile(target)) }
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            rule.waitUntilAtLeastOneExists(hasText("Séance proposée"), 10_000)
+            rule.waitUntilAtLeastOneExists(hasText("Nouvelle séance"), 10_000)
             rule.onNode(hasText("Config") and hasClickAction()).performClick()
             rule.onNodeWithText("Réglages et sauvegarde").performClick()
             rule.waitUntilAtLeastOneExists(hasText("Sauvegarde automatique"), 10_000)
