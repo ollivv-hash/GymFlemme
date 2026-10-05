@@ -3,7 +3,7 @@
 Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé via `adb install`, sans Play Store.
 
-> **Statut : V1.0, V1.1 et V1.1.x validées sur le téléphone. V1.2 (sauvegarde automatique vers Drive) implémentée** :
+> **Statut : V1.0 à V1.2 validées sur le téléphone. V2.1 (fréquence cardiaque : montre en direct + Health Connect) implémentée** :
 > build, Lint et tests JVM au vert, reste à valider sur le téléphone.
 
 - Package : `fr.olivier.forme` — nom d'app provisoire : **Forme**
@@ -22,7 +22,8 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V1.1.1** ✅ | Volume hebdo par groupe musculaire + régularité (onglet Semaine), remplacement d'une machine occupée, supersets (2 exercices), note « pour la prochaine fois » |
 | **V1.2** ✅ | Sauvegarde automatique : fichier JSON choisi une fois (ex. dossier Google Drive), réécrit après chaque séance et chaque jour ; 3 copies locales |
 | plus tard | Intégration Drive complète (API Drive v3, `drive.file`, copies datées, bilans Markdown) — en réflexion |
-| V2.x | Partage des bilans vers l'app Claude, Health Connect (Xiaomi Watch S4 via Mi Fitness), fréquence cardiaque BLE (profil Heart Rate standard) |
+| **V2.1** ✅ | Fréquence cardiaque : FC en direct de la montre (Bluetooth, profil Heart Rate standard), complément Health Connect (Mi Fitness), zones, calories, bilan avec courbe et séries, onglet Semaine, dépense dans Nutrition |
+| plus tard | Partage des bilans vers l'app Claude |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -60,6 +61,8 @@ Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets
 | `kotlinx-serialization-json` | Export / import JSON, routes typées ; maintenu par JetBrains, sans réflexion |
 | `kotlinx-coroutines` | Asynchronisme |
 | `sh.calvin.reorderable` | Glisser-déposer dans une `LazyColumn` (absent de Compose) ; petite lib Apache 2, maintenue. **Seule dépendance tierce.** |
+| `androidx.work:work-runtime` | Sauvegarde automatique quotidienne, rattrapage Health Connect après séance |
+| `androidx.health.connect:connect-client` | Lecture de la FC et des calories écrites par Mi Fitness (V2.1) |
 | Tests : JUnit 4, `kotlinx-coroutines-test`, Turbine, `androidx.test`, Robolectric, `compose-ui-test-junit4` | Tests unitaires et instrumentés ; Robolectric exécute aussi les tests Room sur le JVM (sans téléphone) |
 
 Volontairement **sans** bibliothèque de graphiques (courbes dessinées en Compose Canvas) ni chargeur d'images (`BitmapFactory` sous-échantillonné suffit pour les photos de machines).
@@ -98,12 +101,12 @@ app_sport/
         └── androidTest/
 ```
 
-V1.1 a ajouté `feature/nutrition/` (data · domain · reminder · ui) et la migration Room 1 → 2 ; V1.2 a ajouté la sauvegarde automatique dans `core/backup/` (`AutoBackupManager`, worker WorkManager).
+V1.1 a ajouté `feature/nutrition/` (data · domain · reminder · ui) et la migration Room 1 → 2 ; V1.2 a ajouté la sauvegarde automatique dans `core/backup/` (`AutoBackupManager`, worker WorkManager) ; V2.1 a ajouté `feature/heart/` (data · domain · service · ui) et la migration 3 → 4.
 Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv` depuis le fichier Excel publié par l'ANSES.
 
 ---
 
-## Modèle de données (Room, version 3)
+## Modèle de données (Room, version 4)
 
 Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distances en mètres. `Instant` ↔ epoch millis, `LocalDate` ↔ epochDay. Les enums sont stockées en texte.
 
@@ -132,6 +135,11 @@ Tables Nutrition (V1.1, migration explicite 1 → 2) :
 
 Migration explicite **2 → 3** (V1.1.1) : 4 colonnes nullables ajoutées (`exercise.nextNote`, `template_exercise.supersetGroup`,
 `session_exercise.supersetGroup`, `session_exercise.replacedExerciseId`), aucune donnée modifiée.
+
+Migration explicite **3 → 4** (V2.1) : `profile.birthYear`, `profile.sex`, `profile.hrMaxOverride` (nullables) et la table
+`session_heart` (une ligne par séance, supprimée avec elle) : courbe de FC ré-échantillonnée toutes les 5 s et stockée en
+texte compact (`"72,75,0,80"`, 0 = pas de mesure, ~3 Ko/h), résumé **figé** au moment du calcul (moyenne, min, max, FC max
+utilisée, secondes par zone), calories et leur source (montre ou estimation), source de la courbe (direct / Health Connect / mixte).
 
 ---
 
@@ -165,6 +173,29 @@ Migration explicite **2 → 3** (V1.1.1) : 4 colonnes nullables ajoutées (`exer
   Bilan : « (superset avec X) ».
 - **Note pour la prochaine fois** (icône crayon d'un exercice) : choix rapides (« Monter la charge », « Trop dur, rester », « Douleur / gêne »,
   « Changer le réglage ») ou texte libre. Affichée en bandeau orange à la séance suivante jusqu'à « Vu ✓ », et dans l'historique de l'exercice.
+
+### Fréquence cardiaque (V2.1)
+
+- **FC en direct (source principale)** : la montre diffuse sa FC en Bluetooth LE (profil standard *Heart Rate*,
+  service 0x180D). Config → Montre cardio : choisir la montre parmi les appareils qui diffusent une FC. En séance, Forme la
+  **recherche** (filtre 0x180D, reconnue par adresse ou par nom : l'adresse de diffusion est aléatoire et peut changer) et
+  s'y connecte dès que la diffusion est active, puis se reconnecte après chaque coupure. Un **service au premier plan**
+  (type *connected device*) garde la liaison écran éteint ; chaque mesure est écrite au fil de l'eau dans un fichier par
+  séance (rien n'est perdu si l'app est tuée). Notification « Séance en cours » avec la FC, *Live Update* Android 16.
+- **En séance** : bandeau FC + zone sous le titre ; barre de repos : « récupéré » sous 60 % de la FC max (indication seule).
+- **Complément Health Connect** (après séance) : la FC écrite par Mi Fitness comble les trous de la courbe en direct (le
+  direct est prioritaire), et ses calories actives remplacent l'estimation. **Une seule source** est retenue (l'app qui a
+  écrit la FC, sinon Mi Fitness) : Health Connect contient aussi Fitbit, le podomètre du téléphone…, qu'il ne faut pas
+  additionner. Rattrapage en tâche de fond (5 min après la séance puis toutes les 30, 60, 90… min, 7 essais) et à l'ouverture
+  du bilan ; une séance de plus de 24 h n'est plus modifiée. Mi Fitness n'écrit une FC détaillée que pendant une diffusion
+  ou un entraînement lancé sur la montre.
+- **FC max** : Tanaka (208 − 0,7 × âge) à partir de l'année de naissance (Config → Profil), ou valeur personnalisée.
+  Si une séance la dépasse (moyenne sur 5 s, les pics parasites sont ignorés), le bilan propose de l'ajuster.
+- **Zones** : Z1 50-60 %, Z2 60-70 %, Z3 70-80 %, Z4 80-90 %, Z5 90-100 % de la FC max. « Intensité de travail » = zone 3 et +.
+- **Calories estimées** (sans données de la montre) : formule de Keytel (FC, poids, âge, sexe), sommée par tranche de 5 s.
+- **Bilan** : courbe avec bandes de zones et repères des séries validées, temps par zone, **pic de FC par série** (maximum
+  dans la minute qui précède la validation). **Semaine** : séances mesurées, FC moyenne, temps en zone 3 et +, kcal.
+  **Nutrition** : dépense des séances du jour et apport net.
 
 ### Nutrition (V1.1)
 
@@ -238,8 +269,8 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 ### Export / import manuel
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
-- Format versionné : `{ "schemaVersion": 3, "exportedAt": "…", "sport": { … }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" } }`.
-  Les fichiers **v1** (V1.0) et **v2** (V1.1) restent importables (champs absents = valeurs par défaut). La table Ciqual n'est pas exportée (elle est dans l'APK).
+- Format versionné : `{ "schemaVersion": 4, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" } }`.
+  La FC des séances (courbe + résumé) est incluse depuis la v4. Les fichiers **v1** à **v3** restent importables (champs absents = valeurs par défaut). La table Ciqual n'est pas exportée (elle est dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 
@@ -298,13 +329,13 @@ Tests :
 
 ```bat
 gradlew testDebugUnitTest       :: règles métier, sauvegarde, Room (Robolectric), parcours UI — sans téléphone
-gradlew connectedAndroidTest    :: tests Room instrumentés (DAO, migrations 1 → 2 → 3) sur le téléphone branché
+gradlew connectedAndroidTest    :: tests Room instrumentés (DAO, migrations 1 → 2 → 3 → 4) sur le téléphone branché
 gradlew lintDebug               :: analyse statique Android
 ```
 
 Couverture : règle de progression, rotation (ajout / archivage / réordonnancement), records et volume,
 moyenne mobile 7 jours, pré-remplissage, bilan texte, export/import JSON (aller-retour sans perte, en mémoire
-et via la base), seed, DAO et repositories, migrations Room 1 → 2 → 3, supersets (normalisation), statistiques hebdomadaires, remplacement d'exercice.
+et via la base), seed, DAO et repositories, migrations Room 1 → 4, supersets (normalisation), statistiques hebdomadaires, remplacement d'exercice, fréquence cardiaque (décodage Bluetooth, zones, Keytel, fusion direct/Health Connect, source unique, pics par série, synchro, enregistreur).
 
 Les tests de fumée (`AppSmokeTest`, `RecapSmokeTest`, `FeaturesSmokeTest`, …) écrivent des captures d'écran dans `app/build/smoke-screens/`.
 
