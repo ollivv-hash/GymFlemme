@@ -44,6 +44,7 @@ import fr.olivier.forme.feature.sport.ui.session.ActiveSessionScreen
 import fr.olivier.forme.feature.sport.ui.templates.RotationScreen
 import fr.olivier.forme.feature.sport.ui.templates.TemplateEditScreen
 import fr.olivier.forme.feature.sport.ui.templates.TemplatesScreen
+import kotlinx.coroutines.flow.first
 
 private data class TopLevel(val route: Any, val label: String, val icon: ImageVector)
 
@@ -62,7 +63,11 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
     val showBar = topLevels.any { top -> destination?.hasRoute(top.route::class) == true }
 
     LaunchedEffect(Unit) {
-        if (resumeOnStart && hasActiveSession()) nav.navigate(ActiveSessionRoute)
+        if (resumeOnStart && hasActiveSession()) {
+            // The graph is set by NavHost on its first composition: wait for it before navigating.
+            nav.currentBackStackEntryFlow.first()
+            nav.navigate(ActiveSessionRoute)
+        }
     }
 
     Scaffold(
