@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import fr.olivier.forme.feature.nutrition.domain.DayTotals
+import fr.olivier.forme.feature.nutrition.domain.KcalTarget
 import fr.olivier.forme.feature.nutrition.domain.NutritionMath
 import fr.olivier.forme.feature.nutrition.domain.Per100
 import fr.olivier.forme.feature.sport.domain.Fmt
@@ -60,6 +61,43 @@ fun ProteinGauge(totals: DayTotals, targetG: Double?, modifier: Modifier = Modif
         } else {
             Text("Ajoute une pesée pour calculer l'objectif.", style = MaterialTheme.typography.bodySmall)
         }
+    }
+}
+
+/** Calories eaten vs the day's target (rest-day target + sessions' calories). */
+@Composable
+fun CalorieGauge(eatenKcal: Double, target: KcalTarget, modifier: Modifier = Modifier) {
+    Column(modifier.padding(top = 8.dp)) {
+        Row {
+            Text(
+                Fmt.number(eatenKcal, 0),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                " / ${Fmt.number(target.totalKcal.toDouble(), 0)} kcal",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+            )
+        }
+        val ratio = (eatenKcal / target.totalKcal).toFloat()
+        LinearProgressIndicator(
+            progress = { ratio.coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(10.dp).padding(vertical = 2.dp),
+            color = if (ratio > 1.1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+        )
+        val left = target.totalKcal - eatenKcal
+        Text(
+            listOfNotNull(
+                if (target.sessionKcal > 0) {
+                    "repos ${Fmt.number(target.baseKcal.toDouble(), 0)} + séances ${target.sessionKcal}"
+                } else {
+                    null
+                },
+                if (left >= 0) "il reste ${Fmt.number(left, 0)} kcal" else "dépassé de ${Fmt.number(-left, 0)} kcal",
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 

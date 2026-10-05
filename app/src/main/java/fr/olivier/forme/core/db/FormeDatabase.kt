@@ -64,7 +64,7 @@ abstract class FormeDatabase : RoomDatabase() {
     abstract fun sessionHeartDao(): SessionHeartDao
 
     companion object {
-        const val VERSION = 4
+        const val VERSION = 5
         const val NAME = "forme.db"
     }
 }

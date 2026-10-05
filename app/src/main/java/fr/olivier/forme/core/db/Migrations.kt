@@ -93,5 +93,14 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+    /** V2.2: calorie target (height, goal, personalised rest-day target). Nullable columns only. */
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `profile` ADD COLUMN `heightCm` INTEGER")
+            db.execSQL("ALTER TABLE `profile` ADD COLUMN `nutritionGoal` TEXT")
+            db.execSQL("ALTER TABLE `profile` ADD COLUMN `kcalTargetOverride` INTEGER")
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
 }

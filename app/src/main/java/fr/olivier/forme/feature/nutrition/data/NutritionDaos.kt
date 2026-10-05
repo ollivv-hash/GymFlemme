@@ -107,6 +107,10 @@ interface MealDao {
     @Query("SELECT * FROM meal_entry WHERE date = :date ORDER BY eatenAt")
     suspend fun getDay(date: LocalDate): List<MealEntryEntity>
 
+    /** Entries from [from] to [to], both included. */
+    @Query("SELECT * FROM meal_entry WHERE date >= :from AND date <= :to ORDER BY eatenAt")
+    fun observeRange(from: LocalDate, to: LocalDate): Flow<List<MealEntryEntity>>
+
     @Query("SELECT * FROM meal_entry")
     suspend fun getAll(): List<MealEntryEntity>
 

@@ -45,6 +45,8 @@ import fr.olivier.forme.feature.heart.domain.HeartZones
 import fr.olivier.forme.feature.heart.domain.Sex
 import fr.olivier.forme.feature.nutrition.data.NutritionRepository
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
+import fr.olivier.forme.feature.nutrition.domain.EnergyMath
+import fr.olivier.forme.feature.nutrition.domain.NutritionGoal
 import fr.olivier.forme.feature.nutrition.domain.NutritionMath
 import fr.olivier.forme.feature.nutrition.reminder.CreatineReminder
 import fr.olivier.forme.feature.sport.domain.Fmt
@@ -80,6 +82,8 @@ class ProfileViewModel @Inject constructor(
     val whey = _whey.asStateFlow()
     private val _birthYear = MutableStateFlow("")
     val birthYear = _birthYear.asStateFlow()
+    private val _height = MutableStateFlow("")
+    val height = _height.asStateFlow()
     val currentYear: Int = LocalDate.now(clock).year
     val lastWeight = weights.observeAll().map { list -> list.maxByOrNull { it.date }?.weightKg }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -91,6 +95,7 @@ class ProfileViewModel @Inject constructor(
             fun t(v: Double?) = v?.let { Fmt.number(it, 2) }.orEmpty()
             _whey.value = WheyText(t(p.wheyProteinPer100g), t(p.wheyKcalPer100g), t(p.wheyCarbsPer100g), t(p.wheyFatPer100g))
             _birthYear.value = p.birthYear?.toString().orEmpty()
+            _height.value = p.heightCm?.toString().orEmpty()
         }
     }
 
@@ -99,6 +104,16 @@ class ProfileViewModel @Inject constructor(
     fun updateBirthYear(text: String) {
         _birthYear.value = text.filter(Char::isDigit).take(4)
     }
+
+    fun updateHeight(text: String) {
+        _height.value = text.filter(Char::isDigit).take(3)
+    }
+
+    /** A plausible height in cm, else null. */
+    fun parsedHeight(): Int? = _height.value.toIntOrNull()?.takeIf { it in 120..230 }
+
+    /** Changing the goal drops a personalised calorie target, which was set for the previous goal. */
+    fun setGoal(goal: NutritionGoal?) = update { it.copy(nutritionGoal = goal, kcalTargetOverride = null) }
 
     /** A plausible birth year (10 to 100 years old), else null. */
     fun parsedBirthYear(): Int? = _birthYear.value.toIntOrNull()?.takeIf { it in currentYear - 100..currentYear - 10 }
@@ -112,6 +127,7 @@ class ProfileViewModel @Inject constructor(
                 wheyCarbsPer100g = parseDecimal(w.carbs),
                 wheyFatPer100g = parseDecimal(w.fat),
                 birthYear = parsedBirthYear(),
+                heightCm = parsedHeight(),
             ),
         )
         reminder.reschedule()
@@ -126,6 +142,7 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
     val whey by viewModel.whey.collectAsStateWithLifecycle()
     val weight by viewModel.lastWeight.collectAsStateWithLifecycle()
     val birthYear by viewModel.birthYear.collectAsStateWithLifecycle()
+    val height by viewModel.height.collectAsStateWithLifecycle()
     var pickingTime by remember { mutableStateOf(false) }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     fun round1(v: Double) = (v * 10).roundToInt() / 10.0
@@ -199,6 +216,57 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
                     ?: "Saisis une pesée pour calculer l'objectif du jour.",
                 style = MaterialTheme.typography.bodyMedium,
             )
+
+            SectionTitle("Objectif calories")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NutritionGoal.entries.forEach { goal ->
+                    FilterChip(
+                        selected = p.nutritionGoal == goal,
+                        onClick = { viewModel.setGoal(if (p.nutritionGoal == goal) null else goal) },
+                        label = { Text(goal.label) },
+                    )
+                }
+            }
+            val goal = p.nutritionGoal
+            if (goal == null) {
+                Text("Choisis un objectif pour suivre tes calories.", style = MaterialTheme.typography.bodyMedium)
+            } else {
+                Text(goal.hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(
+                    value = height,
+                    onValueChange = viewModel::updateHeight,
+                    label = { Text("Taille (cm)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+                val advisedKcal = EnergyMath.advisedBase(weight, viewModel.parsedHeight(), age, p.sex, goal)
+                val kcal = p.kcalTargetOverride ?: advisedKcal
+                Stepper(
+                    label = "Jour de repos (kcal)",
+                    valueText = kcal?.let { Fmt.number(it.toDouble(), 0) } ?: "—",
+                    onMinus = { (kcal ?: 2000).let { v -> viewModel.update { it.copy(kcalTargetOverride = (v - 50).coerceIn(1000, 6000)) } } },
+                    onPlus = { (kcal ?: 2000).let { v -> viewModel.update { it.copy(kcalTargetOverride = (v + 50).coerceIn(1000, 6000)) } } },
+                    onValueEntered = { t -> t.toIntOrNull()?.let { v -> viewModel.update { it.copy(kcalTargetOverride = v.coerceIn(1000, 6000)) } } },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+                Text(
+                    when {
+                        advisedKcal == null -> "Renseigne année de naissance, sexe, taille et une pesée pour la valeur conseillée."
+                        p.kcalTargetOverride == null -> "Valeur conseillée (Mifflin-St Jeor × 1,4, ${goal.label.lowercase()})."
+                        else -> "Valeur personnalisée · conseillée : ${Fmt.number(advisedKcal.toDouble(), 0)} kcal."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (p.kcalTargetOverride != null && advisedKcal != null) {
+                    TextButton(onClick = { viewModel.update { it.copy(kcalTargetOverride = null) } }) { Text("Revenir à la valeur conseillée") }
+                }
+                Text(
+                    "Les jours d'entraînement, la dépense mesurée des séances s'ajoute à cet objectif.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             SectionTitle("Whey (valeurs de l'étiquette pour 100 g)")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

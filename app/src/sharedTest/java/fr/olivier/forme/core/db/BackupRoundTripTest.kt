@@ -13,6 +13,7 @@ import fr.olivier.forme.feature.nutrition.data.OpenFoodFactsClient
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
 import fr.olivier.forme.feature.nutrition.domain.FoodSource
 import fr.olivier.forme.feature.nutrition.domain.MealType
+import fr.olivier.forme.feature.nutrition.domain.NutritionGoal
 import fr.olivier.forme.feature.sport.data.CardioEntryEntity
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.SetEntryEntity
@@ -42,7 +43,7 @@ class BackupRoundTripTest {
             source, source.profileDao(), source.ciqualDao(), source.foodDao(), source.mealDao(), source.creatineDao(),
             source.sessionDao(), OpenFoodFactsClient(), clock,
         )
-        nutrition.saveProfile(ProfileEntity(proteinTargetGPerKg = 2.0, wheyProteinPer100g = 80.0, birthYear = 1980, sex = Sex.MALE, hrMaxOverride = 181))
+        nutrition.saveProfile(ProfileEntity(proteinTargetGPerKg = 2.0, wheyProteinPer100g = 80.0, birthYear = 1980, sex = Sex.MALE, hrMaxOverride = 181, heightCm = 178, nutritionGoal = NutritionGoal.BULK, kcalTargetOverride = 2700))
         val session = source.sessionDao().getSession(id)!!
         HeartRepository(source.sessionHeartDao(), source.sessionDao(), source.profileDao(), source.bodyWeightDao(), clock)
             .saveSession(id, listOf(session.startedAt.plusSeconds(30) to 120, session.startedAt.plusSeconds(90) to 150), HeartSource.BLE, watchKcal = 42.0)
@@ -62,6 +63,8 @@ class BackupRoundTripTest {
 
         assertEquals(2, exported.nutrition.meals.size)
         assertEquals(1, exported.sport.heart.size)
+        assertEquals(NutritionGoal.BULK, exported.nutrition.profile!!.nutritionGoal)
+        assertEquals(2700, exported.nutrition.profile!!.kcalTargetOverride)
         assertEquals(1980, exported.nutrition.profile!!.birthYear)
         assertEquals(exported, reimported)
         assertEquals(text, BackupCodec.encode(reimported))

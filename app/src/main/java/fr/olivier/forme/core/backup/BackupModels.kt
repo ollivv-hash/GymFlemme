@@ -11,6 +11,7 @@ import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
 import fr.olivier.forme.feature.nutrition.domain.FoodSource
 import fr.olivier.forme.feature.nutrition.domain.MealType
+import fr.olivier.forme.feature.nutrition.domain.NutritionGoal
 import fr.olivier.forme.feature.sport.data.CardioEntryEntity
 import fr.olivier.forme.feature.sport.data.ExerciseEntity
 import fr.olivier.forme.feature.sport.data.SessionEntity
@@ -28,7 +29,8 @@ import java.time.LocalDate
 /**
  * Full backup file. [schemaVersion] is the backup format version (independent from the Room version):
  * v1 = sport + body weight, v2 adds the `nutrition` section (absent in v1 files → empty),
- * v3 adds supersets, replacements and exercise notes (optional fields, absent → null).
+ * v3 adds supersets, replacements and exercise notes (optional fields, absent → null),
+ * v4 adds session heart rate and age / sex / maximum heart rate, v5 adds height, nutrition goal and calorie target.
  * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual reference table is not exported.
  */
 @Serializable
@@ -63,6 +65,9 @@ data class ProfileDto(
     val birthYear: Int? = null,
     val sex: Sex? = null,
     val hrMaxOverride: Int? = null,
+    val heightCm: Int? = null,
+    val nutritionGoal: NutritionGoal? = null,
+    val kcalTargetOverride: Int? = null,
 )
 
 @Serializable
@@ -281,10 +286,12 @@ fun BodyWeightDto.toEntity() = BodyWeightEntity(id, LocalDate.parse(date), weigh
 fun ProfileEntity.toDto() = ProfileDto(
     proteinTargetGPerKg, wheyProteinPer100g, wheyKcalPer100g, wheyCarbsPer100g, wheyFatPer100g, wheyScoopG,
     creatineDoseG, creatineReminderEnabled, creatineReminderMinutes, birthYear, sex, hrMaxOverride,
+    heightCm, nutritionGoal, kcalTargetOverride,
 )
 fun ProfileDto.toEntity() = ProfileEntity(
     1, proteinTargetGPerKg, wheyProteinPer100g, wheyKcalPer100g, wheyCarbsPer100g, wheyFatPer100g, wheyScoopG,
     creatineDoseG, creatineReminderEnabled, creatineReminderMinutes, birthYear, sex, hrMaxOverride,
+    heightCm, nutritionGoal, kcalTargetOverride,
 )
 
 fun FoodEntity.toDto() = FoodDto(

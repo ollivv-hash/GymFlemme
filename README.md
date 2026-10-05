@@ -23,15 +23,14 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V1.2** ✅ | Sauvegarde automatique : fichier JSON choisi une fois (ex. dossier Google Drive), réécrit après chaque séance et chaque jour ; 3 copies locales |
 | plus tard | Intégration Drive complète (API Drive v3, `drive.file`, copies datées, bilans Markdown) — en réflexion |
 | **V2.1** ✅ | Fréquence cardiaque : FC en direct de la montre (Bluetooth, profil Heart Rate standard), complément Health Connect (Mi Fitness), zones, calories, bilan avec courbe et séries, onglet Semaine, dépense dans Nutrition |
+| **V2.2** ✅ | Objectif calories (prise de masse / maintien / sèche, majoré des séances), conseil protéines et whey (jusqu'à 2 doses), bilan nutrition de la semaine, CI GitHub (APK signé) |
+| V2.3 | Coaching : 1RM estimé, détection de plateau, conseil de semaine de décharge |
 | plus tard | Partage des bilans vers l'app Claude |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
 ### Idées pour plus tard
 
-- **Whey : conseil de quantité du jour.** Au lieu d'une dose fixe, proposer chaque jour la quantité de whey à prendre
-  selon les protéines déjà renseignées dans les repas (reste à couvrir pour atteindre l'objectif), en plus de la valeur
-  d'une dose.
 - Photos des machines : import manuel exercice par exercice (déjà possible), pas d'import en masse.
 - Intégration Drive complète (API Drive v3, copies datées, bilans Markdown) — en réflexion.
 
@@ -106,7 +105,7 @@ Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv`
 
 ---
 
-## Modèle de données (Room, version 4)
+## Modèle de données (Room, version 5)
 
 Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distances en mètres. `Instant` ↔ epoch millis, `LocalDate` ↔ epochDay. Les enums sont stockées en texte.
 
@@ -127,7 +126,7 @@ Tables Nutrition (V1.1, migration explicite 1 → 2) :
 
 | Table | Colonnes principales | Remarques |
 |---|---|---|
-| `profile` | id = 1, proteinTargetGPerKg (1,8), whey (prot./kcal/glucides/lipides pour 100 g, dose 30 g), creatineDoseG (5), rappel (actif, heure) | Ligne absente = valeurs par défaut. |
+| `profile` | id = 1, proteinTargetGPerKg (1,8), whey (prot./kcal/glucides/lipides pour 100 g, dose 30 g), creatineDoseG (5), rappel (actif, heure), FC (année de naissance, sexe, FC max), calories (taille, objectif, objectif repos personnalisé) | Ligne absente = valeurs par défaut. |
 | `ciqual_food` + `ciqual_fts` | code, nom, groupe, kcal, protéines, glucides, lipides pour 100 g ; index plein texte | Référentiel ANSES en lecture seule, chargé depuis l'APK ; recherche insensible aux accents. **Non exporté.** |
 | `food` | id, source (CIQUAL / OFF / CUSTOM), sourceCode (code Ciqual ou code-barres), nom, marque, valeurs /100 g, portion, favori, dernière utilisation | « Mes aliments » : perso, cache Open Food Facts, aliments Ciqual déjà utilisés (récents / favoris). |
 | `meal_entry` | id, date, mealType, foodId?, nom, quantité (g), protéines, kcal, glucides, lipides, isWhey, heure | **Copie des valeurs** : modifier ou supprimer un aliment ne change jamais l'historique. |
@@ -140,6 +139,8 @@ Migration explicite **3 → 4** (V2.1) : `profile.birthYear`, `profile.sex`, `pr
 `session_heart` (une ligne par séance, supprimée avec elle) : courbe de FC ré-échantillonnée toutes les 5 s et stockée en
 texte compact (`"72,75,0,80"`, 0 = pas de mesure, ~3 Ko/h), résumé **figé** au moment du calcul (moyenne, min, max, FC max
 utilisée, secondes par zone), calories et leur source (montre ou estimation), source de la courbe (direct / Health Connect / mixte).
+
+Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionGoal`, `profile.kcalTargetOverride` (nullables).
 
 ---
 
@@ -202,10 +203,23 @@ utilisée, secondes par zone), calories et leur source (montre ou estimation), s
 - **Objectif protéines** = facteur du profil (1,8 g/kg par défaut, modifiable de 0,8 à 3,0) × **dernier poids saisi**.
 - **Jauge du jour** : consommé / objectif et reste à manger ; kcal, glucides et lipides du jour avec la répartition énergétique (4 / 4 / 9 kcal par g).
 - **Repas** : petit-déjeuner, déjeuner, collation, dîner, plus des **collations supplémentaires** horodatées.
-- **Whey** : 1 dose fixe par jour (valeurs de l'étiquette saisies dans le profil). Moment conseillé : **juste après la séance** les jours d'entraînement, au petit-déjeuner ou en collation les jours de repos.
+- **Whey** : 1 dose par jour (2 si le conseil protéines le demande, V2.2) (valeurs de l'étiquette saisies dans le profil). Moment conseillé : **juste après la séance** les jours d'entraînement, au petit-déjeuner ou en collation les jours de repos.
 - **Créatine** : 5 g/jour par défaut, case « prise » avec série de jours consécutifs. **Rappel** quotidien à l'heure choisie (20:00 par défaut), **non envoyé si la prise est déjà notée**, avec bouton « C'est pris » dans la notification ; reprogrammé après redémarrage du téléphone.
 - **Code-barres** : scan caméra (CameraX + ML Kit embarqué, hors ligne) puis Open Food Facts ; chaque produit trouvé est mis en cache et reste disponible hors ligne. Produit inconnu, sans protéines, ou réseau absent : création depuis l'étiquette ou recherche Ciqual.
 - **Ciqual** : table ANSES 2025 (3 484 aliments) embarquée. Quand un aliment Ciqual est utilisé, il rejoint « Mes aliments » (récents, favoris).
+
+### Objectif calories et conseil protéines (V2.2)
+
+- **Objectif** (Profil → Objectif calories) : prise de masse (+10 %), maintien, sèche (−20 %) ; aucun objectif choisi = pas de suivi des calories.
+- **Jour de repos** = métabolisme de base Mifflin-St Jeor (poids, taille, âge, sexe) × 1,4 (vie quotidienne hors séances) × ajustement de l'objectif,
+  arrondi à 10 kcal. Valeur modifiable (± 50 kcal), « Revenir à la valeur conseillée » ; changer d'objectif efface la valeur personnalisée.
+- **Jour d'entraînement** : objectif repos **+ calories mesurées des séances du jour** (montre ou estimation par la FC). Jauge kcal sous la jauge protéines.
+- **Conseil protéines** (aujourd'hui seulement) : manque = objectif − consommé ; repas à venir = repas principaux pas encore saisis et dont l'heure
+  n'est pas passée (petit-déj. 11 h, déjeuner 15 h, collation 18 h 30, dîner 22 h 30), estimés par leur moyenne des 14 derniers jours
+  (repas présent au moins 3 jours, whey et collations supplémentaires exclues). Doses de whey = (manque − repas à venir − 5 g de tolérance) ÷ protéines
+  par dose, arrondi au supérieur, **2 doses par jour au maximum** ; au-delà, le reste est à trouver dans l'alimentation.
+- **Bilan de la semaine** (Historique → Semaine) : jours saisis, protéines moyennes et jours à l'objectif (poids actuel), kcal moyennes et jours
+  dans l'objectif (± 10 %, séances comprises), jours avec whey et créatine.
 
 Source des données de composition : *Anses. 2025. Table de composition nutritionnelle des aliments Ciqual* —
 [ciqual.anses.fr](https://ciqual.anses.fr/), Licence Ouverte / Etalab 2.0. Produits scannés : [Open Food Facts](https://world.openfoodfacts.org/) (ODbL).
@@ -269,8 +283,8 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 ### Export / import manuel
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
-- Format versionné : `{ "schemaVersion": 4, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" } }`.
-  La FC des séances (courbe + résumé) est incluse depuis la v4. Les fichiers **v1** à **v3** restent importables (champs absents = valeurs par défaut). La table Ciqual n'est pas exportée (elle est dans l'APK).
+- Format versionné : `{ "schemaVersion": 5, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" } }`.
+  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5. Les fichiers **v1** à **v4** restent importables (champs absents = valeurs par défaut). La table Ciqual n'est pas exportée (elle est dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 
@@ -329,13 +343,13 @@ Tests :
 
 ```bat
 gradlew testDebugUnitTest       :: règles métier, sauvegarde, Room (Robolectric), parcours UI — sans téléphone
-gradlew connectedAndroidTest    :: tests Room instrumentés (DAO, migrations 1 → 2 → 3 → 4) sur le téléphone branché
+gradlew connectedAndroidTest    :: tests Room instrumentés (DAO, migrations 1 → 2 → 3 → 4 → 5) sur le téléphone branché
 gradlew lintDebug               :: analyse statique Android
 ```
 
 Couverture : règle de progression, rotation (ajout / archivage / réordonnancement), records et volume,
 moyenne mobile 7 jours, pré-remplissage, bilan texte, export/import JSON (aller-retour sans perte, en mémoire
-et via la base), seed, DAO et repositories, migrations Room 1 → 4, supersets (normalisation), statistiques hebdomadaires, remplacement d'exercice, fréquence cardiaque (décodage Bluetooth, zones, Keytel, fusion direct/Health Connect, source unique, pics par série, synchro, enregistreur).
+et via la base), seed, DAO et repositories, migrations Room 1 → 5, supersets (normalisation), statistiques hebdomadaires, remplacement d'exercice, fréquence cardiaque (décodage Bluetooth, zones, Keytel, fusion direct/Health Connect, source unique, pics par série, synchro, enregistreur), objectif calories (Mifflin-St Jeor), conseil protéines / whey, bilan nutrition de la semaine.
 
 Les tests de fumée (`AppSmokeTest`, `RecapSmokeTest`, `FeaturesSmokeTest`, …) écrivent des captures d'écran dans `app/build/smoke-screens/`.
 

@@ -85,9 +85,25 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate1To4() {
+    fun migrate4To5AddsCalorieTargetColumns() {
+        helper.createDatabase(dbName, 4).apply {
+            execSQL("INSERT INTO profile (id, proteinTargetGPerKg, wheyScoopG, creatineDoseG, creatineReminderEnabled, creatineReminderMinutes, birthYear) VALUES (1, 2.0, 30, 5, 1, 1200, 1980)")
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 5, true, Migrations.MIGRATION_4_5).apply {
+            query("SELECT birthYear, heightCm, nutritionGoal, kcalTargetOverride FROM profile WHERE id = 1").use {
+                it.moveToFirst()
+                assertEquals(1980, it.getInt(0))
+                assertTrue(it.isNull(1) && it.isNull(2) && it.isNull(3))
+            }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To5() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, 4, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 5, true, *Migrations.ALL).close()
     }
 
     @Test
