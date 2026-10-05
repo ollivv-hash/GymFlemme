@@ -160,6 +160,16 @@ interface SessionDao {
     )
     fun observeWorkingSetsSince(fromMillis: Long): Flow<List<WorkingSetRow>>
 
+    /** Working sets of active loaded exercises in finished sessions (seed included: it is the starting reference). */
+    @Query(
+        """SELECT e.exerciseId AS exerciseId, x.loadIncrementKg AS loadIncrementKg, s.id AS sessionId,
+                  s.startedAt AS startedAt, e.loadKg AS loadKg, e.reps AS reps
+           FROM set_entry e JOIN session s ON s.id = e.sessionId JOIN exercise x ON x.id = e.exerciseId
+           WHERE e.isWarmup = 0 AND s.endedAt IS NOT NULL AND x.type = 'WEIGHTED' AND x.archived = 0
+           ORDER BY s.startedAt, e.setIndex""",
+    )
+    fun observeWeightedSets(): Flow<List<WeightedSetRow>>
+
     // --- Cardio -----------------------------------------------------------------------------
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

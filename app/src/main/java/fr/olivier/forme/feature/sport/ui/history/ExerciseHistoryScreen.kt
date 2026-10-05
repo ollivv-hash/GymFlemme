@@ -1,6 +1,7 @@
 package fr.olivier.forme.feature.sport.ui.history
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,7 +30,11 @@ import fr.olivier.forme.feature.sport.data.toWorkSet
 import fr.olivier.forme.feature.sport.domain.ExerciseRecords
 import fr.olivier.forme.feature.sport.domain.ExerciseType
 import fr.olivier.forme.feature.sport.domain.Fmt
+import fr.olivier.forme.feature.sport.domain.OneRepMax
+import fr.olivier.forme.feature.sport.domain.Plateau
+import fr.olivier.forme.feature.sport.domain.PlateauDetector
 import fr.olivier.forme.feature.sport.domain.RecordsCalculator
+import fr.olivier.forme.feature.sport.ui.session.PlateauCard
 import fr.olivier.forme.feature.sport.domain.SessionTextFormatter
 import fr.olivier.forme.ui.components.ChartPoint
 import fr.olivier.forme.ui.components.ChartSeries
@@ -54,6 +59,9 @@ data class ExerciseHistoryUi(
     /** Seed included: it is the starting reference. */
     val records: ExerciseRecords = ExerciseRecords(null, null),
     val cardio: List<CardioEntryEntity> = emptyList(),
+    /** Loaded exercises: best estimated 1RM (seed included) and current plateau, if any. */
+    val bestOneRepMaxKg: Double? = null,
+    val plateau: Plateau? = null,
 )
 
 @HiltViewModel
@@ -71,13 +79,17 @@ class ExerciseHistoryViewModel @Inject constructor(
         sessions.observeExerciseHistory(exerciseId),
         sessions.observeCardioHistory(exerciseId),
     ) { exercise, rows, cardio ->
+        val history = rows.toSessionSets()
+        val weighted = exercise?.type == ExerciseType.WEIGHTED
         ExerciseHistoryUi(
             exercise = exercise,
             sessions = rows.filterNot { it.isSeed }.groupBy { it.sessionId }
                 .map { (_, r) -> SessionGroup(r.first().startedAt, r) }
                 .sortedByDescending { it.startedAt },
-            records = RecordsCalculator.records(rows.toSessionSets()),
+            records = RecordsCalculator.records(history),
             cardio = cardio.reversed(),
+            bestOneRepMaxKg = if (weighted) history.mapNotNull { OneRepMax.best(it.sets) }.maxOrNull() else null,
+            plateau = if (weighted) PlateauDetector.detect(history, exercise!!.loadIncrementKg) else null,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExerciseHistoryUi())
 }
@@ -124,8 +136,10 @@ fun ExerciseHistoryScreen(onBack: () -> Unit, viewModel: ExerciseHistoryViewMode
                     SectionTitle("Records")
                     Text("Meilleure charge : ${ui.records.bestLoadKg?.let(Fmt::kg) ?: "—"}")
                     Text("Meilleur volume (séance) : ${ui.records.bestVolumeKg?.let(Fmt::kg) ?: "—"}")
+                    ui.bestOneRepMaxKg?.let { Text("1RM estimé (Epley, ≤ ${OneRepMax.MAX_REPS} reps) : ${Fmt.kg(Math.round(it * 2) / 2.0)}") }
                 }
             }
+            ui.plateau?.let { item { PlateauCard(it, Modifier.padding(top = 8.dp)) } }
 
             val chartPoints = ui.sessions.mapNotNull { group ->
                 val value = when (exercise.type) {
@@ -134,6 +148,14 @@ fun ExerciseHistoryScreen(onBack: () -> Unit, viewModel: ExerciseHistoryViewMode
                     else -> group.rows.mapNotNull { it.durationSec }.maxOrNull()?.toDouble()
                 } ?: return@mapNotNull null
                 ChartPoint(group.startedAt.atZone(viewModel.zone).toLocalDate().toEpochDay().toDouble(), value)
+            }
+            val oneRepMaxPoints = if (exercise.type == ExerciseType.WEIGHTED) {
+                ui.sessions.mapNotNull { group ->
+                    val best = OneRepMax.best(group.rows.map { it.toWorkSet() }) ?: return@mapNotNull null
+                    ChartPoint(group.startedAt.atZone(viewModel.zone).toLocalDate().toEpochDay().toDouble(), best)
+                }
+            } else {
+                emptyList()
             }
             if (chartPoints.isNotEmpty()) {
                 item {
@@ -146,10 +168,19 @@ fun ExerciseHistoryScreen(onBack: () -> Unit, viewModel: ExerciseHistoryViewMode
                             },
                         )
                         LineChart(
-                            series = listOf(ChartSeries(chartPoints, MaterialTheme.colorScheme.primary)),
+                            series = listOfNotNull(
+                                ChartSeries(chartPoints, MaterialTheme.colorScheme.primary),
+                                oneRepMaxPoints.takeIf { it.isNotEmpty() }?.let { ChartSeries(it, MaterialTheme.colorScheme.tertiary) },
+                            ),
                             xLabel = { LocalDate.ofEpochDay(it.toLong()).format(shortDate) },
                             yLabel = { if (exercise.type == ExerciseType.WEIGHTED) Fmt.kg(it) else Fmt.number(it, 0) },
                         )
+                        if (oneRepMaxPoints.isNotEmpty()) {
+                            Row {
+                                Text("— charge max", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                                Text("   — 1RM estimé", color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
                     }
                 }
             }

@@ -22,6 +22,16 @@ data class WorkingSetRow(
     val type: fr.olivier.forme.feature.sport.domain.ExerciseType,
 )
 
+/** One working set of a loaded exercise (plateau detection across exercises). */
+data class WeightedSetRow(
+    val exerciseId: Long,
+    val loadIncrementKg: Double,
+    val sessionId: Long,
+    val startedAt: Instant,
+    val loadKg: Double?,
+    val reps: Int?,
+)
+
 /** One working set of an exercise, with the context of the session it belongs to. */
 data class ExerciseSetRow(
     val sessionId: Long,

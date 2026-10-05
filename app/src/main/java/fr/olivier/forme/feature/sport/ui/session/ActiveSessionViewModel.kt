@@ -23,6 +23,7 @@ import fr.olivier.forme.feature.sport.domain.ProgressionRule
 import fr.olivier.forme.feature.sport.domain.SessionExerciseStatus
 import fr.olivier.forme.feature.sport.domain.SetTarget
 import fr.olivier.forme.feature.sport.domain.SupersetRules
+import fr.olivier.forme.feature.sport.domain.Plateau
 import fr.olivier.forme.feature.sport.domain.Suggestion
 import fr.olivier.forme.feature.sport.domain.WorkSet
 import fr.olivier.forme.feature.sport.timer.RestTimer
@@ -49,6 +50,8 @@ data class ExerciseHistoryHint(
     val lastTime: List<SetEntryEntity>,
     val lastCardio: CardioEntryEntity?,
     val suggestion: Suggestion?,
+    /** Loaded exercises only: no progress of the estimated 1RM for several sessions. */
+    val plateau: Plateau? = null,
 )
 
 data class CardioDraft(val durationSec: Int, val distanceM: Int?, val calories: Int?)
@@ -173,6 +176,11 @@ class ActiveSessionViewModel @Inject constructor(
                     exercise.loadIncrementKg,
                     sessions.previousPerformance(exercise.id, sessionId),
                 ),
+                plateau = if (exercise.type == ExerciseType.WEIGHTED) {
+                    sessions.plateau(exercise.id, exercise.loadIncrementKg, sessionId)
+                } else {
+                    null
+                },
             )
             hints.update { it + (exercise.id to hint) }
         }
