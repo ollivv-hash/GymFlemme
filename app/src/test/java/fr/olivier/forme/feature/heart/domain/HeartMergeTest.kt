@@ -34,4 +34,13 @@ class HeartMergeTest {
         )
         assertEquals(44.0, HeartMerge.kcalWithin(records, t0, t0.plusSeconds(3600)), 1e-9)
     }
+
+    @Test
+    fun originPicking() {
+        val watch = HeartMerge.WATCH_APP
+        assertEquals("a", HeartMerge.pickOrigin(listOf("a", "a", "b"), setOf(watch)))
+        assertEquals(watch, HeartMerge.pickOrigin(emptyList(), setOf("com.fitbit.FitbitMobile", watch)))
+        assertEquals("solo", HeartMerge.pickOrigin(emptyList(), setOf("solo")))
+        assertEquals(null, HeartMerge.pickOrigin(emptyList(), setOf("x", "y")))
+    }
 }

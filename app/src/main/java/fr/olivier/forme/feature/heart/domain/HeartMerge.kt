@@ -3,10 +3,26 @@ package fr.olivier.forme.feature.heart.domain
 import java.time.Duration
 import java.time.Instant
 
-/** A calorie record from the watch (Health Connect): energy spent between [start] and [end]. */
-data class KcalInterval(val start: Instant, val end: Instant, val kcal: Double)
+/** A calorie record from Health Connect: energy spent between [start] and [end], written by app [origin]. */
+data class KcalInterval(val start: Instant, val end: Instant, val kcal: Double, val origin: String? = null)
+
+/** A heart rate measurement from Health Connect, written by app [origin]. */
+data class SourcedSample(val time: Instant, val bpm: Int, val origin: String)
 
 object HeartMerge {
+    /** Package of Mi Fitness, the Xiaomi watch app writing to Health Connect. */
+    const val WATCH_APP = "com.xiaomi.wearable"
+
+    /**
+     * Several apps may write to Health Connect (watch app, Fitbit, the phone's own step counter…): mixing them would
+     * count the same effort twice. Keeps one source: the app that wrote the heart rate of the session (the most
+     * samples), else the watch app, else the only calorie source if there is just one; null = none usable.
+     */
+    fun pickOrigin(heartRateOrigins: List<String>, kcalOrigins: Set<String>): String? =
+        heartRateOrigins.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+            ?: WATCH_APP.takeIf { it in kcalOrigins }
+            ?: kcalOrigins.singleOrNull()
+
     /**
      * Fills the gaps of the live (Bluetooth) curve with Health Connect values, slot by slot; live values always win.
      * Both series must be on the same grid. Returns the merged series and its source.
