@@ -9,10 +9,14 @@ import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
 import fr.olivier.forme.feature.nutrition.data.NutritionRepository
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
 import fr.olivier.forme.feature.nutrition.data.macros
+import fr.olivier.forme.feature.nutrition.data.protein
+import fr.olivier.forme.feature.nutrition.data.restDayKcal
 import fr.olivier.forme.feature.nutrition.domain.CreatineStreak
 import fr.olivier.forme.feature.nutrition.domain.DayTotals
 import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.nutrition.domain.NutritionMath
+import fr.olivier.forme.feature.nutrition.domain.ProteinAdvice
+import fr.olivier.forme.feature.nutrition.domain.ProteinPlan
 import fr.olivier.forme.feature.nutrition.domain.WheyAdvice
 import fr.olivier.forme.feature.nutrition.domain.WheyMoment
 import fr.olivier.forme.feature.nutrition.reminder.CreatineReminder
@@ -40,9 +44,19 @@ data class JournalUi(
     val wheyMoment: WheyMoment = WheyMoment.REST_DAY,
     val creatineTaken: Boolean = false,
     val creatineStreak: Int = 0,
+    /** Protein advice of the day (today only, with a target). */
+    val proteinPlan: ProteinPlan? = null,
+    /** Rest-day calorie target; null without a nutrition goal. */
+    val restDayKcal: Int? = null,
+    val wheyDoses: Int = 0,
 ) {
     fun entriesOf(type: MealType) = entries.filter { it.mealType == type }
     val wheyConfigured get() = profile.wheyProteinPer100g != null
+    val proteinPerDoseG: Double? get() = profile.wheyProteinPer100g?.let { it * profile.wheyScoopG / 100 }
+
+    /** A first dose is always offered; a second one only when the advice asks for it. */
+    val canAddWhey: Boolean
+        get() = wheyDoses < ProteinAdvice.MAX_DOSES && (wheyDoses == 0 || (proteinPlan?.doses ?: 0) > 0)
 }
 
 /** Shared by the Nutrition journal and the home card. */
@@ -59,7 +73,9 @@ class JournalViewModel @Inject constructor(
     private val lastWeight = weights.observeAll().map { list -> list.maxByOrNull { it.date }?.weightKg }
 
     val ui: StateFlow<JournalUi> = date.flatMapLatest { d ->
-        combine(
+        val history = repository.observeRange(d.minusDays(ProteinAdvice.LOOKBACK_DAYS), d.minusDays(1))
+            .map { list -> ProteinAdvice.usualProtein(list.map { it.protein() }) }
+        val day = combine(
             repository.observeDay(d),
             repository.profile,
             lastWeight,
@@ -76,7 +92,15 @@ class JournalViewModel @Inject constructor(
                 wheyMoment = WheyAdvice.moment(entries.any { it.isWhey }, training),
                 creatineTaken = d in creatineDates,
                 creatineStreak = CreatineStreak.days(creatineDates, repository.today()),
+                restDayKcal = profile.restDayKcal(weight, d.year),
+                wheyDoses = entries.count { it.isWhey },
             )
+        }
+        combine(day, history) { ui, usual ->
+            val target = ui.proteinTargetG
+            if (!ui.isToday || target == null) return@combine ui
+            val upcoming = ProteinAdvice.upcoming(ui.entries.map { it.protein() }, usual, repository.now())
+            ui.copy(proteinPlan = ProteinAdvice.plan(ui.totals.proteinG, target, upcoming, ui.proteinPerDoseG, ui.wheyDoses))
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUi(today, true))
 

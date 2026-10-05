@@ -2,8 +2,11 @@ package fr.olivier.forme.feature.nutrition.data
 
 import androidx.room.withTransaction
 import fr.olivier.forme.core.db.FormeDatabase
+import fr.olivier.forme.feature.heart.domain.HeartZones
+import fr.olivier.forme.feature.nutrition.domain.EnergyMath
 import fr.olivier.forme.feature.nutrition.domain.FoodSource
 import fr.olivier.forme.feature.nutrition.domain.Macros
+import fr.olivier.forme.feature.nutrition.domain.MealProtein
 import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.nutrition.domain.NutritionMath
 import fr.olivier.forme.feature.nutrition.domain.Per100
@@ -13,6 +16,7 @@ import kotlinx.coroutines.flow.map
 import java.text.Normalizer
 import java.time.Clock
 import java.time.LocalDate
+import java.time.LocalTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,6 +41,14 @@ sealed interface FoodChoice {
 
 fun FoodEntity.per100() = Per100(proteinPer100g, kcalPer100g, carbsPer100g, fatPer100g)
 fun MealEntryEntity.macros() = Macros(proteinG, kcal, carbsG, fatG)
+fun MealEntryEntity.protein() = MealProtein(date, mealType, proteinG, isWhey)
+
+/** Rest-day calorie target: personalised, else advised from the goal; null without a goal or missing measures. */
+fun ProfileEntity.restDayKcal(weightKg: Double?, currentYear: Int): Int? {
+    val goal = nutritionGoal ?: return null
+    return kcalTargetOverride
+        ?: EnergyMath.advisedBase(weightKg, heightCm, birthYear?.let { HeartZones.age(it, currentYear) }, sex, goal)
+}
 
 @Singleton
 class NutritionRepository @Inject constructor(
@@ -61,6 +73,11 @@ class NutritionRepository @Inject constructor(
     // --- Meals -----------------------------------------------------------------------------
 
     fun observeDay(date: LocalDate): Flow<List<MealEntryEntity>> = mealDao.observeDay(date)
+
+    /** Entries from [from] to [to], both included (protein habits, weekly summary). */
+    fun observeRange(from: LocalDate, to: LocalDate): Flow<List<MealEntryEntity>> = mealDao.observeRange(from, to)
+
+    fun now(): LocalTime = LocalTime.now(clock)
 
     /** True when a real workout session started on [date] (whey timing). */
     fun observeTrainingOn(date: LocalDate): Flow<Boolean> {

@@ -9,6 +9,7 @@ import androidx.room.PrimaryKey
 import fr.olivier.forme.feature.heart.domain.Sex
 import fr.olivier.forme.feature.nutrition.domain.FoodSource
 import fr.olivier.forme.feature.nutrition.domain.MealType
+import fr.olivier.forme.feature.nutrition.domain.NutritionGoal
 import java.time.Instant
 import java.time.LocalDate
 
@@ -32,6 +33,11 @@ data class ProfileEntity(
     val sex: Sex? = null,
     /** Maximum heart rate entered or accepted by the user; null = computed from the age. */
     val hrMaxOverride: Int? = null,
+    /** Calorie target (V2.2): height for the basal metabolic rate, goal; null goal = no calorie target. */
+    val heightCm: Int? = null,
+    val nutritionGoal: NutritionGoal? = null,
+    /** Rest-day target entered by the user; null = advised from the goal. */
+    val kcalTargetOverride: Int? = null,
 ) {
     companion object {
         const val DEFAULT_PROTEIN_G_PER_KG = 1.8

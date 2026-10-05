@@ -42,8 +42,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.olivier.forme.feature.bodyweight.ui.WeightScreen
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
+import fr.olivier.forme.feature.nutrition.domain.EnergyMath
 import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.nutrition.domain.Per100
+import fr.olivier.forme.feature.nutrition.domain.ProteinAdvice
 import fr.olivier.forme.feature.nutrition.domain.WheyMoment
 import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.ui.components.FormeTopBar
@@ -106,8 +108,10 @@ private fun JournalContent(
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
                     ProteinGauge(ui.totals, ui.proteinTargetG)
                     Spacer(Modifier.padding(4.dp))
-                    MacroSummary(ui.totals)
-                    SessionSpendLine(ui.totals.kcal, sessionKcal)
+                    val kcalTarget = EnergyMath.target(ui.restDayKcal, sessionKcal)
+                    if (kcalTarget != null) CalorieGauge(ui.totals.kcal, kcalTarget)
+                    MacroSummary(ui.totals, Modifier.padding(top = 4.dp))
+                    if (kcalTarget == null) SessionSpendLine(ui.totals.kcal, sessionKcal)
                 }
             }
         }
@@ -195,22 +199,37 @@ private fun MealHeader(type: MealType, entries: List<MealEntryEntity>, onAdd: ()
 private fun WheyCard(ui: JournalUi, onAdd: () -> Unit, onProfile: () -> Unit) {
     Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Column(Modifier.padding(12.dp)) {
+            ui.proteinPlan?.let { plan ->
+                Text(
+                    ProteinAdvice.message(plan),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (plan.reached) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+            }
             if (!ui.wheyConfigured) {
                 Text("Whey", style = MaterialTheme.typography.titleMedium)
                 TextButton(onClick = onProfile) { Text("Renseigner ma whey dans le profil") }
                 return@Column
             }
             val p = ui.profile
-            val proteinPerDose = p.wheyProteinPer100g!! * p.wheyScoopG / 100
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "Whey · ${Fmt.number(p.wheyScoopG, 0)} g (${Fmt.number(proteinPerDose)} g prot.)",
+                        "Whey · ${Fmt.number(p.wheyScoopG, 0)} g (${Fmt.number(ui.proteinPerDoseG!!)} g prot.)",
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    Text(ui.wheyMoment.label, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        when {
+                            ui.wheyDoses == 0 -> ui.wheyMoment.label
+                            ui.canAddWhey -> "2ᵉ dose : en collation, à distance de la première"
+                            ui.wheyDoses == 1 -> WheyMoment.DONE.label
+                            else -> "${ui.wheyDoses} doses prises aujourd'hui"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
-                if (ui.wheyMoment != WheyMoment.DONE) Button(onClick = onAdd) { Text("Ajouter") } else Text("✓", style = MaterialTheme.typography.headlineSmall)
+                if (ui.canAddWhey) Button(onClick = onAdd) { Text("Ajouter") } else Text("✓", style = MaterialTheme.typography.headlineSmall)
             }
         }
     }

@@ -54,6 +54,13 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import fr.olivier.forme.feature.heart.data.HeartRepository
+import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
+import fr.olivier.forme.feature.nutrition.data.NutritionRepository
+import fr.olivier.forme.feature.nutrition.data.restDayKcal
+import fr.olivier.forme.feature.nutrition.domain.DayIntake
+import fr.olivier.forme.feature.nutrition.domain.EnergyMath
+import fr.olivier.forme.feature.nutrition.domain.NutritionMath
+import fr.olivier.forme.feature.nutrition.domain.NutritionWeek
 import fr.olivier.forme.feature.heart.domain.HeartWeek
 import fr.olivier.forme.feature.heart.domain.SessionHeartLine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -72,6 +79,8 @@ data class WeekUi(
     val today: LocalDate,
     /** Heart rate of the shown week's sessions (V2.1); sessions = 0 when none was measured. */
     val heart: HeartWeek = HeartWeek.of(emptyList()),
+    /** Nutrition of the shown week (V2.2); null until loaded. */
+    val nutrition: NutritionWeek? = null,
 )
 
 const val CALENDAR_WEEKS = 12
@@ -82,6 +91,8 @@ class WeekViewModel @Inject constructor(
     sessions: SessionRepository,
     settings: SettingsRepository,
     heartRepository: HeartRepository,
+    nutrition: NutritionRepository,
+    weights: BodyWeightRepository,
     private val clock: Clock,
 ) : ViewModel() {
     private val today = LocalDate.now(clock)
@@ -102,13 +113,43 @@ class WeekViewModel @Inject constructor(
         }
     }
 
+    private val lastWeight = weights.observeAll().map { list -> list.maxByOrNull { it.date }?.weightKg }
+
+    /** Protein target from the current weight; calorie target of each day = rest-day target + its sessions. */
+    private val nutritionWeek = shownWeek.flatMapLatest { week ->
+        combine(
+            nutrition.observeRange(week, week.plusDays(6)),
+            nutrition.profile,
+            lastWeight,
+            nutrition.creatineDates(),
+            heartRepository.observeRange(week, week.plusDays(7)),
+        ) { entries, profile, weight, creatine, hearts ->
+            val intakes = entries.groupBy { it.date }.map { (date, day) ->
+                DayIntake(date, day.sumOf { it.proteinG }, day.sumOf { it.kcal ?: 0.0 }, day.any { it.isWhey })
+            }
+            val sessionKcal = hearts.groupBy { it.seriesStart.atZone(clock.zone).toLocalDate() }
+                .mapValues { (_, list) -> list.sumOf { it.kcal ?: 0.0 } }
+            val base = profile.restDayKcal(weight, week.year)
+            NutritionWeek.of(
+                weekStart = week,
+                today = today,
+                intakes = intakes,
+                creatineDates = creatine,
+                proteinTargetG = NutritionMath.proteinTarget(weight, profile.proteinTargetGPerKg),
+                kcalTargetOf = base?.let { b -> { d: LocalDate -> EnergyMath.target(b, sessionKcal[d])!!.totalKcal } },
+            )
+        }
+    }
+
+    private val extras = combine(heartWeek, nutritionWeek) { heart, food -> heart to food }
+
     val ui = combine(
         shownWeek,
         sessions.observeWorkingSetsSince(since.atStartOfDay(clock.zone).toInstant()),
         sessions.observeFinished(),
         settings.trainingGoals,
-        heartWeek,
-    ) { week, rows, finished, goals, heart ->
+        extras,
+    ) { week, rows, finished, goals, (heart, food) ->
         val zone = clock.zone
         val sets = rows.map { TrainedSet(it.startedAt.atZone(zone).toLocalDate(), it.muscleGroup, it.type) }
         val sessionDates = finished.map { it.startedAt.atZone(zone).toLocalDate() }
@@ -122,6 +163,7 @@ class WeekViewModel @Inject constructor(
             calendarStart = calendarStart,
             today = today,
             heart = heart,
+            nutrition = food,
         )
     }.stateIn(
         viewModelScope,
@@ -187,6 +229,7 @@ fun WeekContent(viewModel: WeekViewModel = hiltViewModel()) {
         if (ui.heart.sessions > 0) {
             item { HeartWeekCard(ui.heart) }
         }
+        ui.nutrition?.takeIf { it.loggedDays > 0 }?.let { food -> item { NutritionWeekCard(food) } }
         item {
             SectionTitle("Séries par groupe musculaire")
             Text(
@@ -292,5 +335,34 @@ private fun HeartWeekCard(heart: HeartWeek) {
         ).joinToString(" · "),
         style = MaterialTheme.typography.bodyMedium,
         fontWeight = FontWeight.SemiBold,
+    )
+}
+
+/** Nutrition of the week: averages over logged days, days on target, supplements. */
+@Composable
+private fun NutritionWeekCard(food: NutritionWeek) {
+    SectionTitle("Nutrition")
+    Text(
+        "${food.loggedDays} jour${if (food.loggedDays > 1) "s" else ""} saisi${if (food.loggedDays > 1) "s" else ""} sur ${food.elapsedDays}",
+        style = MaterialTheme.typography.bodyMedium,
+    )
+    Text(
+        listOfNotNull(
+            food.avgProteinG?.let { "protéines ${it.roundToInt()} g/j" },
+            food.proteinTargetDays?.let { "cible atteinte $it/${food.loggedDays}" },
+        ).joinToString(" · "),
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Text(
+        listOfNotNull(
+            food.avgKcal?.let { "${Fmt.number(it, 0)} kcal/j" },
+            food.kcalTargetDays?.let { "dans l'objectif (±10 %) $it/${food.loggedDays}" },
+        ).joinToString(" · "),
+        style = MaterialTheme.typography.bodyMedium,
+    )
+    Text(
+        "Whey ${food.wheyDays}/${food.elapsedDays} · créatine ${food.creatineDays}/${food.elapsedDays}",
+        style = MaterialTheme.typography.bodyMedium,
     )
 }
