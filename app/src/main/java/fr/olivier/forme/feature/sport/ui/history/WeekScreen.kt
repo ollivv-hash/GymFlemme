@@ -53,6 +53,12 @@ import kotlinx.coroutines.flow.update
 import java.time.Clock
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import fr.olivier.forme.feature.heart.data.HeartRepository
+import fr.olivier.forme.feature.heart.domain.HeartWeek
+import fr.olivier.forme.feature.heart.domain.SessionHeartLine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlin.math.roundToInt
 import javax.inject.Inject
 
 data class WeekUi(
@@ -64,6 +70,8 @@ data class WeekUi(
     val trainedDays: Set<LocalDate> = emptySet(),
     val calendarStart: LocalDate,
     val today: LocalDate,
+    /** Heart rate of the shown week's sessions (V2.1); sessions = 0 when none was measured. */
+    val heart: HeartWeek = HeartWeek.of(emptyList()),
 )
 
 const val CALENDAR_WEEKS = 12
@@ -73,6 +81,7 @@ const val CALENDAR_WEEKS = 12
 class WeekViewModel @Inject constructor(
     sessions: SessionRepository,
     settings: SettingsRepository,
+    heartRepository: HeartRepository,
     private val clock: Clock,
 ) : ViewModel() {
     private val today = LocalDate.now(clock)
@@ -81,12 +90,25 @@ class WeekViewModel @Inject constructor(
     /** Enough history for the calendar and the streak (one year). */
     private val since = currentWeek.minusWeeks(52)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val heartWeek = shownWeek.flatMapLatest { week ->
+        heartRepository.observeRange(week, week.plusDays(7)).map { list ->
+            HeartWeek.of(
+                list.map { h ->
+                    val series = h.series
+                    SessionHeartLine(h.avgBpm, series.bpm.count { it > 0 } * series.intervalSec, h.zoneSeconds, h.kcal)
+                },
+            )
+        }
+    }
+
     val ui = combine(
         shownWeek,
         sessions.observeWorkingSetsSince(since.atStartOfDay(clock.zone).toInstant()),
         sessions.observeFinished(),
         settings.trainingGoals,
-    ) { week, rows, finished, goals ->
+        heartWeek,
+    ) { week, rows, finished, goals, heart ->
         val zone = clock.zone
         val sets = rows.map { TrainedSet(it.startedAt.atZone(zone).toLocalDate(), it.muscleGroup, it.type) }
         val sessionDates = finished.map { it.startedAt.atZone(zone).toLocalDate() }
@@ -99,6 +121,7 @@ class WeekViewModel @Inject constructor(
             trainedDays = sessionDates.filter { it >= calendarStart }.toSet(),
             calendarStart = calendarStart,
             today = today,
+            heart = heart,
         )
     }.stateIn(
         viewModelScope,
@@ -160,6 +183,9 @@ fun WeekContent(viewModel: WeekViewModel = hiltViewModel()) {
                     )
                 }
             }
+        }
+        if (ui.heart.sessions > 0) {
+            item { HeartWeekCard(ui.heart) }
         }
         item {
             SectionTitle("Séries par groupe musculaire")
@@ -245,5 +271,26 @@ private fun TrainingCalendar(ui: WeekUi) {
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 6.dp),
+    )
+}
+
+/** Heart rate of the week: measured sessions, average, time at working intensity, calories. */
+@Composable
+private fun HeartWeekCard(heart: HeartWeek) {
+    SectionTitle("Fréquence cardiaque")
+    Text(
+        listOfNotNull(
+            "${heart.sessions} séance${if (heart.sessions > 1) "s" else ""} mesurée${if (heart.sessions > 1) "s" else ""}",
+            heart.avgBpm?.let { "FC moyenne $it bpm" },
+        ).joinToString(" · "),
+        style = MaterialTheme.typography.bodyMedium,
+    )
+    Text(
+        listOfNotNull(
+            "zone 3 et + : ${(heart.highZoneSeconds / 60.0).roundToInt()} min",
+            heart.kcal.takeIf { it > 0 }?.let { "${it.roundToInt()} kcal dépensées" },
+        ).joinToString(" · "),
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.SemiBold,
     )
 }

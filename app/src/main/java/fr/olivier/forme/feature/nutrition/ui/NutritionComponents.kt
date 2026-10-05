@@ -63,6 +63,17 @@ fun ProteinGauge(totals: DayTotals, targetG: Double?, modifier: Modifier = Modif
     }
 }
 
+/** Calories eaten vs spent in the day's sessions (measured by the watch or estimated from heart rate). */
+@Composable
+fun SessionSpendLine(eatenKcal: Double, sessionKcal: Double?) {
+    sessionKcal ?: return
+    Text(
+        "Dépense des séances : ${sessionKcal.roundToInt()} kcal · apport net ${(eatenKcal - sessionKcal).roundToInt()} kcal",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.tertiary,
+    )
+}
+
 /** Calories, carbs and fat of the day, with the share of energy of each macro. */
 @Composable
 fun MacroSummary(totals: DayTotals, modifier: Modifier = Modifier) {
