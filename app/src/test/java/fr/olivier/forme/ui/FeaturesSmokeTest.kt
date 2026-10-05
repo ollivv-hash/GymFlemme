@@ -97,6 +97,8 @@ class FeaturesSmokeTest {
             shot("f2-week")
 
             rule.onNode(hasText("Accueil") and hasClickAction()).performClick()
+            waitFor("Nouvelle séance")
+            rule.onNodeWithText("Nouvelle séance").performClick()
             waitFor("Séance proposée")
             rule.onNodeWithText("Démarrer").performClick()
             waitFor("Allure")

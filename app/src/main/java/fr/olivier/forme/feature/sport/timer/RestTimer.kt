@@ -90,25 +90,34 @@ class RestTimer @Inject constructor(
             .setChronometerCountDown(true)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(openAppIntent(context))
+            // Android 16 "Live Update": countdown chip in the status bar and card on the lock screen.
+            .setRequestPromotedOngoing(true)
             .build()
         notify(context, NOTIF_RUNNING, notification)
     }
 
     companion object {
-        const val CHANNEL_RUNNING = "rest_running"
+        /**
+         * v2: default importance (no sound, no vibration). The first channel was "low" importance, which Android and
+         * HyperOS treat as silent and hide on the lock screen; a channel's importance cannot be raised once created.
+         */
+        const val CHANNEL_RUNNING = "rest_running_v2"
+        private const val CHANNEL_RUNNING_OLD = "rest_running"
         const val CHANNEL_DONE = "rest_done"
         const val NOTIF_RUNNING = 1
         const val NOTIF_DONE = 2
 
         fun createChannels(context: Context) {
             val nm = context.getSystemService(NotificationManager::class.java)
+            nm.deleteNotificationChannel(CHANNEL_RUNNING_OLD)
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_RUNNING, "Repos en cours", NotificationManager.IMPORTANCE_LOW).apply {
+                NotificationChannel(CHANNEL_RUNNING, "Repos en cours", NotificationManager.IMPORTANCE_DEFAULT).apply {
                     setShowBadge(false)
+                    setSound(null, null)
+                    enableVibration(false)
                     lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                 },
             )

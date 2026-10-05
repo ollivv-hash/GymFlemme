@@ -64,9 +64,30 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate1To3() {
+    fun migrate3To4AddsHeartTableAndProfileColumns() {
+        helper.createDatabase(dbName, 3).apply {
+            execSQL("INSERT INTO profile (id, proteinTargetGPerKg, wheyScoopG, creatineDoseG, creatineReminderEnabled, creatineReminderMinutes) VALUES (1, 2.0, 30, 5, 1, 1200)")
+            execSQL("INSERT INTO session (id, templateNameSnapshot, startedAt, isSeed) VALUES (7, 'C', 1000, 0)")
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 4, true, Migrations.MIGRATION_3_4).apply {
+            query("SELECT proteinTargetGPerKg, birthYear, sex, hrMaxOverride FROM profile WHERE id = 1").use {
+                it.moveToFirst()
+                assertEquals(2.0, it.getDouble(0), 0.0)
+                assertTrue(it.isNull(1) && it.isNull(2) && it.isNull(3))
+            }
+            execSQL("INSERT INTO session_heart (sessionId, source, seriesStart, intervalSec, bpmSeries, avgBpm, minBpm, maxBpm, zone1Sec, zone2Sec, zone3Sec, zone4Sec, zone5Sec) VALUES (7, 'BLE', 1000, 5, '90,100', 95, 90, 100, 10, 0, 0, 0, 0)")
+            execSQL("PRAGMA foreign_keys = ON")
+            execSQL("DELETE FROM session WHERE id = 7")
+            query("SELECT COUNT(*) FROM session_heart").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To4() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, 3, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 4, true, *Migrations.ALL).close()
     }
 
     @Test

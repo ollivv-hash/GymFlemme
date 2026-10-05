@@ -6,6 +6,7 @@ import androidx.room.Fts4
 import androidx.room.FtsOptions
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import fr.olivier.forme.feature.heart.domain.Sex
 import fr.olivier.forme.feature.nutrition.domain.FoodSource
 import fr.olivier.forme.feature.nutrition.domain.MealType
 import java.time.Instant
@@ -26,6 +27,11 @@ data class ProfileEntity(
     val creatineReminderEnabled: Boolean = true,
     /** Minutes after midnight. */
     val creatineReminderMinutes: Int = 20 * 60,
+    /** Heart rate (V2.1): age and sex for the maximum heart rate and calorie estimates. */
+    val birthYear: Int? = null,
+    val sex: Sex? = null,
+    /** Maximum heart rate entered or accepted by the user; null = computed from the age. */
+    val hrMaxOverride: Int? = null,
 ) {
     companion object {
         const val DEFAULT_PROTEIN_G_PER_KG = 1.8

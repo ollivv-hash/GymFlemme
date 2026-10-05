@@ -38,6 +38,7 @@ class BackupRepository @Inject constructor(
                     sessionExercises = sessions.getAllSessionExercises().sortedBy { it.id }.map { it.toDto() },
                     sets = sessions.getAllSets().sortedBy { it.id }.map { it.toDto() },
                     cardio = sessions.getAllCardio().sortedBy { it.id }.map { it.toDto() },
+                    heart = db.sessionHeartDao().getAll().sortedBy { it.sessionId }.map { it.toDto() },
                 ),
                 bodyWeight = db.bodyWeightDao().getAll().sortedBy { it.id }.map { it.toDto() },
                 nutrition = NutritionBackup(
@@ -53,7 +54,7 @@ class BackupRepository @Inject constructor(
     /** Replaces the whole database content with [file], atomically (all or nothing). Ciqual is left untouched. */
     suspend fun restore(file: BackupFile) {
         db.withTransaction {
-            db.sessionDao().deleteAllSessions() // cascades to session lines, sets and cardio
+            db.sessionDao().deleteAllSessions() // cascades to session lines, sets, cardio and heart rate
             db.templateDao().deleteAll() // cascades to template lines
             db.exerciseDao().deleteAll()
             db.bodyWeightDao().deleteAll()
@@ -70,6 +71,7 @@ class BackupRepository @Inject constructor(
             db.sessionDao().insertSessionExercises(sport.sessionExercises.map { it.toEntity() })
             db.sessionDao().insertSets(sport.sets.map { it.toEntity() })
             db.sessionDao().insertCardios(sport.cardio.map { it.toEntity() })
+            db.sessionHeartDao().insertAll(sport.heart.map { it.toEntity() })
             db.bodyWeightDao().insertAll(file.bodyWeight.map { it.toEntity() })
             val nutrition = file.nutrition
             nutrition.profile?.let { db.profileDao().upsert(it.toEntity()) }

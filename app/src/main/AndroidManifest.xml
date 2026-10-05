@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Rest timer: notification + exact alarm at the end of the rest. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 16 "Live Updates": rest countdown and heart rate promoted to the status bar / lock screen. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission
@@ -16,6 +19,37 @@
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
+    <!-- Heart rate (V2.1): live broadcast from the watch over Bluetooth LE (standard Heart Rate profile). -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Keeps the watch link and the recording alive screen off during a session. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+    <!-- Heart rate (V2.1): read-only access to Health Connect (data written by Mi Fitness). -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
+
+    <queries>
+        <!-- Health Connect app on Android 13 and below. -->
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
 
     <application
         android:name=".FormeApp"
@@ -37,6 +71,30 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Health Connect privacy rationale: required for the permission dialog to show. -->
+        <activity
+            android:name=".feature.heart.ui.HealthPermissionsRationaleActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE"
+            android:targetActivity=".feature.heart.ui.HealthPermissionsRationaleActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
+
+        <service
+            android:name=".feature.heart.service.HeartRateService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
 
         <receiver
             android:name=".feature.sport.timer.RestAlarmReceiver"

@@ -5,6 +5,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightDao
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightEntity
+import fr.olivier.forme.feature.heart.data.SessionHeartDao
+import fr.olivier.forme.feature.heart.data.SessionHeartEntity
 import fr.olivier.forme.feature.nutrition.data.CiqualDao
 import fr.olivier.forme.feature.nutrition.data.CiqualFoodEntity
 import fr.olivier.forme.feature.nutrition.data.CiqualFtsEntity
@@ -43,6 +45,7 @@ import fr.olivier.forme.feature.sport.data.WorkoutTemplateEntity
         FoodEntity::class,
         MealEntryEntity::class,
         CreatineEntryEntity::class,
+        SessionHeartEntity::class,
     ],
     version = FormeDatabase.VERSION,
     exportSchema = true,
@@ -58,9 +61,10 @@ abstract class FormeDatabase : RoomDatabase() {
     abstract fun foodDao(): FoodDao
     abstract fun mealDao(): MealDao
     abstract fun creatineDao(): CreatineDao
+    abstract fun sessionHeartDao(): SessionHeartDao
 
     companion object {
-        const val VERSION = 3
+        const val VERSION = 4
         const val NAME = "forme.db"
     }
 }

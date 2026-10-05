@@ -31,3 +31,6 @@ import kotlinx.serialization.Serializable
 /** foodId = 0 → new food, optionally linked to a scanned [barcode] and pre-filled with [name]. */
 @Serializable data class FoodEditRoute(val foodId: Long = 0, val barcode: String = "", val name: String = "")
 @Serializable data object ProfileRoute
+
+// --- Heart rate (V2.1) ---
+@Serializable data object WatchTestRoute

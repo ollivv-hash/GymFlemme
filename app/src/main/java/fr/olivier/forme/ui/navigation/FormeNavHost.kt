@@ -33,6 +33,7 @@ import fr.olivier.forme.feature.nutrition.ui.ProfileScreen
 import fr.olivier.forme.feature.nutrition.ui.ScanScreen
 import fr.olivier.forme.feature.settings.ui.ConfigScreen
 import fr.olivier.forme.feature.settings.ui.SettingsScreen
+import fr.olivier.forme.feature.heart.ui.WatchTestScreen
 import fr.olivier.forme.feature.sport.ui.catalog.CatalogScreen
 import fr.olivier.forme.feature.sport.ui.catalog.ExerciseEditScreen
 import fr.olivier.forme.feature.sport.ui.history.ExerciseHistoryScreen
@@ -131,6 +132,7 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
                     onSettings = { nav.navigate(SettingsRoute) },
                     onProfile = { nav.navigate(ProfileRoute) },
                     onFoods = { nav.navigate(FoodsRoute) },
+                    onWatch = { nav.navigate(WatchTestRoute) },
                 )
             }
             composable<ActiveSessionRoute> {
@@ -173,6 +175,7 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
             composable<TemplateEditRoute> { TemplateEditScreen(onDone = { nav.popBackStack() }) }
             composable<RotationRoute> { RotationScreen(onBack = { nav.popBackStack() }) }
             composable<SettingsRoute> { SettingsScreen(onBack = { nav.popBackStack() }) }
+            composable<WatchTestRoute> { WatchTestScreen(onBack = { nav.popBackStack() }) }
         }
     }
 }

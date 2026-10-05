@@ -26,6 +26,14 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
+### Idées pour plus tard
+
+- **Whey : conseil de quantité du jour.** Au lieu d'une dose fixe, proposer chaque jour la quantité de whey à prendre
+  selon les protéines déjà renseignées dans les repas (reste à couvrir pour atteindre l'objectif), en plus de la valeur
+  d'une dose.
+- Photos des machines : import manuel exercice par exercice (déjà possible), pas d'import en masse.
+- Intégration Drive complète (API Drive v3, copies datées, bilans Markdown) — en réflexion.
+
 ---
 
 ## Stack technique

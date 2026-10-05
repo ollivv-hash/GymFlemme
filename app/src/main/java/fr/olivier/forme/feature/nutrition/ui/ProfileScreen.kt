@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,6 +41,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
+import fr.olivier.forme.feature.heart.domain.HeartZones
+import fr.olivier.forme.feature.heart.domain.Sex
 import fr.olivier.forme.feature.nutrition.data.NutritionRepository
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
 import fr.olivier.forme.feature.nutrition.domain.NutritionMath
@@ -56,6 +59,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Clock
+import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
@@ -67,11 +72,15 @@ class ProfileViewModel @Inject constructor(
     private val repository: NutritionRepository,
     private val reminder: CreatineReminder,
     weights: BodyWeightRepository,
+    private val clock: Clock,
 ) : ViewModel() {
     private val _profile = MutableStateFlow(ProfileEntity())
     val profile = _profile.asStateFlow()
     private val _whey = MutableStateFlow(WheyText())
     val whey = _whey.asStateFlow()
+    private val _birthYear = MutableStateFlow("")
+    val birthYear = _birthYear.asStateFlow()
+    val currentYear: Int = LocalDate.now(clock).year
     val lastWeight = weights.observeAll().map { list -> list.maxByOrNull { it.date }?.weightKg }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -81,11 +90,18 @@ class ProfileViewModel @Inject constructor(
             _profile.value = p
             fun t(v: Double?) = v?.let { Fmt.number(it, 2) }.orEmpty()
             _whey.value = WheyText(t(p.wheyProteinPer100g), t(p.wheyKcalPer100g), t(p.wheyCarbsPer100g), t(p.wheyFatPer100g))
+            _birthYear.value = p.birthYear?.toString().orEmpty()
         }
     }
 
     fun update(transform: (ProfileEntity) -> ProfileEntity) = _profile.update(transform)
     fun updateWhey(transform: (WheyText) -> WheyText) = _whey.update(transform)
+    fun updateBirthYear(text: String) {
+        _birthYear.value = text.filter(Char::isDigit).take(4)
+    }
+
+    /** A plausible birth year (10 to 100 years old), else null. */
+    fun parsedBirthYear(): Int? = _birthYear.value.toIntOrNull()?.takeIf { it in currentYear - 100..currentYear - 10 }
 
     fun save(onDone: () -> Unit) = viewModelScope.launch {
         val w = _whey.value
@@ -95,6 +111,7 @@ class ProfileViewModel @Inject constructor(
                 wheyKcalPer100g = parseDecimal(w.kcal),
                 wheyCarbsPer100g = parseDecimal(w.carbs),
                 wheyFatPer100g = parseDecimal(w.fat),
+                birthYear = parsedBirthYear(),
             ),
         )
         reminder.reschedule()
@@ -108,17 +125,64 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
     val p by viewModel.profile.collectAsStateWithLifecycle()
     val whey by viewModel.whey.collectAsStateWithLifecycle()
     val weight by viewModel.lastWeight.collectAsStateWithLifecycle()
+    val birthYear by viewModel.birthYear.collectAsStateWithLifecycle()
     var pickingTime by remember { mutableStateOf(false) }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     fun round1(v: Double) = (v * 10).roundToInt() / 10.0
 
-    Scaffold(topBar = { FormeTopBar("Profil nutrition", onDone) { TextButton(onClick = { viewModel.save(onDone) }) { Text("Enregistrer") } } }) { padding ->
+    Scaffold(topBar = { FormeTopBar("Profil", onDone) { TextButton(onClick = { viewModel.save(onDone) }) { Text("Enregistrer") } } }) { padding ->
         Column(
             Modifier
                 .padding(padding)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
+            SectionTitle("Toi (fréquence cardiaque)")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = birthYear,
+                    onValueChange = viewModel::updateBirthYear,
+                    label = { Text("Année de naissance") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                )
+                Sex.entries.forEach { sex ->
+                    FilterChip(
+                        selected = p.sex == sex,
+                        onClick = { viewModel.update { it.copy(sex = if (it.sex == sex) null else sex) } },
+                        label = { Text(sex.label) },
+                    )
+                }
+            }
+            val age = viewModel.parsedBirthYear()?.let { HeartZones.age(it, viewModel.currentYear) }
+            val advised = age?.let(HeartZones::hrMaxFromAge)
+            val hrMax = p.hrMaxOverride ?: advised
+            Stepper(
+                label = "FC max (bpm)",
+                valueText = hrMax?.toString() ?: "—",
+                onMinus = { (hrMax ?: 180).let { v -> viewModel.update { it.copy(hrMaxOverride = (v - 1).coerceIn(120, 230)) } } },
+                onPlus = { (hrMax ?: 180).let { v -> viewModel.update { it.copy(hrMaxOverride = (v + 1).coerceIn(120, 230)) } } },
+                onValueEntered = { t -> t.toIntOrNull()?.let { v -> viewModel.update { it.copy(hrMaxOverride = v.coerceIn(120, 230)) } } },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            Text(
+                when {
+                    advised == null -> "Saisis ton année de naissance pour obtenir la FC max conseillée."
+                    p.hrMaxOverride == null -> "$age ans : valeur conseillée (208 − 0,7 × âge)."
+                    else -> "Valeur personnalisée · conseillée pour $age ans : $advised bpm."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (p.hrMaxOverride != null && advised != null) {
+                TextButton(onClick = { viewModel.update { it.copy(hrMaxOverride = null) } }) { Text("Revenir à la valeur conseillée") }
+            }
+            Text(
+                "Âge, sexe et poids servent aux zones cardio et à l'estimation des calories de séance.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
             SectionTitle("Objectif protéines")
             Stepper(
                 label = "g par kg de poids de corps",
