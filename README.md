@@ -24,7 +24,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | plus tard | Intégration Drive complète (API Drive v3, `drive.file`, copies datées, bilans Markdown) — en réflexion |
 | **V2.1** ✅ | Fréquence cardiaque : FC en direct de la montre (Bluetooth, profil Heart Rate standard), complément Health Connect (Mi Fitness), zones, calories, bilan avec courbe et séries, onglet Semaine, dépense dans Nutrition |
 | **V2.2** ✅ | Objectif calories (prise de masse / maintien / sèche, majoré des séances), conseil protéines et whey (jusqu'à 2 doses), bilan nutrition de la semaine, CI GitHub (APK signé) |
-| V2.3 | Coaching : 1RM estimé, détection de plateau, conseil de semaine de décharge |
+| **V2.3** ✅ | Coaching : 1RM estimé, détection de plateau (séance + historique), conseil de semaine de décharge sur l'accueil |
 | plus tard | Partage des bilans vers l'app Claude |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
@@ -174,6 +174,19 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   Bilan : « (superset avec X) ».
 - **Note pour la prochaine fois** (icône crayon d'un exercice) : choix rapides (« Monter la charge », « Trop dur, rester », « Douleur / gêne »,
   « Changer le réglage ») ou texte libre. Affichée en bandeau orange à la séance suivante jusqu'à « Vu ✓ », et dans l'historique de l'exercice.
+
+### Coaching (V2.3)
+
+- **1RM estimé** (Epley : charge × (1 + reps / 30), charge seule pour 1 rep), uniquement sur les séries de **12 reps ou moins**
+  et les exercices `WEIGHTED`. Affiché dans les records de l'exercice et en seconde courbe (orange) du graphique.
+- **Plateau** : une séance « progresse » quand son meilleur 1RM estimé bat toutes les séances précédentes (séance d'exemple comprise) ;
+  après **3 séances d'affilée sans progrès**, une carte « Stagnation depuis N séances » apparaît en séance (exercice déplié) et dans
+  l'historique de l'exercice, avec trois pistes : changer de plage de reps 2 à 3 semaines, repartir à −10 % de la dernière charge
+  (arrondi à l'incrément de la machine), passer à une variante avec « Remplacer ». La suggestion de progression reste affichée à côté.
+- **Décharge** (simple conseil, carte sur l'accueil) : après **6 semaines complètes d'affilée** avec au moins une série de travail,
+  ou quand **3 exercices ou plus** (pratiqués ces 3 dernières semaines) sont en plateau. Une semaine sans séance, ou une semaine
+  avec moins de 60 % des séries de la moyenne des 4 précédentes (décharge faite), remet le compteur à zéro. « Compris » masque
+  la carte jusqu'à la semaine suivante.
 
 ### Fréquence cardiaque (V2.1)
 
@@ -349,7 +362,7 @@ gradlew lintDebug               :: analyse statique Android
 
 Couverture : règle de progression, rotation (ajout / archivage / réordonnancement), records et volume,
 moyenne mobile 7 jours, pré-remplissage, bilan texte, export/import JSON (aller-retour sans perte, en mémoire
-et via la base), seed, DAO et repositories, migrations Room 1 → 5, supersets (normalisation), statistiques hebdomadaires, remplacement d'exercice, fréquence cardiaque (décodage Bluetooth, zones, Keytel, fusion direct/Health Connect, source unique, pics par série, synchro, enregistreur), objectif calories (Mifflin-St Jeor), conseil protéines / whey, bilan nutrition de la semaine.
+et via la base), seed, DAO et repositories, migrations Room 1 → 5, supersets (normalisation), statistiques hebdomadaires, remplacement d'exercice, fréquence cardiaque (décodage Bluetooth, zones, Keytel, fusion direct/Health Connect, source unique, pics par série, synchro, enregistreur), objectif calories (Mifflin-St Jeor), conseil protéines / whey, bilan nutrition de la semaine, 1RM estimé, plateau, conseil de décharge.
 
 Les tests de fumée (`AppSmokeTest`, `RecapSmokeTest`, `FeaturesSmokeTest`, …) écrivent des captures d'écran dans `app/build/smoke-screens/`.
 
