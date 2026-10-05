@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +54,7 @@ import androidx.compose.material3.Checkbox
 import fr.olivier.forme.feature.sport.data.SessionEntity
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.TemplateRepository
+import fr.olivier.forme.feature.sport.domain.DeloadAdvisor
 import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.feature.sport.domain.WeeklyStats
 import fr.olivier.forme.core.settings.SettingsRepository
@@ -79,7 +81,7 @@ class HomeViewModel @Inject constructor(
     private val sessions: SessionRepository,
     templates: TemplateRepository,
     private val weights: BodyWeightRepository,
-    settings: SettingsRepository,
+    private val settings: SettingsRepository,
     private val clock: Clock,
 ) : ViewModel() {
     private fun <T> kotlinx.coroutines.flow.Flow<T>.state(initial: T) =
@@ -100,6 +102,23 @@ class HomeViewModel @Inject constructor(
         val start = WeeklyStats.weekStart(LocalDate.now(clock))
         finished.count { WeeklyStats.weekStart(it.startedAt.atZone(clock.zone).toLocalDate()) == start } to goals.sessionsPerWeek
     }.state(null)
+
+    /** Deload advice (6 complete weeks in a row, or 3 exercises stalling), unless dismissed for this week. */
+    val deload = run {
+        val currentWeek = WeeklyStats.weekStart(LocalDate.now(clock))
+        val since = currentWeek.minusWeeks(DeloadAdvisor.STREAK_WEEKS + 6L)
+        combine(
+            sessions.observeWorkingSetsSince(since.atStartOfDay(clock.zone).toInstant()),
+            sessions.observePlateauCount(currentWeek.minusWeeks(3).atStartOfDay(clock.zone).toInstant()),
+            settings.deloadDismissedWeek,
+        ) { sets, plateaus, dismissed ->
+            if (dismissed == currentWeek) return@combine null
+            val perWeek = sets.groupingBy { WeeklyStats.weekStart(it.startedAt.atZone(clock.zone).toLocalDate()) }.eachCount()
+            DeloadAdvisor.advise(perWeek, currentWeek, plateaus)
+        }.state(null)
+    }
+
+    fun dismissDeload() = viewModelScope.launch { settings.dismissDeload(WeeklyStats.weekStart(LocalDate.now(clock))) }
 
     fun today(): LocalDate = LocalDate.now(clock)
     val zone: ZoneId get() = clock.zone
@@ -135,6 +154,7 @@ fun HomeScreen(
     val recent by viewModel.recent.collectAsStateWithLifecycle()
     val weight by viewModel.weight.collectAsStateWithLifecycle()
     val weekProgress by viewModel.weekProgress.collectAsStateWithLifecycle()
+    val deload by viewModel.deload.collectAsStateWithLifecycle()
     var addingWeight by remember { mutableStateOf(false) }
     var choosingSession by remember { mutableStateOf(false) }
 
@@ -172,6 +192,19 @@ fun HomeScreen(
                             onClick = { choosingSession = true },
                             modifier = Modifier.fillMaxWidth().height(64.dp).padding(top = 12.dp),
                         ) { Text("Nouvelle séance", style = MaterialTheme.typography.titleLarge) }
+                    }
+                }
+            }
+
+            deload?.let { advice ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Semaine de décharge conseillée", style = MaterialTheme.typography.titleMedium)
+                        Text(advice.message, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
+                        TextButton(onClick = viewModel::dismissDeload, modifier = Modifier.align(Alignment.End)) { Text("Compris") }
                     }
                 }
             }

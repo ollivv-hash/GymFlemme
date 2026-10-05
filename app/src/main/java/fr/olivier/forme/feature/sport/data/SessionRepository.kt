@@ -9,6 +9,8 @@ import fr.olivier.forme.feature.sport.domain.ExerciseType
 import fr.olivier.forme.feature.sport.domain.NewRecords
 import fr.olivier.forme.feature.sport.domain.PreviousComparison
 import fr.olivier.forme.feature.sport.domain.PreviousPerformance
+import fr.olivier.forme.feature.sport.domain.PlateauDetector
+import fr.olivier.forme.feature.sport.domain.Plateau
 import fr.olivier.forme.feature.sport.domain.RecordsCalculator
 import fr.olivier.forme.feature.sport.domain.ReportSet
 import fr.olivier.forme.feature.sport.domain.SessionExerciseStatus
@@ -18,6 +20,7 @@ import fr.olivier.forme.feature.sport.domain.SupersetRules
 import fr.olivier.forme.feature.sport.domain.VolumeCalculator
 import fr.olivier.forme.feature.sport.domain.WorkSet
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.time.Clock
 import java.time.Duration
 import java.time.LocalDateTime
@@ -52,6 +55,20 @@ class SessionRepository @Inject constructor(
     fun observeWorkingSetsSince(from: java.time.Instant): Flow<List<WorkingSetRow>> =
         dao.observeWorkingSetsSince(from.toEpochMilli())
     fun observeCardioHistory(exerciseId: Long): Flow<List<CardioEntryEntity>> = dao.observeCardioHistory(exerciseId)
+
+    /** Loaded exercises currently on a plateau, among those trained since [activeSince] (deload advice). */
+    fun observePlateauCount(activeSince: java.time.Instant): Flow<Int> = dao.observeWeightedSets().map { rows ->
+        rows.groupBy { it.exerciseId }.values.count { sets ->
+            sets.last().startedAt >= activeSince && PlateauDetector.detect(
+                sets.groupBy { it.sessionId }.map { (id, r) -> SessionSets(id, null, r.map { WorkSet(loadKg = it.loadKg, reps = it.reps) }) },
+                sets.first().loadIncrementKg,
+            ) != null
+        }
+    }
+
+    /** Plateau of an exercise before the running session (null when progressing or not enough history). */
+    suspend fun plateau(exerciseId: Long, loadIncrementKg: Double, currentSessionId: Long): Plateau? =
+        PlateauDetector.detect(dao.getExerciseHistory(exerciseId, currentSessionId).toSessionSets(), loadIncrementKg)
 
     /** Starts a session from a template (null = free session); resumes the running one if any. */
     suspend fun start(templateId: Long?): Long = db.withTransaction {

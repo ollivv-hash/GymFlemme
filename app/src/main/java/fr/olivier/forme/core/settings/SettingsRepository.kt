@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -108,6 +109,13 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         }
     }
 
+    /** Week (Monday) whose deload advice was dismissed; the advice comes back the following week if still due. */
+    val deloadDismissedWeek: Flow<LocalDate?> = dataStore.data.map { prefs -> prefs[DELOAD_DISMISSED_WEEK]?.let(LocalDate::ofEpochDay) }
+
+    suspend fun dismissDeload(week: LocalDate) {
+        dataStore.edit { it[DELOAD_DISMISSED_WEEK] = week.toEpochDay() }
+    }
+
     suspend fun setTrainingGoals(goals: TrainingGoals) {
         dataStore.edit {
             it[SESSIONS_PER_WEEK] = goals.sessionsPerWeek.coerceIn(1, 7)
@@ -158,5 +166,6 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         private val AUTO_BACKUP_SUCCESS_AT = longPreferencesKey("auto_backup_success_at")
         private val AUTO_BACKUP_ATTEMPT_AT = longPreferencesKey("auto_backup_attempt_at")
         private val AUTO_BACKUP_ERROR = stringPreferencesKey("auto_backup_error")
+        private val DELOAD_DISMISSED_WEEK = longPreferencesKey("deload_dismissed_week")
     }
 }

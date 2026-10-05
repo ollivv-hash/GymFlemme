@@ -65,6 +65,8 @@ import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.feature.sport.domain.Prefill
 import fr.olivier.forme.feature.sport.domain.SessionExerciseStatus
 import fr.olivier.forme.feature.sport.domain.SessionTextFormatter
+import fr.olivier.forme.feature.sport.domain.Plateau
+import fr.olivier.forme.feature.sport.domain.PlateauDetector
 import fr.olivier.forme.feature.sport.domain.Suggestion
 import fr.olivier.forme.feature.sport.ui.home.label
 import fr.olivier.forme.feature.sport.ui.templates.ExercisePickerDialog
@@ -402,6 +404,8 @@ private fun SetEditor(item: ExerciseUi, viewModel: ActiveSessionViewModel) {
         )
     }
 
+    item.hint?.plateau?.let { PlateauCard(it) }
+
     // Sets already done in this session.
     item.sets.forEachIndexed { index, set ->
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -631,3 +635,22 @@ private fun ReplaceDialog(
         confirmButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },
     )
 }
+
+/** No progress for several sessions: the three ways out, in a compact card. */
+@Composable
+fun PlateauCard(plateau: Plateau, modifier: Modifier = Modifier) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
+    ) {
+        Column(Modifier.padding(10.dp)) {
+            Text(
+                "Stagnation depuis ${plateau.sessions} séances (1RM estimé ${Fmt.kg(plateau.bestOneRepMaxKg.roundToHalf())})",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            PlateauDetector.advice(plateau).forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+        }
+    }
+}
+
+private fun Double.roundToHalf(): Double = kotlin.math.round(this * 2) / 2
