@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -15,7 +14,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.painterResource
+import fr.olivier.forme.R
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -50,13 +53,16 @@ import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalTime
 
-private data class TopLevel(val route: Any, val label: String, val icon: ImageVector)
+private data class TopLevel(val route: Any, val label: String, val icon: @Composable () -> Painter)
+
+private fun vector(image: ImageVector): @Composable () -> Painter = { rememberVectorPainter(image) }
 
 private val topLevels = listOf(
-    TopLevel(HomeRoute, "Accueil", Icons.Filled.Home),
-    TopLevel(HistoryRoute, "Historique", Icons.Filled.DateRange),
-    TopLevel(NutritionRoute(), "Nutrition", Icons.Filled.Favorite),
-    TopLevel(ConfigRoute, "Config", Icons.Filled.Settings),
+    // Home is the app itself: its tab shows the GymBro "G" (V2.7).
+    TopLevel(HomeRoute, "Accueil") { painterResource(R.drawable.ic_logo_g) },
+    TopLevel(HistoryRoute, "Historique", vector(Icons.Filled.DateRange)),
+    TopLevel(NutritionRoute(), "Nutrition", vector(Icons.Filled.Favorite)),
+    TopLevel(ConfigRoute, "Config", vector(Icons.Filled.Settings)),
 )
 
 @Composable
@@ -107,7 +113,7 @@ fun FormeNavHost(
                         NavigationBarItem(
                             selected = destination?.hasRoute(top.route::class) == true,
                             onClick = { nav.navigateTopLevel(top.route) },
-                            icon = { Icon(top.icon, contentDescription = null) },
+                            icon = { Icon(top.icon(), contentDescription = null) },
                             label = { Text(top.label) },
                         )
                     }

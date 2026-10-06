@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- GymBro "G" used in notifications (monochrome). -->
+<!-- GymBro "G" (monochrome): "Accueil" tab and notifications (alias ic_notification). Tinted by its user. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"

@@ -29,7 +29,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.4** ✅ | Analyse IA : fichier Markdown du jour (consignes + profil + séance + nutrition + semaine) partagé à l'app IA choisie (Claude, ChatGPT…) |
 | **V2.5** ✅ | Journal nutrition en anneaux : kcal et protéines (consommé / objectif, reste), glucides et lipides face à leur cible conseillée |
 | **V2.6** ✅ | Raccourcis d'icône (séance, repas, scanner), widget d'écran d'accueil 4 × 2, sauvegardes relues et vérifiées |
-| **V2.7** ✅ | Nouveau nom **GymBro** et nouvelle icône (G vert, fond blanc, icône à thème Android 13+) ; nouveaux fichiers `gymbro-*` |
+| **V2.7** ✅ | Nouveau nom **GymBro** et nouvelle icône (G bleu de l'app, fond blanc, icône à thème Android 13+) ; accueil sans titre, onglet « Accueil » avec le G ; nouveaux fichiers `gymbro-*` |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
