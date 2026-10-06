@@ -286,7 +286,7 @@ private fun AutoBackupSection(
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
-                    success != null -> Text("✓ Dernière sauvegarde : ${formatTime(success)}", modifier = Modifier.padding(top = 4.dp))
+                    success != null -> Text("✓ Dernière sauvegarde : ${formatTime(success)} · relue et vérifiée", modifier = Modifier.padding(top = 4.dp))
                     else -> Text("Pas encore de sauvegarde", modifier = Modifier.padding(top = 4.dp))
                 }
             }

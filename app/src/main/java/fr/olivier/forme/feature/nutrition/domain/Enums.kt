@@ -8,6 +8,17 @@ enum class MealType(val label: String) {
     DINNER("Dîner"),
     /** Additional snacks, listed with their time. */
     EXTRA("Collations supplémentaires"),
+    ;
+
+    companion object {
+        /** The main meal being eaten at [time]: breakfast until 11:00, lunch until 15:00, snack until 18:30, then dinner. */
+        fun at(time: java.time.LocalTime): MealType = when {
+            time.isBefore(java.time.LocalTime.of(11, 0)) -> BREAKFAST
+            time.isBefore(java.time.LocalTime.of(15, 0)) -> LUNCH
+            time.isBefore(java.time.LocalTime.of(18, 30)) -> SNACK
+            else -> DINNER
+        }
+    }
 }
 
 /**

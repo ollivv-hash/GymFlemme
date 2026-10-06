@@ -95,6 +95,33 @@ class AutoBackupManagerTest {
     }
 
     @Test
+    fun readBackIsCheckedBeforeCallingABackupGood() = runTest {
+        val (manager, _) = manager()
+        val good = BackupCodec.encode(BackupRepository(db, context(), clock).snapshot()).toByteArray()
+        assertNull(BackupVerifier.check(good, good.copyOf()))
+        assertTrue(BackupVerifier.check(good, null)!!.contains("vide"))
+        // Truncated upload, or a provider that kept an older version.
+        assertTrue(BackupVerifier.check(good, good.copyOf(good.size / 2))!!.contains("différent"))
+        // Bytes faithfully copied, but not a backup this version can restore.
+        val newer = good.decodeToString().replaceFirst("\"schemaVersion\": 5", "\"schemaVersion\": 99").toByteArray()
+        assertTrue(BackupVerifier.check(newer, newer)!!.contains("plus récent"))
+
+        // A successful run reads its copies back: no error.
+        assertNull(manager.setTarget(Uri.fromFile(tmp.newFile("ok.json"))).targetError)
+    }
+
+    @Test
+    fun failureIsNotifiedThenCleared() {
+        val manager = context().getSystemService(android.app.NotificationManager::class.java)
+        val shadow = org.robolectric.Shadows.shadowOf(manager)
+        BackupNotifier.createChannel(context())
+        BackupNotifier.failed(context(), "Fichier introuvable")
+        assertEquals("Sauvegarde automatique en échec", shadow.allNotifications.single().extras.getString("android.title"))
+        BackupNotifier.clear(context())
+        assertTrue(shadow.allNotifications.isEmpty())
+    }
+
+    @Test
     fun workerRunsTheBackup() = runTest {
         val worker = TestListenableWorkerBuilder<AutoBackupWorker>(context()).build()
         assertTrue(worker.doWork() is ListenableWorker.Result.Success)
