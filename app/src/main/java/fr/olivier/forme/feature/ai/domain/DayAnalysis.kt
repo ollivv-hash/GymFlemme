@@ -107,7 +107,7 @@ object AnalysisMarkdown {
 
     /** Default instructions; editable in Config → Analyse IA. */
     val DEFAULT_PROMPT = """
-        Tu es mon coach musculation et nutrition. Analyse ma journée à partir des données ci-dessous, exportées de mon app Forme.
+        Tu es mon coach musculation et nutrition. Analyse ma journée à partir des données ci-dessous, exportées de mon app GymBro.
 
         Réponds en français, de façon directe et concise (pas d'introduction ni de formule de politesse), avec exactement ces sections :
         1. **Résumé** : 3 lignes maximum sur la journée.
@@ -124,10 +124,10 @@ object AnalysisMarkdown {
         - Pas de diagnostic médical ; signale seulement si quelque chose mérite l'avis d'un professionnel.
     """.trimIndent()
 
-    fun fileName(date: LocalDate) = "forme-analyse-$date.md"
+    fun fileName(date: LocalDate) = "gymbro-analyse-$date.md"
 
     fun build(day: AiDay, prompt: String = DEFAULT_PROMPT): String = buildString {
-        appendLine("# Forme · analyse du ${day.date.format(dayFormat)}")
+        appendLine("# GymBro · analyse du ${day.date.format(dayFormat)}")
         appendLine()
         appendLine("_Données exportées le ${day.exportedAt.format(shortDate)} à ${day.exportedAt.format(timeFormat)}._")
         appendLine()

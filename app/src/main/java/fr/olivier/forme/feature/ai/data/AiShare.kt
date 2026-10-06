@@ -28,7 +28,7 @@ enum class ShareMode {
 
 /**
  * Hands a Markdown document to an AI app through the Android share sheet: the file (from the cache, through the
- * FileProvider) and/or its text, with a short lead sentence. Nothing is sent by Forme itself.
+ * FileProvider) and/or its text, with a short lead sentence. Nothing is sent by the app itself.
  */
 @Singleton
 class AiShare @Inject constructor(@ApplicationContext private val context: Context) {

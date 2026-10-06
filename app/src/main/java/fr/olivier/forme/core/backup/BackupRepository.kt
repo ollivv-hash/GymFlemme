@@ -101,18 +101,21 @@ class BackupRepository @Inject constructor(
     private suspend fun writeSafetyBackup(): File {
         val dir = File(context.getExternalFilesDir(null) ?: context.filesDir, "backups").apply { mkdirs() }
         val stamp = LocalDateTime.now(clock).format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
-        val target = File(dir, "forme-avant-import-$stamp.json")
+        val target = File(dir, "${SAFETY_PREFIX}$stamp.json")
         target.writeText(BackupCodec.encode(snapshot()))
-        dir.listFiles { f -> f.name.startsWith("forme-avant-import-") }
-            ?.sortedByDescending { it.name }
+        // Copies made before the app was renamed (Forme → GymBro, 2.7) are pruned with the new ones, oldest first.
+        dir.listFiles { f -> f.name.startsWith(SAFETY_PREFIX) || f.name.startsWith(OLD_SAFETY_PREFIX) }
+            ?.sortedByDescending { it.name.substringAfter("-avant-import-") }
             ?.drop(SAFETY_KEEP)
             ?.forEach { it.delete() }
         return target
     }
 
-    fun suggestedFileName(): String = "forme-sauvegarde-${LocalDateTime.now(clock).toLocalDate()}.json"
+    fun suggestedFileName(): String = "gymbro-sauvegarde-${LocalDateTime.now(clock).toLocalDate()}.json"
 
     private companion object {
+        const val SAFETY_PREFIX = "gymbro-avant-import-"
+        const val OLD_SAFETY_PREFIX = "forme-avant-import-"
         const val SAFETY_KEEP = 5
     }
 }

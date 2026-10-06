@@ -163,7 +163,7 @@ fun HomeScreen(
     var addingWeight by remember { mutableStateOf(false) }
     var choosingSession by remember { mutableStateOf(false) }
 
-    Scaffold(topBar = { FormeTopBar("Forme") }) { padding ->
+    Scaffold(topBar = { FormeTopBar("GymBro") }) { padding ->
         Column(
             Modifier
                 .padding(padding)
