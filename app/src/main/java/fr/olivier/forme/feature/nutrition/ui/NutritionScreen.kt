@@ -105,14 +105,15 @@ private fun JournalContent(
         }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                    ProteinGauge(ui.totals, ui.proteinTargetG)
-                    Spacer(Modifier.padding(4.dp))
-                    val kcalTarget = EnergyMath.target(ui.restDayKcal, sessionKcal)
-                    if (kcalTarget != null) CalorieGauge(ui.totals.kcal, kcalTarget)
-                    MacroSummary(ui.totals, Modifier.padding(top = 4.dp))
-                    if (kcalTarget == null) SessionSpendLine(ui.totals.kcal, sessionKcal)
-                }
+                val kcalTarget = EnergyMath.target(ui.restDayKcal, sessionKcal)
+                DayRings(
+                    totals = ui.totals,
+                    kcalTarget = kcalTarget,
+                    proteinTargetG = ui.proteinTargetG,
+                    macroTargets = EnergyMath.macroTargets(kcalTarget?.totalKcal, ui.proteinTargetG, ui.weightKg, ui.profile.nutritionGoal),
+                    sessionKcal = sessionKcal,
+                    modifier = Modifier.padding(16.dp),
+                )
             }
         }
         item { WheyCard(ui, onAdd = viewModel::addWhey, onProfile = onProfile) }

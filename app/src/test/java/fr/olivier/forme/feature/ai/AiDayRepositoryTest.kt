@@ -82,6 +82,16 @@ class AiDayRepositoryTest {
             "Protéines : 30 g",
             "Dîner (30 g prot., 300 kcal) : Saumon 150 g",
             "Séances : 1 / 3",
+            // History for charts.
+            "## Historique pour graphiques",
+            "### Chest press (dernières séances)",
+            "| 42,5 kg × 10 | 56,7 |",
+            "| 45 kg × 10 | 60 |",
+            "### Poids (30 jours)",
+            "| 80,5 | 80,5 |",
+            "### Nutrition (7 jours)",
+            "| 30 | 300 |",
+            "### Séries par groupe musculaire (semaines)",
         ).forEach { assertTrue("missing: $it\n$md", md.contains(it)) }
     }
 }

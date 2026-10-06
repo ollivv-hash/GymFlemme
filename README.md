@@ -26,6 +26,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.2** ✅ | Objectif calories (prise de masse / maintien / sèche, majoré des séances), conseil protéines et whey (jusqu'à 2 doses), bilan nutrition de la semaine, CI GitHub (APK signé) |
 | **V2.3** ✅ | Coaching : 1RM estimé, détection de plateau (séance + historique), conseil de semaine de décharge sur l'accueil |
 | **V2.4** ✅ | Analyse IA : fichier Markdown du jour (consignes + profil + séance + nutrition + semaine) partagé à l'app IA choisie (Claude, ChatGPT…) |
+| **V2.5** ✅ | Journal nutrition en anneaux : kcal et protéines (consommé / objectif, reste), glucides et lipides face à leur cible conseillée |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -184,6 +185,11 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   cibles protéines / calories, FC max), **séance(s) du jour** (séries avec RIR, dernière fois, 1RM estimé, stagnation, volume,
   records, FC et zones, calories, notes), **nutrition du jour** (totaux / objectifs, repas détaillés, whey, créatine),
   **semaine** (séances / objectif, séries par muscle, bilan nutrition, FC).
+- **Historique pour graphiques** (2.4.1), en tableaux Markdown : pour chaque exercice de la séance, les 8 dernières séances
+  (meilleure série, 1RM estimé) ; le poids sur 30 jours avec sa moyenne 7 jours ; les 7 derniers jours saisis de nutrition
+  (protéines, calories, objectif calories du jour) ; les séries par groupe musculaire des 4 dernières semaines. Les consignes par
+  défaut demandent un **artifact** (tableau de bord HTML) construit avec ces tableaux. Une consigne personnalisée reste
+  inchangée : « Rétablir par défaut » récupère la nouvelle section « Visuel ».
 - **Config → Analyse IA** : app IA par défaut (apps IA connues en tête, ou « Demander à chaque fois »), méthode d'envoi,
   consignes d'analyse modifiables (« Rétablir par défaut »), test avec la journée en cours.
 - Méthode d'envoi testée avec Claude (lot 0) : **fichier seul** (par défaut ; la phrase d'accompagnement est ignorée quand un
@@ -234,7 +240,9 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 ### Nutrition (V1.1)
 
 - **Objectif protéines** = facteur du profil (1,8 g/kg par défaut, modifiable de 0,8 à 3,0) × **dernier poids saisi**.
-- **Jauge du jour** : consommé / objectif et reste à manger ; kcal, glucides et lipides du jour avec la répartition énergétique (4 / 4 / 9 kcal par g).
+- **Anneaux du jour** (V2.5) : deux grands anneaux kcal et protéines (consommé / objectif, reste ; kcal en orange au-delà de +10 %,
+  protéines en vert une fois l'objectif atteint), deux petits pour glucides et lipides face à leur cible, puis la répartition
+  énergétique (4 / 4 / 9 kcal par g). L'accueil garde la jauge protéines.
 - **Repas** : petit-déjeuner, déjeuner, collation, dîner, plus des **collations supplémentaires** horodatées.
 - **Whey** : 1 dose par jour (2 si le conseil protéines le demande, V2.2) (valeurs de l'étiquette saisies dans le profil). Moment conseillé : **juste après la séance** les jours d'entraînement, au petit-déjeuner ou en collation les jours de repos.
 - **Créatine** : 5 g/jour par défaut, case « prise » avec série de jours consécutifs. **Rappel** quotidien à l'heure choisie (20:00 par défaut), **non envoyé si la prise est déjà notée**, avec bouton « C'est pris » dans la notification ; reprogrammé après redémarrage du téléphone.
@@ -250,7 +258,10 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   la FC (Keytel) est une dépense brute, comparable aux « kcal totales » de Mi Fitness, alors que l'objectif repos contient déjà
   le métabolisme de base ; il est donc soustrait sur la durée mesurée (Mifflin-St Jeor, ou 24 kcal/kg/jour sans la taille).
   Les calories actives de la montre, déjà nettes, sont ajoutées telles quelles. Le bilan de séance garde le chiffre brut.
-  Jauge kcal sous la jauge protéines.
+- **Cibles glucides et lipides** (V2.5), méthode de la nutrition du sport (ACSM / ISSN : lipides 20–35 % des kcal) :
+  lipides = **30 % de l'objectif kcal** (prise de masse, maintien) ou **25 %** (sèche, pour garder des glucides à l'entraînement),
+  jamais sous **0,6 g/kg** ; glucides = ce qui reste après protéines et lipides. Les kcal des séances vont donc aux glucides.
+  Exemple : 2 300 kcal, 160 g de protéines → lipides 77 g, glucides 243 g. Sans objectif kcal ou sans pesée : grammes seuls.
 - **Conseil protéines** (aujourd'hui seulement) : manque = objectif − consommé ; repas à venir = repas principaux pas encore saisis et dont l'heure
   n'est pas passée (petit-déj. 11 h, déjeuner 15 h, collation 18 h 30, dîner 22 h 30), estimés par leur moyenne des 14 derniers jours
   (repas présent au moins 3 jours, whey et collations supplémentaires exclues). Doses de whey = (manque − repas à venir − 5 g de tolérance) ÷ protéines

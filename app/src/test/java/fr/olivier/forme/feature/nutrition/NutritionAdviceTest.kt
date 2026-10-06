@@ -3,6 +3,7 @@ package fr.olivier.forme.feature.nutrition
 import fr.olivier.forme.feature.heart.domain.Sex
 import fr.olivier.forme.feature.nutrition.domain.DayIntake
 import fr.olivier.forme.feature.nutrition.domain.EnergyMath
+import fr.olivier.forme.feature.nutrition.domain.MacroTargets
 import fr.olivier.forme.feature.nutrition.domain.MealProtein
 import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.nutrition.domain.NutritionGoal
@@ -18,6 +19,19 @@ import java.time.LocalTime
 
 class NutritionAdviceTest {
     private val today = LocalDate.of(2026, 10, 7) // a Wednesday
+
+    @Test
+    fun fatAndCarbTargetsFromCaloriesAndProtein() {
+        // 2300 kcal, 160 g of protein (640 kcal): fat 30 % = 690 kcal = 77 g, carbs (2300 - 640 - 690) / 4 = 243 g.
+        assertEquals(MacroTargets(fatG = 77, carbsG = 243), EnergyMath.macroTargets(2300, 160.0, 80.0, NutritionGoal.MAINTAIN))
+        assertEquals(MacroTargets(fatG = 77, carbsG = 243), EnergyMath.macroTargets(2300, 160.0, 80.0, NutritionGoal.BULK))
+        // Cut: fat 25 % = 64 g, more carbs left for training.
+        assertEquals(MacroTargets(fatG = 64, carbsG = 271), EnergyMath.macroTargets(2300, 160.0, 80.0, NutritionGoal.CUT))
+        // Very low calories: fat floor of 0.6 g/kg (60 g at 100 kg), carbs never negative.
+        assertEquals(MacroTargets(fatG = 60, carbsG = 0), EnergyMath.macroTargets(1200, 200.0, 100.0, NutritionGoal.CUT))
+        assertNull(EnergyMath.macroTargets(null, 160.0, 80.0, NutritionGoal.CUT))
+        assertNull(EnergyMath.macroTargets(2300, null, 80.0, NutritionGoal.CUT))
+    }
 
     @Test
     fun calorieTargetFromMifflinAndGoal() {

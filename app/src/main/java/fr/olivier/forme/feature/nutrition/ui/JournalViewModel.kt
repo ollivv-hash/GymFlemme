@@ -51,6 +51,8 @@ data class JournalUi(
     /** Rest-day calorie target; null without a nutrition goal. */
     val restDayKcal: Int? = null,
     val wheyDoses: Int = 0,
+    /** Last recorded body weight (floor of the fat target). */
+    val weightKg: Double? = null,
 ) {
     fun entriesOf(type: MealType) = entries.filter { it.mealType == type }
     val wheyConfigured get() = profile.wheyProteinPer100g != null
@@ -96,6 +98,7 @@ class JournalViewModel @Inject constructor(
                 creatineStreak = CreatineStreak.days(creatineDates, repository.today()),
                 restDayKcal = profile.restDayKcal(weight, d.year),
                 wheyDoses = entries.count { it.isWhey },
+                weightKg = weight,
             )
         }
         combine(day, history) { ui, usual ->
