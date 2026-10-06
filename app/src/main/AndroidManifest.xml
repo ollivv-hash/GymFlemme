@@ -49,6 +49,11 @@
     <queries>
         <!-- Health Connect app on Android 13 and below. -->
         <package android:name="com.google.android.apps.healthdata" />
+        <!-- AI analysis (V2.4): apps that can receive a shared text or file. -->
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="text/plain" />
+        </intent>
     </queries>
 
     <application
@@ -71,6 +76,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- AI analysis (V2.4): the day's Markdown file is shared from the cache through this provider. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- Health Connect privacy rationale: required for the permission dialog to show. -->
         <activity

@@ -34,3 +34,6 @@ import kotlinx.serialization.Serializable
 
 // --- Heart rate (V2.1) ---
 @Serializable data object WatchTestRoute
+
+// --- AI analysis (V2.4) ---
+@Serializable data object AiSettingsRoute
