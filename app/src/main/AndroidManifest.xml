@@ -112,6 +112,19 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
 
+        <!-- Home-screen widget (V2.6). -->
+        <receiver
+            android:name=".feature.widget.FormeWidgetReceiver"
+            android:exported="true"
+            android:label="Forme">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/forme_widget_info" />
+        </receiver>
+
         <receiver
             android:name=".feature.sport.timer.RestAlarmReceiver"
             android:exported="false" />

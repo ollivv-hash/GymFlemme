@@ -1,0 +1,118 @@
+package fr.olivier.forme.feature.widget
+
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.glance.appwidget.testing.unit.runGlanceAppWidgetUnitTest
+import androidx.glance.testing.unit.hasText
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import fr.olivier.forme.core.db.SeedData
+import fr.olivier.forme.core.db.TestClock
+import fr.olivier.forme.core.db.context
+import fr.olivier.forme.core.db.testDatabase
+import fr.olivier.forme.core.settings.SettingsRepository
+import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
+import fr.olivier.forme.feature.heart.data.HeartRepository
+import fr.olivier.forme.feature.heart.domain.Sex
+import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
+import fr.olivier.forme.feature.nutrition.data.NutritionRepository
+import fr.olivier.forme.feature.nutrition.data.OpenFoodFactsClient
+import fr.olivier.forme.feature.nutrition.data.ProfileEntity
+import fr.olivier.forme.feature.nutrition.domain.MealType
+import fr.olivier.forme.feature.nutrition.domain.NutritionGoal
+import fr.olivier.forme.feature.sport.data.SessionRepository
+import fr.olivier.forme.feature.sport.data.TemplateRepository
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import org.junit.runner.RunWith
+import java.io.File
+import java.time.Duration
+import java.time.LocalDate
+
+/** V2.6 home-screen widget: its data (same rules as the app) and what it displays. */
+@RunWith(AndroidJUnit4::class)
+class WidgetTest {
+    @get:Rule
+    val tmp = TemporaryFolder()
+
+    private val clock = TestClock()
+    private val db = testDatabase(clock)
+
+    @After
+    fun close() = db.close()
+
+    @Test
+    fun dataFollowsSessionsAndMeals() = runTest {
+        val sessions = SessionRepository(db, db.sessionDao(), db.templateDao(), db.exerciseDao(), clock)
+        val nutrition = NutritionRepository(
+            db, db.profileDao(), db.ciqualDao(), db.foodDao(), db.mealDao(), db.creatineDao(), db.sessionDao(), OpenFoodFactsClient(), clock,
+        )
+        val weights = BodyWeightRepository(db.bodyWeightDao())
+        val settings = SettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "s.preferences_pb") })
+        val source = WidgetDataSource(
+            sessions,
+            TemplateRepository(db, db.templateDao(), db.sessionDao()),
+            settings,
+            nutrition,
+            HeartRepository(db.sessionHeartDao(), db.sessionDao(), db.profileDao(), db.bodyWeightDao(), clock),
+            weights,
+            clock,
+        )
+        val today = LocalDate.now(clock)
+
+        val empty = source.observe(today).first()
+        assertNotNull(empty.sessionTitle) // the rotation proposes the seeded templates
+        assertFalse(empty.sessionRunning)
+        assertEquals(null, empty.kcalTarget) // no nutrition goal yet
+
+        nutrition.saveProfile(ProfileEntity(birthYear = 1980, sex = Sex.MALE, heightCm = 178, nutritionGoal = NutritionGoal.CUT))
+        weights.save(today, 80.0)
+        db.mealDao().insert(
+            MealEntryEntity(
+                date = today, mealType = MealType.LUNCH, foodId = null, name = "Poulet", quantityG = 200.0, proteinG = 50.0,
+                kcal = 400.0, carbsG = 0.0, fatG = 8.0, eatenAt = clock.instant(),
+            ),
+        )
+        val id = sessions.start(SeedData.templateC.id)
+        val running = source.observe(today).first()
+        assertTrue(running.sessionRunning)
+        assertEquals(400.0, running.kcal, 0.0)
+        assertEquals(50.0, running.proteinG, 0.0)
+        assertEquals(144.0, running.proteinTargetG!!, 0.01) // 1.8 g/kg × 80 kg
+        assertNotNull(running.kcalTarget)
+
+        clock.advance(Duration.ofMinutes(45))
+        sessions.finish(id, 3, null)
+        val done = source.observe(today).first()
+        assertFalse(done.sessionRunning)
+        assertEquals(empty.weekDone + 1, done.weekDone)
+    }
+
+    @Test
+    fun contentShowsSessionWeekAndRings() = runGlanceAppWidgetUnitTest {
+        setContext(context())
+        provideComposable {
+            WidgetContent(
+                context(),
+                WidgetData(
+                    sessionTitle = "B · Dos",
+                    sessionRunning = false,
+                    weekDone = 2,
+                    weekGoal = 3,
+                    kcal = 1240.0,
+                    kcalTarget = 2300,
+                    proteinG = 95.0,
+                    proteinTargetG = 160.0,
+                ),
+            )
+        }
+        listOf("Prochaine séance", "B · Dos", "Semaine : 2 / 3", "Démarrer", "1 240", "/ 2 300", "95", "/ 160")
+            .forEach { onNode(hasText(it)).assertExists() }
+    }
+}

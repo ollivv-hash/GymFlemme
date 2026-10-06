@@ -8,6 +8,7 @@ import fr.olivier.forme.core.di.ApplicationScope
 import fr.olivier.forme.core.launch.QuickAction
 import fr.olivier.forme.feature.nutrition.data.CiqualLoader
 import fr.olivier.forme.feature.nutrition.reminder.CreatineReminder
+import fr.olivier.forme.feature.widget.WidgetRefresher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -21,9 +22,11 @@ class AppStartup @Inject constructor(
     private val ciqual: CiqualLoader,
     private val creatineReminder: CreatineReminder,
     private val autoBackup: AutoBackupScheduler,
+    private val widget: WidgetRefresher,
 ) {
     fun run() {
         autoBackup.scheduleDaily()
+        widget.start()
         runCatching { QuickAction.publishShortcuts(context) }.onFailure { Log.e("Forme", "Shortcuts publishing failed", it) }
         scope.launch {
             runCatching { creatineReminder.reschedule() }.onFailure { Log.e("Forme", "Reminder scheduling failed", it) }

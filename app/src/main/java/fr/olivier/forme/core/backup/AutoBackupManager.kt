@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
+import androidx.core.net.toUri
 import dagger.hilt.android.qualifiers.ApplicationContext
 import fr.olivier.forme.core.settings.SettingsRepository
 import kotlinx.coroutines.Dispatchers
@@ -64,13 +65,13 @@ class AutoBackupManager @Inject constructor(
             val local = writeLocalCopy(bytes)
             val localError = BackupVerifier.check(bytes, runCatching { local.readBytes() }.getOrNull())
                 ?.let { "Copie locale non vérifiée : $it" }
-            val target = settings.autoBackup.first().targetUri
+            val target = settings.autoBackup.first().targetUri?.toUri()
                 ?: return@withContext AutoBackupResult(local, targetWritten = false, targetError = localError)
-            val error = runCatching { writeTarget(Uri.parse(target), bytes) }
+            val error = runCatching { writeTarget(target, bytes) }
                 .onFailure { Log.w(TAG, "Auto backup to target failed", it) }
                 .exceptionOrNull()
                 ?.let(::describe)
-                ?: BackupVerifier.check(bytes, runCatching { readTarget(Uri.parse(target)) }.getOrNull())
+                ?: BackupVerifier.check(bytes, runCatching { readTarget(target) }.getOrNull())
                     ?.let { "Sauvegarde écrite mais non vérifiée : $it" }
                 ?: localError
             settings.recordAutoBackup(clock.millis(), error)

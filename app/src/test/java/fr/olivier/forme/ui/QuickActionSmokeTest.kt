@@ -36,7 +36,7 @@ class QuickActionSmokeTest {
         launch(QuickAction.SCAN).use {
             waitFor("Scanner")
             val ids = ShortcutManagerCompat.getDynamicShortcuts(context()).map { it.id }.sorted()
-            assertEquals(QuickAction.entries.map { it.name }.sorted(), ids)
+            assertEquals(QuickAction.entries.filter { it.icon != null }.map { it.name }.sorted(), ids)
         }
     }
 

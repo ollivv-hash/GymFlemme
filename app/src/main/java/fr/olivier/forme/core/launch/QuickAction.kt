@@ -12,10 +12,13 @@ import fr.olivier.forme.R
  * Actions opened from outside the app: launcher shortcuts (long press on the icon) and the home-screen widget.
  * They reach [MainActivity] as an intent action, then the navigation performs them.
  */
-enum class QuickAction(val action: String, val shortLabel: String, val longLabel: String, val icon: Int) {
+enum class QuickAction(val action: String, val shortLabel: String, val longLabel: String, val icon: Int?) {
     START_SESSION("fr.olivier.forme.action.START_SESSION", "Séance", "Démarrer la séance", R.drawable.ic_shortcut_session),
     ADD_MEAL("fr.olivier.forme.action.ADD_MEAL", "Repas", "Ajouter un repas", R.drawable.ic_shortcut_meal),
     SCAN("fr.olivier.forme.action.SCAN", "Scanner", "Scanner un code-barres", R.drawable.ic_shortcut_scan),
+
+    /** Widget only (no launcher shortcut): the rings open the nutrition journal. */
+    OPEN_NUTRITION("fr.olivier.forme.action.OPEN_NUTRITION", "Nutrition", "Journal nutrition", null),
     ;
 
     fun intent(context: Context): Intent =
@@ -29,11 +32,12 @@ enum class QuickAction(val action: String, val shortLabel: String, val longLabel
          * names the package in plain text, which would break the debug build (".debug" suffix).
          */
         fun publishShortcuts(context: Context) {
-            val shortcuts = entries.map { a ->
+            val shortcuts = entries.mapNotNull { a ->
+                val icon = a.icon ?: return@mapNotNull null
                 ShortcutInfoCompat.Builder(context, a.name)
                     .setShortLabel(a.shortLabel)
                     .setLongLabel(a.longLabel)
-                    .setIcon(IconCompat.createWithResource(context, a.icon))
+                    .setIcon(IconCompat.createWithResource(context, icon))
                     .setIntent(a.intent(context))
                     .build()
             }

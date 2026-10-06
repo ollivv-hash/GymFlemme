@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -66,7 +67,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         // After a recreation (rotation), the launching action was already performed.
-        if (savedInstanceState == null) viewModel.onIntent(intent)
+        if (savedInstanceState == null) handle(intent)
         setContent {
             val theme = viewModel.themeMode.collectAsStateWithLifecycle()
             val pendingAction = viewModel.pendingAction.collectAsStateWithLifecycle()
@@ -84,6 +85,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        handle(intent)
+    }
+
+    private fun handle(intent: Intent?) {
+        // Lets the launcher rank the shortcuts by use.
+        QuickAction.from(intent)?.let { ShortcutManagerCompat.reportShortcutUsed(this, it.name) }
         viewModel.onIntent(intent)
     }
 }
