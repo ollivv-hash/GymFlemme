@@ -16,11 +16,14 @@ import javax.inject.Singleton
 /** An installed app able to receive a shared text. */
 data class ShareTarget(val packageName: String, val label: String, val isAi: Boolean)
 
-/** How the analysis is handed to the AI app (the lot 0 test compares them on the real phone). */
-enum class ShareMode(val label: String) {
-    FILE_AND_TEXT("Fichier + texte"),
-    TEXT("Texte seul"),
-    FILE("Fichier seul"),
+/**
+ * How the analysis is handed to the AI app. Tested with Claude (lot 0): the file alone works and its lead text is
+ * dropped when a file is attached; the text alone works too.
+ */
+enum class ShareMode {
+    FILE_AND_TEXT,
+    TEXT,
+    FILE,
 }
 
 /**

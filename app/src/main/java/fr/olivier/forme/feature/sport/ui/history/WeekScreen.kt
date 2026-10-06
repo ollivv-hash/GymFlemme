@@ -54,14 +54,7 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import fr.olivier.forme.feature.heart.data.HeartRepository
-import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
-import fr.olivier.forme.feature.nutrition.data.NutritionRepository
-import fr.olivier.forme.feature.nutrition.data.bmrPerDay
-import fr.olivier.forme.feature.nutrition.data.netKcal
-import fr.olivier.forme.feature.nutrition.data.restDayKcal
-import fr.olivier.forme.feature.nutrition.domain.DayIntake
-import fr.olivier.forme.feature.nutrition.domain.EnergyMath
-import fr.olivier.forme.feature.nutrition.domain.NutritionMath
+import fr.olivier.forme.feature.nutrition.data.NutritionWeekSource
 import fr.olivier.forme.feature.nutrition.domain.NutritionWeek
 import fr.olivier.forme.feature.heart.domain.HeartWeek
 import fr.olivier.forme.feature.heart.domain.SessionHeartLine
@@ -93,8 +86,7 @@ class WeekViewModel @Inject constructor(
     sessions: SessionRepository,
     settings: SettingsRepository,
     heartRepository: HeartRepository,
-    nutrition: NutritionRepository,
-    weights: BodyWeightRepository,
+    private val nutritionWeekSource: NutritionWeekSource,
     private val clock: Clock,
 ) : ViewModel() {
     private val today = LocalDate.now(clock)
@@ -115,34 +107,7 @@ class WeekViewModel @Inject constructor(
         }
     }
 
-    private val lastWeight = weights.observeAll().map { list -> list.maxByOrNull { it.date }?.weightKg }
-
-    /** Protein target from the current weight; calorie target of each day = rest-day target + its sessions. */
-    private val nutritionWeek = shownWeek.flatMapLatest { week ->
-        combine(
-            nutrition.observeRange(week, week.plusDays(6)),
-            nutrition.profile,
-            lastWeight,
-            nutrition.creatineDates(),
-            heartRepository.observeRange(week, week.plusDays(7)),
-        ) { entries, profile, weight, creatine, hearts ->
-            val intakes = entries.groupBy { it.date }.map { (date, day) ->
-                DayIntake(date, day.sumOf { it.proteinG }, day.sumOf { it.kcal ?: 0.0 }, day.any { it.isWhey })
-            }
-            val bmr = profile.bmrPerDay(weight, week.year)
-            val sessionKcal = hearts.groupBy { it.seriesStart.atZone(clock.zone).toLocalDate() }
-                .mapValues { (_, list) -> list.netKcal(bmr) ?: 0.0 }
-            val base = profile.restDayKcal(weight, week.year)
-            NutritionWeek.of(
-                weekStart = week,
-                today = today,
-                intakes = intakes,
-                creatineDates = creatine,
-                proteinTargetG = NutritionMath.proteinTarget(weight, profile.proteinTargetGPerKg),
-                kcalTargetOf = base?.let { b -> { d: LocalDate -> EnergyMath.target(b, sessionKcal[d])!!.totalKcal } },
-            )
-        }
-    }
+    private val nutritionWeek = shownWeek.flatMapLatest { week -> nutritionWeekSource.observe(week) }
 
     private val extras = combine(heartWeek, nutritionWeek) { heart, food -> heart to food }
 

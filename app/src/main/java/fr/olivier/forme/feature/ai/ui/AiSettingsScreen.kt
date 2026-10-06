@@ -2,20 +2,26 @@ package fr.olivier.forme.feature.ai.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -25,51 +31,52 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import fr.olivier.forme.core.settings.SettingsRepository
+import fr.olivier.forme.feature.ai.data.AiAnalysis
 import fr.olivier.forme.feature.ai.data.AiShare
-import fr.olivier.forme.feature.ai.data.ShareMode
 import fr.olivier.forme.feature.ai.data.ShareTarget
+import fr.olivier.forme.feature.ai.domain.AnalysisMarkdown
 import fr.olivier.forme.ui.components.FormeTopBar
 import fr.olivier.forme.ui.components.SectionTitle
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Clock
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
 class AiSettingsViewModel @Inject constructor(
     private val settings: SettingsRepository,
-    private val share: AiShare,
+    share: AiShare,
+    private val analysis: AiAnalysis,
+    private val clock: Clock,
 ) : ViewModel() {
     val targets: List<ShareTarget> = share.targets()
     val selected = settings.aiApp.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val asText = settings.aiShareAsText.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     fun select(packageName: String?) = viewModelScope.launch { settings.setAiApp(packageName) }
+    fun setAsText(value: Boolean) = viewModelScope.launch { settings.setAiShareAsText(value) }
 
-    /** Lot 0: sends a small sample analysis with [mode], to see what the chosen app does with it. */
-    fun test(mode: ShareMode) = share.share(selected.value, mode, SAMPLE_FILE, SAMPLE, LEAD)
+    suspend fun prompt(): String = settings.aiPrompt.first() ?: AnalysisMarkdown.DEFAULT_PROMPT
 
-    companion object {
-        const val SAMPLE_FILE = "forme-test-partage.md"
-        const val LEAD = "Analyse le fichier joint en suivant les consignes qu'il contient."
-        val SAMPLE = """
-            # Forme · test de partage
-
-            ## Consignes
-            Ceci est un test d'envoi depuis l'app Forme. Réponds en une phrase : « Fichier bien reçu », puis cite le
-            poids et les protéines du jour indiqués plus bas, pour prouver que tu as lu le contenu.
-
-            ## Données (exemple)
-            - Poids : 80,4 kg
-            - Protéines du jour : 132 g / 144 g
-            - Séance : C · Mixte + tronc dominant, 52 min, FC moyenne 117 bpm
-        """.trimIndent()
+    /** Saving the default text (or an empty one) goes back to following the app's default prompt. */
+    fun savePrompt(text: String) = viewModelScope.launch {
+        settings.setAiPrompt(text.takeIf { it.trim() != AnalysisMarkdown.DEFAULT_PROMPT.trim() })
     }
+
+    fun analyseToday() = analysis.launch(LocalDate.now(clock))
 }
 
-/** Config → Analyse IA: default AI app and (lot 0) sharing test. */
+/** Config → Analyse IA: default AI app, how to send, and the analysis instructions. */
 @Composable
 fun AiSettingsScreen(onBack: () -> Unit, viewModel: AiSettingsViewModel = hiltViewModel()) {
     val selected by viewModel.selected.collectAsStateWithLifecycle()
+    val asText by viewModel.asText.collectAsStateWithLifecycle()
+    var prompt by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { if (prompt == null) prompt = viewModel.prompt() }
+
     Scaffold(topBar = { FormeTopBar("Analyse IA", onBack) }) { padding ->
         Column(
             Modifier
@@ -77,13 +84,14 @@ fun AiSettingsScreen(onBack: () -> Unit, viewModel: AiSettingsViewModel = hiltVi
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            SectionTitle("App IA par défaut")
             Text(
-                "Le bouton « Analyse IA » ouvrira cette app avec la séance et la nutrition du jour. " +
-                    "Rien n'est envoyé tant que tu n'as pas validé dans l'app.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                "« Analyse IA » (accueil, bilan de séance) prépare un fichier avec tes consignes, la séance et la nutrition " +
+                    "du jour, puis ouvre ton app IA. Rien n'est envoyé tant que tu n'as pas validé dans l'app.",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 8.dp),
             )
+
+            SectionTitle("App IA par défaut")
             TargetRow("Demander à chaque fois", selected == null) { viewModel.select(null) }
             val (ai, others) = viewModel.targets.partition { it.isAi }
             ai.forEach { t -> TargetRow(t.label, selected == t.packageName) { viewModel.select(t.packageName) } }
@@ -92,23 +100,36 @@ fun AiSettingsScreen(onBack: () -> Unit, viewModel: AiSettingsViewModel = hiltVi
                 others.forEach { t -> TargetRow(t.label, selected == t.packageName) { viewModel.select(t.packageName) } }
             }
 
-            SectionTitle("Test du partage")
+            SectionTitle("Méthode d'envoi")
+            TargetRow("Fichier .md (recommandé, testé avec Claude)", !asText) { viewModel.setAsText(false) }
+            TargetRow("Texte (pour les apps qui refusent les fichiers)", asText) { viewModel.setAsText(true) }
             Text(
-                "Envoie un petit fichier d'exemple à l'app choisie, de trois façons. Note pour chacune ce qui arrive " +
-                    "(fichier joint ? texte pré-rempli ? rien ?) et si l'IA cite bien le poids et les protéines.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                ShareMode.entries.forEach { mode ->
-                    OutlinedButton(onClick = { viewModel.test(mode) }) { Text(mode.label) }
-                }
-            }
-            Text(
-                "Le contenu est aussi copié dans le presse-papiers à chaque essai.",
+                "Le contenu est aussi copié dans le presse-papiers, pour le coller si besoin.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 24.dp),
             )
+
+            SectionTitle("Consignes d'analyse (prompt)")
+            prompt?.let { text ->
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { prompt = it },
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+                    Button(onClick = { viewModel.savePrompt(text) }) { Text("Enregistrer") }
+                    TextButton(onClick = {
+                        prompt = AnalysisMarkdown.DEFAULT_PROMPT
+                        viewModel.savePrompt(AnalysisMarkdown.DEFAULT_PROMPT)
+                    }) { Text("Rétablir par défaut") }
+                }
+            }
+
+            OutlinedButton(
+                onClick = viewModel::analyseToday,
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
+            ) { Text("Tester avec la journée d'aujourd'hui") }
         }
     }
 }
