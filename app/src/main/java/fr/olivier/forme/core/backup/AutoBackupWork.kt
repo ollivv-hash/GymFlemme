@@ -33,8 +33,12 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) : CoroutineWo
     override suspend fun doWork(): Result {
         val manager = EntryPointAccessors.fromApplication(applicationContext, Deps::class.java).autoBackupManager()
         return runCatching { manager.runNow() }.fold(
-            // A target failure is shown in the settings; retrying would not fix a lost grant.
-            onSuccess = { Result.success() },
+            // A target failure is shown in the settings and notified; retrying would not fix a lost grant.
+            onSuccess = { result ->
+                val error = result.targetError
+                if (error != null) BackupNotifier.failed(applicationContext, error) else BackupNotifier.clear(applicationContext)
+                Result.success()
+            },
             onFailure = {
                 Log.e("Forme", "Auto backup failed", it)
                 if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.failure()

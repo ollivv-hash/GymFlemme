@@ -54,17 +54,25 @@ class AutoBackupManager @Inject constructor(
         settings.setAutoBackupTarget(null)
     }
 
-    /** Writes the local copy, then the target if one is set; the target outcome is recorded in the settings. */
+    /**
+     * Writes the local copy, then the target if one is set; each one is read back and checked (V2.6, see
+     * [BackupVerifier]). The target outcome is recorded in the settings.
+     */
     suspend fun runNow(): AutoBackupResult = mutex.withLock {
         withContext(Dispatchers.IO) {
             val bytes = BackupCodec.encode(backup.snapshot()).toByteArray()
             val local = writeLocalCopy(bytes)
+            val localError = BackupVerifier.check(bytes, runCatching { local.readBytes() }.getOrNull())
+                ?.let { "Copie locale non vérifiée : $it" }
             val target = settings.autoBackup.first().targetUri
-                ?: return@withContext AutoBackupResult(local, targetWritten = false, targetError = null)
+                ?: return@withContext AutoBackupResult(local, targetWritten = false, targetError = localError)
             val error = runCatching { writeTarget(Uri.parse(target), bytes) }
                 .onFailure { Log.w(TAG, "Auto backup to target failed", it) }
                 .exceptionOrNull()
                 ?.let(::describe)
+                ?: BackupVerifier.check(bytes, runCatching { readTarget(Uri.parse(target)) }.getOrNull())
+                    ?.let { "Sauvegarde écrite mais non vérifiée : $it" }
+                ?: localError
             settings.recordAutoBackup(clock.millis(), error)
             AutoBackupResult(local, targetWritten = error == null, targetError = error)
         }
@@ -89,6 +97,9 @@ class AutoBackupManager @Inject constructor(
             ?: throw FileNotFoundException(uri.toString())
         stream.use { it.write(bytes) }
     }
+
+    private fun readTarget(uri: Uri): ByteArray? =
+        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
 
     private fun writeLocalCopy(bytes: ByteArray): File {
         val dir = localDir()
