@@ -1,4 +1,4 @@
-# Forme — App Sport & Nutrition (Android, usage personnel)
+# GymBro — App Sport & Nutrition (Android, usage personnel)
 
 Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé via `adb install`, sans Play Store.
@@ -6,7 +6,8 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 > **Statut : V1.0 à V1.2 validées sur le téléphone. V2.1 (fréquence cardiaque : montre en direct + Health Connect) implémentée** :
 > build, Lint et tests JVM au vert, reste à valider sur le téléphone.
 
-- Package : `fr.olivier.forme` — nom d'app provisoire : **Forme**
+- Nom : **GymBro** (2.7 ; s'appelait « Forme » avant). Package inchangé : `fr.olivier.forme` — le changer ferait une
+  autre app pour Android (installation à côté, base vide), donc les noms internes (`Forme…` dans le code) restent.
 - Interface en français, code (identifiants, commentaires) en anglais
 - **Hors ligne d'abord** : tout fonctionne sans réseau ; seule la recherche d'un produit **jamais scanné** interroge Open Food Facts.
   Aucune API IA, aucun service payant, aucune clé d'API dans le code
@@ -28,6 +29,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.4** ✅ | Analyse IA : fichier Markdown du jour (consignes + profil + séance + nutrition + semaine) partagé à l'app IA choisie (Claude, ChatGPT…) |
 | **V2.5** ✅ | Journal nutrition en anneaux : kcal et protéines (consommé / objectif, reste), glucides et lipides face à leur cible conseillée |
 | **V2.6** ✅ | Raccourcis d'icône (séance, repas, scanner), widget d'écran d'accueil 4 × 2, sauvegardes relues et vérifiées |
+| **V2.7** ✅ | Nouveau nom **GymBro** et nouvelle icône (G vert, fond blanc, icône à thème Android 13+) ; nouveaux fichiers `gymbro-*` |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -180,9 +182,9 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 
 ### Analyse IA (V2.4)
 
-- Boutons **« Analyse IA du jour »** (accueil) et **« Analyse IA de cette journée »** (bilan de séance) : Forme écrit
-  `forme-analyse-AAAA-MM-JJ.md` puis le partage (Android `ACTION_SEND`) à l'app IA choisie ; l'utilisateur n'a plus qu'à envoyer.
-  Forme n'appelle aucune IA et n'envoie rien elle-même.
+- Boutons **« Analyse IA du jour »** (accueil) et **« Analyse IA de cette journée »** (bilan de séance) : GymBro écrit
+  `gymbro-analyse-AAAA-MM-JJ.md` puis le partage (Android `ACTION_SEND`) à l'app IA choisie ; l'utilisateur n'a plus qu'à envoyer.
+  GymBro n'appelle aucune IA et n'envoie rien elle-même.
 - Contenu du fichier : **consignes** (prompt, modifiable), **profil** (âge, sexe, taille, poids et tendance 4 semaines, objectif,
   cibles protéines / calories, FC max), **séance(s) du jour** (séries avec RIR, dernière fois, 1RM estimé, stagnation, volume,
   records, FC et zones, calories, notes), **nutrition du jour** (totaux / objectifs, repas détaillés, whey, créatine),
@@ -215,7 +217,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 ### Fréquence cardiaque (V2.1)
 
 - **FC en direct (source principale)** : la montre diffuse sa FC en Bluetooth LE (profil standard *Heart Rate*,
-  service 0x180D). Config → Montre cardio : choisir la montre parmi les appareils qui diffusent une FC. En séance, Forme la
+  service 0x180D). Config → Montre cardio : choisir la montre parmi les appareils qui diffusent une FC. En séance, GymBro la
   **recherche** (filtre 0x180D, reconnue par adresse ou par nom : l'adresse de diffusion est aléatoire et peut changer) et
   s'y connecte dès que la diffusion est active, puis se reconnecte après chaque coupure. Un **service au premier plan**
   (type *connected device*) garde la liaison écran éteint ; chaque mesure est écrite au fil de l'eau dans un fichier par
@@ -333,7 +335,7 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 ### Sauvegarde automatique (V1.2)
 
 - **Réglages → Sauvegarde automatique → Choisir l'emplacement…** : le sélecteur Android (Storage Access Framework) s'ouvre ;
-  choisir **Google Drive**, le dossier voulu, et valider `forme-sauvegarde.json`. L'app garde un droit d'écriture
+  choisir **Google Drive**, le dossier voulu, et valider `gymbro-sauvegarde.json` (un fichier `forme-sauvegarde.json` déjà choisi reste utilisé tel quel). L'app garde un droit d'écriture
   **persistant sur ce seul fichier** : aucun compte Google dans l'app, aucun projet Google Cloud, aucune clé.
 - Le fichier est **réécrit en place** après chaque **séance terminée**, **une fois par jour** (WorkManager) et via
   « Sauvegarder maintenant ». L'app Drive se charge de l'envoi (différé si hors ligne) et conserve les **versions
