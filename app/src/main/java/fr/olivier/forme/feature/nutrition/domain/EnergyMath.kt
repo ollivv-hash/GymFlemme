@@ -32,6 +32,17 @@ object EnergyMath {
     fun target(baseKcal: Int?, sessionKcal: Double?): KcalTarget? =
         baseKcal?.let { KcalTarget(it, (sessionKcal ?: 0.0).roundToInt()) }
 
+    /** Rough basal metabolic rate (kcal/day) when the height is unknown: ~24 kcal per kg. */
+    const val BMR_PER_KG_FALLBACK = 24.0
+
+    /**
+     * Part of a session's calories to add to the rest-day target. The heart-rate estimate (Keytel) is a gross
+     * expenditure that includes the basal metabolism, already in the rest-day target: it is removed over the
+     * measured time. The watch's active calories are already net.
+     */
+    fun netSessionKcal(kcal: Double, fromWatch: Boolean, measuredSeconds: Int, bmrPerDay: Double?): Double =
+        if (fromWatch || bmrPerDay == null) kcal else (kcal - bmrPerDay * measuredSeconds / 86_400.0).coerceAtLeast(0.0)
+
     /** A day is "on target" within ±10 % of its calorie target. */
     fun onTarget(eatenKcal: Double, target: Int): Boolean = target > 0 && kotlin.math.abs(eatenKcal - target) <= target * 0.10
 }

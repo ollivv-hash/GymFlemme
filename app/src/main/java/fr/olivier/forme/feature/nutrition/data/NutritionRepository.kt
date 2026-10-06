@@ -2,7 +2,9 @@ package fr.olivier.forme.feature.nutrition.data
 
 import androidx.room.withTransaction
 import fr.olivier.forme.core.db.FormeDatabase
+import fr.olivier.forme.feature.heart.data.SessionHeartEntity
 import fr.olivier.forme.feature.heart.domain.HeartZones
+import fr.olivier.forme.feature.heart.domain.KcalSource
 import fr.olivier.forme.feature.nutrition.domain.EnergyMath
 import fr.olivier.forme.feature.nutrition.domain.FoodSource
 import fr.olivier.forme.feature.nutrition.domain.Macros
@@ -42,6 +44,24 @@ sealed interface FoodChoice {
 fun FoodEntity.per100() = Per100(proteinPer100g, kcalPer100g, carbsPer100g, fatPer100g)
 fun MealEntryEntity.macros() = Macros(proteinG, kcal, carbsG, fatG)
 fun MealEntryEntity.protein() = MealProtein(date, mealType, proteinG, isWhey)
+
+/** Basal metabolic rate (kcal/day): Mifflin-St Jeor when every measure is known, else a weight-based estimate. */
+fun ProfileEntity.bmrPerDay(weightKg: Double?, currentYear: Int): Double? {
+    val weight = weightKg ?: return null
+    val age = birthYear?.let { HeartZones.age(it, currentYear) }
+    val sex = sex
+    val height = heightCm
+    return if (age != null && sex != null && height != null) EnergyMath.bmr(weight, height, age, sex) else weight * EnergyMath.BMR_PER_KG_FALLBACK
+}
+
+/** Calories of sessions to add to a day's target, basal metabolism removed (see [EnergyMath.netSessionKcal]). */
+fun List<SessionHeartEntity>.netKcal(bmrPerDay: Double?): Double? =
+    mapNotNull { h ->
+        h.kcal?.let { kcal ->
+            val measured = h.series.bpm.count { it > 0 } * h.series.intervalSec
+            EnergyMath.netSessionKcal(kcal, h.kcalSource == KcalSource.WATCH, measured, bmrPerDay)
+        }
+    }.takeIf { it.isNotEmpty() }?.sum()
 
 /** Rest-day calorie target: personalised, else advised from the goal; null without a goal or missing measures. */
 fun ProfileEntity.restDayKcal(weightKg: Double?, currentYear: Int): Int? {

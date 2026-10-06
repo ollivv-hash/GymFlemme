@@ -8,7 +8,9 @@ import fr.olivier.forme.feature.heart.data.HeartRepository
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
 import fr.olivier.forme.feature.nutrition.data.NutritionRepository
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
+import fr.olivier.forme.feature.nutrition.data.bmrPerDay
 import fr.olivier.forme.feature.nutrition.data.macros
+import fr.olivier.forme.feature.nutrition.data.netKcal
 import fr.olivier.forme.feature.nutrition.data.protein
 import fr.olivier.forme.feature.nutrition.data.restDayKcal
 import fr.olivier.forme.feature.nutrition.domain.CreatineStreak
@@ -104,9 +106,11 @@ class JournalViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUi(today, true))
 
-    /** Calories spent in the day's sessions (heart rate, V2.1); null when none was measured. */
+    /** Calories spent in the day's sessions beyond basal metabolism (V2.1, net since 2.3.2); null when none was measured. */
     val sessionKcal: StateFlow<Double?> = date.flatMapLatest { d ->
-        heart.observeDay(d).map { list -> list.mapNotNull { it.kcal }.takeIf { it.isNotEmpty() }?.sum() }
+        combine(heart.observeDay(d), repository.profile, lastWeight) { list, profile, weight ->
+            list.netKcal(profile.bmrPerDay(weight, d.year))
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun shiftDay(days: Long) = date.update { (it.plusDays(days)).coerceAtMost(repository.today()) }
