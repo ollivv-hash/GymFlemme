@@ -44,6 +44,7 @@ import fr.olivier.forme.feature.sport.ui.session.ActiveSessionScreen
 import fr.olivier.forme.feature.sport.ui.templates.RotationScreen
 import fr.olivier.forme.feature.sport.ui.templates.TemplateEditScreen
 import fr.olivier.forme.feature.sport.ui.templates.TemplatesScreen
+import fr.olivier.forme.feature.ai.ui.AiSettingsScreen
 import kotlinx.coroutines.flow.first
 
 private data class TopLevel(val route: Any, val label: String, val icon: ImageVector)
@@ -138,6 +139,7 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
                     onProfile = { nav.navigate(ProfileRoute) },
                     onFoods = { nav.navigate(FoodsRoute) },
                     onWatch = { nav.navigate(WatchTestRoute) },
+                    onAi = { nav.navigate(AiSettingsRoute) },
                 )
             }
             composable<ActiveSessionRoute> {
@@ -181,6 +183,7 @@ fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean
             composable<RotationRoute> { RotationScreen(onBack = { nav.popBackStack() }) }
             composable<SettingsRoute> { SettingsScreen(onBack = { nav.popBackStack() }) }
             composable<WatchTestRoute> { WatchTestScreen(onBack = { nav.popBackStack() }) }
+            composable<AiSettingsRoute> { AiSettingsScreen(onBack = { nav.popBackStack() }) }
         }
     }
 }

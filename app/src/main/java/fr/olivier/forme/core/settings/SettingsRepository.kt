@@ -93,6 +93,13 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         }
     }
 
+    /** Package of the AI app receiving the analysis (V2.4); null = ask each time (system chooser). */
+    val aiApp: Flow<String?> = dataStore.data.map { prefs -> prefs[AI_APP]?.takeIf { it.isNotEmpty() } }
+
+    suspend fun setAiApp(packageName: String?) {
+        dataStore.edit { if (packageName == null) it.remove(AI_APP) else it[AI_APP] = packageName }
+    }
+
     val hrDevice: Flow<HrDevice?> = dataStore.data.map { prefs ->
         prefs[HR_DEVICE_ADDRESS]?.let { HrDevice(it, prefs[HR_DEVICE_NAME]) }
     }
@@ -167,5 +174,6 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         private val AUTO_BACKUP_ATTEMPT_AT = longPreferencesKey("auto_backup_attempt_at")
         private val AUTO_BACKUP_ERROR = stringPreferencesKey("auto_backup_error")
         private val DELOAD_DISMISSED_WEEK = longPreferencesKey("deload_dismissed_week")
+        private val AI_APP = stringPreferencesKey("ai_app_package")
     }
 }
