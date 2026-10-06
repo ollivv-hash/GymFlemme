@@ -6,6 +6,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.room.Room
 import androidx.test.core.app.ActivityScenario
@@ -96,7 +98,9 @@ class NutritionSmokeTest {
             pump { exists("ajouté à déjeuner") }
             rule.mainClock.autoAdvance = true
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
-            rule.waitUntilAtLeastOneExists(hasText("45,2 g prot.", substring = true), 10_000)
+            // The day's rings fill the top of the journal: scroll down to the added food.
+            rule.waitUntilAtLeastOneExists(hasText("/ 148 g", substring = true), 10_000)
+            rule.onNode(hasScrollAction()).performScrollToNode(hasText("45,2 g prot.", substring = true))
             shot("n4-journal-after")
         }
     }

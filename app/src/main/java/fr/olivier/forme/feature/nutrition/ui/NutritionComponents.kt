@@ -1,12 +1,16 @@
 package fr.olivier.forme.feature.nutrition.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.LinearProgressIndicator
@@ -18,11 +22,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import fr.olivier.forme.feature.nutrition.domain.DayTotals
 import fr.olivier.forme.feature.nutrition.domain.KcalTarget
+import fr.olivier.forme.feature.nutrition.domain.MacroTargets
 import fr.olivier.forme.feature.nutrition.domain.NutritionMath
 import fr.olivier.forme.feature.nutrition.domain.Per100
 import fr.olivier.forme.feature.sport.domain.Fmt
@@ -64,43 +76,6 @@ fun ProteinGauge(totals: DayTotals, targetG: Double?, modifier: Modifier = Modif
     }
 }
 
-/** Calories eaten vs the day's target (rest-day target + sessions' calories). */
-@Composable
-fun CalorieGauge(eatenKcal: Double, target: KcalTarget, modifier: Modifier = Modifier) {
-    Column(modifier.padding(top = 8.dp)) {
-        Row {
-            Text(
-                Fmt.number(eatenKcal, 0),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                " / ${Fmt.number(target.totalKcal.toDouble(), 0)} kcal",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(start = 4.dp, top = 2.dp),
-            )
-        }
-        val ratio = (eatenKcal / target.totalKcal).toFloat()
-        LinearProgressIndicator(
-            progress = { ratio.coerceIn(0f, 1f) },
-            modifier = Modifier.fillMaxWidth().height(10.dp).padding(vertical = 2.dp),
-            color = if (ratio > 1.1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-        )
-        val left = target.totalKcal - eatenKcal
-        Text(
-            listOfNotNull(
-                if (target.sessionKcal > 0) {
-                    "repos ${Fmt.number(target.baseKcal.toDouble(), 0)} + séances ${target.sessionKcal}"
-                } else {
-                    null
-                },
-                if (left >= 0) "il reste ${Fmt.number(left, 0)} kcal" else "dépassé de ${Fmt.number(-left, 0)} kcal",
-            ).joinToString(" · "),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
-}
-
 /** Calories eaten vs spent in the day's sessions (measured by the watch or estimated from heart rate). */
 @Composable
 fun SessionSpendLine(eatenKcal: Double, sessionKcal: Double?) {
@@ -112,22 +87,120 @@ fun SessionSpendLine(eatenKcal: Double, sessionKcal: Double?) {
     )
 }
 
-/** Calories, carbs and fat of the day, with the share of energy of each macro. */
+/** Protein ring once the target is reached: going beyond it is fine. */
+private val ReachedGreen = Color(0xFF43A047)
+
+/**
+ * The day at a glance: large rings for calories and protein (eaten / target, what is left), small ones for carbs
+ * and fat against their advised targets, then the share of energy of each macro.
+ */
 @Composable
-fun MacroSummary(totals: DayTotals, modifier: Modifier = Modifier) {
-    val split = NutritionMath.energySplit(totals)
-    Column(modifier) {
-        Text(
-            "${totals.kcal.roundToInt()} kcal · glucides ${totals.carbsG.roundToInt()} g · lipides ${totals.fatG.roundToInt()} g",
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        split?.let {
+fun DayRings(
+    totals: DayTotals,
+    kcalTarget: KcalTarget?,
+    proteinTargetG: Double?,
+    macroTargets: MacroTargets?,
+    sessionKcal: Double?,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            val kcalTotal = kcalTarget?.totalKcal?.toDouble()
+            ProgressRing(
+                value = totals.kcal,
+                target = kcalTotal,
+                unit = "kcal",
+                label = "Calories",
+                color = if (kcalTotal != null && totals.kcal > kcalTotal * 1.1) scheme.tertiary else scheme.primary,
+                caption = kcalTotal?.let { leftCaption(it - totals.kcal, "") } ?: "objectif : voir profil",
+                large = true,
+            )
+            ProgressRing(
+                value = totals.proteinG,
+                target = proteinTargetG,
+                unit = "g",
+                label = "Protéines",
+                color = if (proteinTargetG != null && totals.proteinG >= proteinTargetG) ReachedGreen else scheme.primary,
+                caption = proteinTargetG?.let {
+                    if (totals.proteinG >= it) "objectif atteint" else leftCaption(it - totals.proteinG, " g")
+                } ?: "ajoute une pesée",
+                large = true,
+            )
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+            ProgressRing(totals.carbsG, macroTargets?.carbsG?.toDouble(), "g", "Glucides", scheme.secondary)
+            ProgressRing(totals.fatG, macroTargets?.fatG?.toDouble(), "g", "Lipides", scheme.secondary)
+        }
+        if (kcalTarget != null && kcalTarget.sessionKcal > 0) {
+            Text(
+                "Objectif : repos ${Fmt.number(kcalTarget.baseKcal.toDouble(), 0)} + séances ${kcalTarget.sessionKcal} kcal",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+        NutritionMath.energySplit(totals)?.let {
             Text(
                 "Énergie : protéines ${it.proteinPct} % · glucides ${it.carbsPct} % · lipides ${it.fatPct} %",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
             )
         }
+        if (kcalTarget == null) SessionSpendLine(totals.kcal, sessionKcal)
+    }
+}
+
+private fun leftCaption(left: Double, unit: String): String =
+    if (left >= 0) "reste ${Fmt.number(left, 0)}$unit" else "+${Fmt.number(-left, 0)}$unit"
+
+/**
+ * Progress ring drawn with Compose Canvas: [value] / [target] written in the centre, [label] below.
+ * Without a target, only the value is shown on an empty ring.
+ */
+@Composable
+fun ProgressRing(
+    value: Double,
+    target: Double?,
+    unit: String,
+    label: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    caption: String? = null,
+    large: Boolean = false,
+) {
+    val size = if (large) 132.dp else 84.dp
+    val stroke = if (large) 12.dp else 8.dp
+    val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+    val fraction = if (target != null && target > 0) (value / target).toFloat().coerceIn(0f, 1f) else 0f
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.fillMaxSize()) {
+                val width = stroke.toPx()
+                val inset = width / 2
+                val arcSize = Size(this.size.width - width, this.size.height - width)
+                drawArc(track, 0f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(width))
+                if (fraction > 0f) {
+                    drawArc(color, -90f, 360f * fraction, false, Offset(inset, inset), arcSize, style = Stroke(width, cap = StrokeCap.Round))
+                }
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    Fmt.number(value, 0),
+                    style = if (large) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    target?.let { "/ ${Fmt.number(it, 0)} $unit" } ?: unit,
+                    style = if (large) MaterialTheme.typography.bodySmall else MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (large && caption != null) {
+                    Text(caption, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                }
+            }
+        }
+        Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
