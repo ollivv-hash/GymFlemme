@@ -39,6 +39,17 @@ class NutritionAdviceTest {
     }
 
     @Test
+    fun sessionCaloriesWithoutBasalMetabolism() {
+        // 311 kcal estimated for 30 measured minutes; BMR 1687.5 kcal/day → 35.2 kcal already in the rest-day target.
+        assertEquals(275.8, EnergyMath.netSessionKcal(311.0, fromWatch = false, measuredSeconds = 1800, bmrPerDay = 1687.5), 0.1)
+        // The watch's active calories are already net.
+        assertEquals(254.0, EnergyMath.netSessionKcal(254.0, fromWatch = true, measuredSeconds = 1800, bmrPerDay = 1687.5), 0.0)
+        // Unknown metabolism: kept as is; never negative.
+        assertEquals(311.0, EnergyMath.netSessionKcal(311.0, fromWatch = false, measuredSeconds = 1800, bmrPerDay = null), 0.0)
+        assertEquals(0.0, EnergyMath.netSessionKcal(10.0, fromWatch = false, measuredSeconds = 3600, bmrPerDay = 2000.0), 0.0)
+    }
+
+    @Test
     fun usualMealsIgnoreWheyExtrasAndRareMeals() {
         val history = (1..5).flatMap { d ->
             val date = today.minusDays(d.toLong())

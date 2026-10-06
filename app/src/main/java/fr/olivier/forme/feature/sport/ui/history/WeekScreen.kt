@@ -56,6 +56,8 @@ import java.time.format.DateTimeFormatter
 import fr.olivier.forme.feature.heart.data.HeartRepository
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
 import fr.olivier.forme.feature.nutrition.data.NutritionRepository
+import fr.olivier.forme.feature.nutrition.data.bmrPerDay
+import fr.olivier.forme.feature.nutrition.data.netKcal
 import fr.olivier.forme.feature.nutrition.data.restDayKcal
 import fr.olivier.forme.feature.nutrition.domain.DayIntake
 import fr.olivier.forme.feature.nutrition.domain.EnergyMath
@@ -127,8 +129,9 @@ class WeekViewModel @Inject constructor(
             val intakes = entries.groupBy { it.date }.map { (date, day) ->
                 DayIntake(date, day.sumOf { it.proteinG }, day.sumOf { it.kcal ?: 0.0 }, day.any { it.isWhey })
             }
+            val bmr = profile.bmrPerDay(weight, week.year)
             val sessionKcal = hearts.groupBy { it.seriesStart.atZone(clock.zone).toLocalDate() }
-                .mapValues { (_, list) -> list.sumOf { it.kcal ?: 0.0 } }
+                .mapValues { (_, list) -> list.netKcal(bmr) ?: 0.0 }
             val base = profile.restDayKcal(weight, week.year)
             NutritionWeek.of(
                 weekStart = week,

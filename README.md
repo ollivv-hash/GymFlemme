@@ -230,7 +230,11 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 - **Objectif** (Profil → Objectif calories) : prise de masse (+10 %), maintien, sèche (−20 %) ; aucun objectif choisi = pas de suivi des calories.
 - **Jour de repos** = métabolisme de base Mifflin-St Jeor (poids, taille, âge, sexe) × 1,4 (vie quotidienne hors séances) × ajustement de l'objectif,
   arrondi à 10 kcal. Valeur modifiable (± 50 kcal), « Revenir à la valeur conseillée » ; changer d'objectif efface la valeur personnalisée.
-- **Jour d'entraînement** : objectif repos **+ calories mesurées des séances du jour** (montre ou estimation par la FC). Jauge kcal sous la jauge protéines.
+- **Jour d'entraînement** : objectif repos **+ calories des séances du jour**, métabolisme de base retiré (2.3.2) : l'estimation par
+  la FC (Keytel) est une dépense brute, comparable aux « kcal totales » de Mi Fitness, alors que l'objectif repos contient déjà
+  le métabolisme de base ; il est donc soustrait sur la durée mesurée (Mifflin-St Jeor, ou 24 kcal/kg/jour sans la taille).
+  Les calories actives de la montre, déjà nettes, sont ajoutées telles quelles. Le bilan de séance garde le chiffre brut.
+  Jauge kcal sous la jauge protéines.
 - **Conseil protéines** (aujourd'hui seulement) : manque = objectif − consommé ; repas à venir = repas principaux pas encore saisis et dont l'heure
   n'est pas passée (petit-déj. 11 h, déjeuner 15 h, collation 18 h 30, dîner 22 h 30), estimés par leur moyenne des 14 derniers jours
   (repas présent au moins 3 jours, whey et collations supplémentaires exclues). Doses de whey = (manque − repas à venir − 5 g de tolérance) ÷ protéines
