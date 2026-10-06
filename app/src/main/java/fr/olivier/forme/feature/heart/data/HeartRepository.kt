@@ -1,6 +1,7 @@
 package fr.olivier.forme.feature.heart.data
 
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightDao
+import fr.olivier.forme.feature.heart.domain.Calories
 import fr.olivier.forme.feature.heart.domain.HeartProfile
 import fr.olivier.forme.feature.heart.domain.HeartSeries
 import fr.olivier.forme.feature.heart.domain.HeartSource
@@ -58,15 +59,12 @@ class HeartRepository @Inject constructor(
 
     /**
      * Stores [series] (already on the session grid) with its summary computed from the current profile. Calories
-     * measured by the watch ([watchKcal]) win over the estimate. Returns null, storing nothing, if the series is empty.
+     * measured by the watch ([watchKcal]) win over the estimate when plausible ([Calories.pick]). Returns null,
+     * storing nothing, if the series is empty.
      */
     suspend fun saveSeries(sessionId: Long, series: HeartSeries, source: HeartSource, watchKcal: Double? = null): SessionHeartEntity? {
         val summary = HeartSummary.of(series, heartProfile()) ?: return null
-        val (kcal, kcalSource) = when {
-            watchKcal != null && watchKcal > 0 -> watchKcal to KcalSource.WATCH
-            summary.estimatedKcal != null -> summary.estimatedKcal to KcalSource.ESTIMATE
-            else -> null to null
-        }
+        val (kcal, kcalSource) = Calories.pick(watchKcal, summary.estimatedKcal) ?: (null to null)
         val z = summary.zoneSeconds
         val entity = SessionHeartEntity(
             sessionId = sessionId,
@@ -88,6 +86,19 @@ class HeartRepository @Inject constructor(
         )
         heartDao.upsert(entity)
         return entity
+    }
+
+    /**
+     * Replaces implausible watch calories (see [Calories.pick]) of a stored session by the heart-rate estimate,
+     * leaving the rest of its frozen summary untouched. Returns the stored entity.
+     */
+    suspend fun recheckWatchCalories(sessionId: Long): SessionHeartEntity? {
+        val stored = heartDao.get(sessionId) ?: return null
+        if (stored.kcalSource != KcalSource.WATCH) return stored
+        val estimate = HeartSummary.of(stored.series, heartProfile())?.estimatedKcal
+        val (kcal, source) = Calories.pick(stored.kcal, estimate) ?: return stored
+        if (source == KcalSource.WATCH) return stored
+        return stored.copy(kcal = kcal, kcalSource = source).also { heartDao.upsert(it) }
     }
 
     /** Accepts a higher maximum heart rate measured in session (zones of future sessions use it). */
