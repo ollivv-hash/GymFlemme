@@ -2,6 +2,11 @@ package fr.olivier.forme.feature.ai.data
 
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.feature.ai.domain.AiDay
+import fr.olivier.forme.feature.ai.domain.AiExerciseHistory
+import fr.olivier.forme.feature.ai.domain.AiExerciseSession
+import fr.olivier.forme.feature.ai.domain.AiHistory
+import fr.olivier.forme.feature.ai.domain.AiNutritionDay
+import fr.olivier.forme.feature.ai.domain.AiWeighIn
 import fr.olivier.forme.feature.ai.domain.AiExerciseExtra
 import fr.olivier.forme.feature.ai.domain.AiHeart
 import fr.olivier.forme.feature.ai.domain.AiMeal
@@ -17,6 +22,7 @@ import fr.olivier.forme.feature.heart.domain.HeartZones
 import fr.olivier.forme.feature.heart.domain.KcalSource
 import fr.olivier.forme.feature.nutrition.data.NutritionRepository
 import fr.olivier.forme.feature.nutrition.data.NutritionWeekSource
+import fr.olivier.forme.feature.nutrition.data.ProfileEntity
 import fr.olivier.forme.feature.nutrition.data.bmrPerDay
 import fr.olivier.forme.feature.nutrition.data.macros
 import fr.olivier.forme.feature.nutrition.data.netKcal
@@ -139,7 +145,7 @@ class AiDayRepository @Inject constructor(
 
         val weekStart = WeeklyStats.weekStart(date)
         val goals = settings.trainingGoals.first()
-        val sets = sessions.observeWorkingSetsSince(weekStart.atStartOfDay(zone).toInstant()).first()
+        val sets = sessions.observeWorkingSetsSince(weekStart.minusWeeks(HISTORY_WEEKS - 1L).atStartOfDay(zone).toInstant()).first()
             .map { TrainedSet(it.startedAt.atZone(zone).toLocalDate(), it.muscleGroup, it.type) }
         val weekSessionDates = sessions.observeFinished().first().map { it.startedAt.atZone(zone).toLocalDate() }
         val stats = WeeklyStats.week(sets, weekSessionDates, weekStart)
@@ -156,6 +162,65 @@ class AiDayRepository @Inject constructor(
             sessionKcal = hearts.sumOf { it.kcal ?: 0.0 }.roundToInt(),
         )
 
-        return AiDay(date, LocalDateTime.now(clock), profile, aiSessions, aiNutrition, week)
+        val history = AiHistory(
+            exercises = aiSessions.flatMap { it.report.exercises }
+                .filter { ex -> ex.type != ExerciseType.CARDIO && ex.sets.any { !it.isWarmup } }
+                .distinctBy { it.exerciseId }
+                .map { ex -> exerciseHistory(ex.exerciseId, ex.name.substringBefore(" ("), ex.type, ex.perSide, date) },
+            weighIns = averages.filter { !it.date.isBefore(date.minusDays(HISTORY_DAYS_WEIGHT)) }.map { avg ->
+                AiWeighIn(avg.date, weighIns.first { it.date == avg.date }.weightKg, avg.weightKg)
+            },
+            nutritionDays = nutritionDays(date, profileEntity, lastWeight, restDayKcal),
+            proteinTargetG = proteinTarget,
+            weeklySets = (HISTORY_WEEKS - 1 downTo 0).map { back ->
+                val start = weekStart.minusWeeks(back.toLong())
+                start to WeeklyStats.week(sets, weekSessionDates, start).setsByGroup
+            },
+        )
+        return AiDay(date, LocalDateTime.now(clock), profile, aiSessions, aiNutrition, week, history)
+    }
+
+    /** Last sessions (up to [date]) of an exercise: best set and estimated 1RM. */
+    private suspend fun exerciseHistory(exerciseId: Long, name: String, type: ExerciseType, perSide: Boolean, date: LocalDate): AiExerciseHistory {
+        val zone = clock.zone
+        val rows = sessions.observeExerciseHistory(exerciseId).first()
+            .filter { !it.isSeed && !it.startedAt.atZone(zone).toLocalDate().isAfter(date) }
+        val bySession = rows.groupBy { it.sessionId }.values.toList().takeLast(HISTORY_SESSIONS)
+        return AiExerciseHistory(
+            name = name,
+            sessions = bySession.map { session ->
+                val work = session.map { it.toWorkSet() }
+                val best = work.maxWith(compareBy({ it.loadKg ?: 0.0 }, { it.reps ?: 0 }, { it.durationSec ?: 0 }))
+                AiExerciseSession(
+                    date = session.first().startedAt.atZone(zone).toLocalDate(),
+                    bestSet = SessionTextFormatter.setLabel(type, perSide, best.copy(rir = null)),
+                    oneRepMaxKg = if (type == ExerciseType.WEIGHTED) OneRepMax.best(work) else null,
+                )
+            },
+        )
+    }
+
+    /** The last 7 logged days up to [date]: protein, calories and each day's calorie target (sessions included). */
+    private suspend fun nutritionDays(date: LocalDate, profile: ProfileEntity, weight: Double?, restDayKcal: Int?): List<AiNutritionDay> {
+        val from = date.minusDays(6)
+        val zone = clock.zone
+        val bmr = profile.bmrPerDay(weight, date.year)
+        val sessionKcal = heart.observeRange(from, date.plusDays(1)).first()
+            .groupBy { it.seriesStart.atZone(zone).toLocalDate() }
+            .mapValues { (_, list) -> list.netKcal(bmr) }
+        return nutrition.observeRange(from, date).first().groupBy { it.date }.toSortedMap().map { (day, entries) ->
+            AiNutritionDay(
+                date = day,
+                proteinG = entries.sumOf { it.proteinG },
+                kcal = entries.sumOf { it.kcal ?: 0.0 },
+                kcalTarget = EnergyMath.target(restDayKcal, sessionKcal[day])?.totalKcal,
+            )
+        }
+    }
+
+    private companion object {
+        const val HISTORY_SESSIONS = 8
+        const val HISTORY_WEEKS = 4
+        const val HISTORY_DAYS_WEIGHT = 30L
     }
 }

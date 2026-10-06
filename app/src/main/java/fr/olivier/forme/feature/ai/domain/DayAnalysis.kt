@@ -69,6 +69,25 @@ data class AiWeek(
     val sessionKcal: Int,
 )
 
+/** One past session of an exercise: its best set (heaviest, then most reps) and estimated 1RM. */
+data class AiExerciseSession(val date: LocalDate, val bestSet: String, val oneRepMaxKg: Double?)
+
+data class AiExerciseHistory(val name: String, val sessions: List<AiExerciseSession>)
+
+data class AiWeighIn(val date: LocalDate, val weightKg: Double, val average7Kg: Double)
+
+data class AiNutritionDay(val date: LocalDate, val proteinG: Double, val kcal: Double, val kcalTarget: Int?)
+
+/** History for charts (V2.4.1): progression of the day's exercises, weight, nutrition, weekly sets. */
+data class AiHistory(
+    val exercises: List<AiExerciseHistory> = emptyList(),
+    val weighIns: List<AiWeighIn> = emptyList(),
+    val nutritionDays: List<AiNutritionDay> = emptyList(),
+    val proteinTargetG: Double? = null,
+    /** Week start (Monday) → working sets per muscle group, oldest first. */
+    val weeklySets: List<Pair<LocalDate, Map<MuscleGroup, Int>>> = emptyList(),
+)
+
 data class AiDay(
     val date: LocalDate,
     val exportedAt: LocalDateTime,
@@ -76,6 +95,7 @@ data class AiDay(
     val sessions: List<AiSession>,
     val nutrition: AiNutrition,
     val week: AiWeek,
+    val history: AiHistory = AiHistory(),
 )
 
 /** Builds the Markdown file handed to the AI app: instructions first, then the day's data. */
@@ -94,6 +114,7 @@ object AnalysisMarkdown {
         2. **Séance** : ce qui progresse, ce qui stagne ou recule (charges, reps, RIR, fréquence cardiaque), chiffres à l'appui. S'il n'y a pas de séance, dis seulement si c'est cohérent avec ma semaine.
         3. **Nutrition** : écart aux objectifs (protéines, calories) et ce qu'il me reste à manger aujourd'hui, avec des aliments et des quantités concrets.
         4. **Conseils** : 3 actions maximum, concrètes et chiffrées, pour la prochaine séance et pour demain.
+        5. **Visuel** : termine par un artifact (tableau de bord HTML d'une page, lisible sur mobile, thème sombre) construit avec la section « Historique pour graphiques » : jauges protéines et calories du jour vs objectif, courbe de progression (1RM estimé) des exercices de la séance, courbe du poids (moyenne 7 jours), barres des séries par groupe musculaire des dernières semaines vs le repère.
 
         Règles :
         - Base-toi uniquement sur ces données ; si une information manque, dis-le en une phrase au lieu de l'inventer.
@@ -125,6 +146,7 @@ object AnalysisMarkdown {
         }
         nutrition(day.nutrition)
         week(day.week)
+        history(day.history)
     }.trimEnd() + "\n"
 
     private fun StringBuilder.profile(p: AiProfile) {
@@ -253,6 +275,51 @@ object AnalysisMarkdown {
         }
         if (w.measuredSessions > 0) {
             appendLine("- Fréquence cardiaque : ${w.measuredSessions} séance(s) mesurée(s), ${kcal(w.sessionKcal)} kcal dépensées")
+        }
+    }
+
+    private fun StringBuilder.history(h: AiHistory) {
+        if (h.exercises.isEmpty() && h.weighIns.isEmpty() && h.nutritionDays.isEmpty() && h.weeklySets.isEmpty()) return
+        appendLine()
+        appendLine("## Historique pour graphiques")
+        h.exercises.filter { it.sessions.isNotEmpty() }.forEach { ex ->
+            appendLine()
+            appendLine("### ${ex.name} (dernières séances)")
+            appendLine()
+            appendLine("| Date | Meilleure série | 1RM estimé (kg) |")
+            appendLine("|---|---|---|")
+            ex.sessions.forEach { r ->
+                appendLine("| ${r.date.format(shortDate)} | ${r.bestSet} | ${r.oneRepMaxKg?.let { Fmt.number(it) } ?: "—"} |")
+            }
+        }
+        if (h.weighIns.isNotEmpty()) {
+            appendLine()
+            appendLine("### Poids (30 jours)")
+            appendLine()
+            appendLine("| Date | Poids (kg) | Moyenne 7 j (kg) |")
+            appendLine("|---|---|---|")
+            h.weighIns.forEach { appendLine("| ${it.date.format(shortDate)} | ${Fmt.number(it.weightKg)} | ${Fmt.number(it.average7Kg)} |") }
+        }
+        if (h.nutritionDays.isNotEmpty()) {
+            appendLine()
+            appendLine("### Nutrition (7 jours)" + (h.proteinTargetG?.let { " · objectif protéines ${it.roundToInt()} g" } ?: ""))
+            appendLine()
+            appendLine("| Date | Protéines (g) | Calories (kcal) | Objectif calories (kcal) |")
+            appendLine("|---|---|---|---|")
+            h.nutritionDays.forEach {
+                appendLine("| ${it.date.format(shortDate)} | ${it.proteinG.roundToInt()} | ${it.kcal.roundToInt()} | ${it.kcalTarget?.toString() ?: "—"} |")
+            }
+        }
+        if (h.weeklySets.isNotEmpty()) {
+            val groups = MuscleGroup.entries.filter { g -> g != MuscleGroup.CARDIO && (g != MuscleGroup.AUTRE || h.weeklySets.any { (it.second[g] ?: 0) > 0 }) }
+            appendLine()
+            appendLine("### Séries par groupe musculaire (semaines)")
+            appendLine()
+            appendLine("| Semaine du | " + groups.joinToString(" | ") { it.label } + " |")
+            appendLine("|---|" + groups.joinToString("") { "---|" })
+            h.weeklySets.forEach { (week, sets) ->
+                appendLine("| ${week.format(shortDate)} | " + groups.joinToString(" | ") { (sets[it] ?: 0).toString() } + " |")
+            }
         }
     }
 

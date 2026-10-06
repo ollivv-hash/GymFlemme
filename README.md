@@ -184,6 +184,11 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   cibles protéines / calories, FC max), **séance(s) du jour** (séries avec RIR, dernière fois, 1RM estimé, stagnation, volume,
   records, FC et zones, calories, notes), **nutrition du jour** (totaux / objectifs, repas détaillés, whey, créatine),
   **semaine** (séances / objectif, séries par muscle, bilan nutrition, FC).
+- **Historique pour graphiques** (2.4.1), en tableaux Markdown : pour chaque exercice de la séance, les 8 dernières séances
+  (meilleure série, 1RM estimé) ; le poids sur 30 jours avec sa moyenne 7 jours ; les 7 derniers jours saisis de nutrition
+  (protéines, calories, objectif calories du jour) ; les séries par groupe musculaire des 4 dernières semaines. Les consignes par
+  défaut demandent un **artifact** (tableau de bord HTML) construit avec ces tableaux. Une consigne personnalisée reste
+  inchangée : « Rétablir par défaut » récupère la nouvelle section « Visuel ».
 - **Config → Analyse IA** : app IA par défaut (apps IA connues en tête, ou « Demander à chaque fois »), méthode d'envoi,
   consignes d'analyse modifiables (« Rétablir par défaut »), test avec la journée en cours.
 - Méthode d'envoi testée avec Claude (lot 0) : **fichier seul** (par défaut ; la phrase d'accompagnement est ignorée quand un
