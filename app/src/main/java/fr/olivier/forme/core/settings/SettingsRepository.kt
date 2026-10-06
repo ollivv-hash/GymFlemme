@@ -2,6 +2,7 @@ package fr.olivier.forme.core.settings
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -100,6 +101,20 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         dataStore.edit { if (packageName == null) it.remove(AI_APP) else it[AI_APP] = packageName }
     }
 
+    /** How the analysis is shared (V2.4): the file alone suits Claude, the text suits apps refusing files. */
+    val aiShareAsText: Flow<Boolean> = dataStore.data.map { prefs -> prefs[AI_AS_TEXT] ?: false }
+
+    suspend fun setAiShareAsText(asText: Boolean) {
+        dataStore.edit { it[AI_AS_TEXT] = asText }
+    }
+
+    /** Analysis instructions written by the user; null = the app's default prompt. */
+    val aiPrompt: Flow<String?> = dataStore.data.map { prefs -> prefs[AI_PROMPT]?.takeIf { it.isNotBlank() } }
+
+    suspend fun setAiPrompt(prompt: String?) {
+        dataStore.edit { if (prompt.isNullOrBlank()) it.remove(AI_PROMPT) else it[AI_PROMPT] = prompt }
+    }
+
     val hrDevice: Flow<HrDevice?> = dataStore.data.map { prefs ->
         prefs[HR_DEVICE_ADDRESS]?.let { HrDevice(it, prefs[HR_DEVICE_NAME]) }
     }
@@ -175,5 +190,7 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         private val AUTO_BACKUP_ERROR = stringPreferencesKey("auto_backup_error")
         private val DELOAD_DISMISSED_WEEK = longPreferencesKey("deload_dismissed_week")
         private val AI_APP = stringPreferencesKey("ai_app_package")
+        private val AI_AS_TEXT = booleanPreferencesKey("ai_share_as_text")
+        private val AI_PROMPT = stringPreferencesKey("ai_prompt")
     }
 }

@@ -54,6 +54,7 @@ import androidx.compose.material3.Checkbox
 import fr.olivier.forme.feature.sport.data.SessionEntity
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.TemplateRepository
+import fr.olivier.forme.feature.ai.data.AiAnalysis
 import fr.olivier.forme.feature.sport.domain.DeloadAdvisor
 import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.feature.sport.domain.WeeklyStats
@@ -82,6 +83,7 @@ class HomeViewModel @Inject constructor(
     templates: TemplateRepository,
     private val weights: BodyWeightRepository,
     private val settings: SettingsRepository,
+    private val analysis: AiAnalysis,
     private val clock: Clock,
 ) : ViewModel() {
     private fun <T> kotlinx.coroutines.flow.Flow<T>.state(initial: T) =
@@ -119,6 +121,9 @@ class HomeViewModel @Inject constructor(
     }
 
     fun dismissDeload() = viewModelScope.launch { settings.dismissDeload(WeeklyStats.weekStart(LocalDate.now(clock))) }
+
+    /** Hands today's session and nutrition to the AI app (V2.4). */
+    fun analyse() = analysis.launch(LocalDate.now(clock))
 
     fun today(): LocalDate = LocalDate.now(clock)
     val zone: ZoneId get() = clock.zone
@@ -218,6 +223,10 @@ fun HomeScreen(
                         Text("Créatine ${Fmt.number(nutrition.profile.creatineDoseG)} g prise")
                     }
                 }
+            }
+
+            OutlinedButton(onClick = viewModel::analyse, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Text("Analyse IA du jour")
             }
 
             SectionTitle("Poids")

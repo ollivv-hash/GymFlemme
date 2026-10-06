@@ -25,7 +25,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.1** ✅ | Fréquence cardiaque : FC en direct de la montre (Bluetooth, profil Heart Rate standard), complément Health Connect (Mi Fitness), zones, calories, bilan avec courbe et séries, onglet Semaine, dépense dans Nutrition |
 | **V2.2** ✅ | Objectif calories (prise de masse / maintien / sèche, majoré des séances), conseil protéines et whey (jusqu'à 2 doses), bilan nutrition de la semaine, CI GitHub (APK signé) |
 | **V2.3** ✅ | Coaching : 1RM estimé, détection de plateau (séance + historique), conseil de semaine de décharge sur l'accueil |
-| plus tard | Partage des bilans vers l'app Claude |
+| **V2.4** ✅ | Analyse IA : fichier Markdown du jour (consignes + profil + séance + nutrition + semaine) partagé à l'app IA choisie (Claude, ChatGPT…) |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -174,6 +174,22 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   Bilan : « (superset avec X) ».
 - **Note pour la prochaine fois** (icône crayon d'un exercice) : choix rapides (« Monter la charge », « Trop dur, rester », « Douleur / gêne »,
   « Changer le réglage ») ou texte libre. Affichée en bandeau orange à la séance suivante jusqu'à « Vu ✓ », et dans l'historique de l'exercice.
+
+### Analyse IA (V2.4)
+
+- Boutons **« Analyse IA du jour »** (accueil) et **« Analyse IA de cette journée »** (bilan de séance) : Forme écrit
+  `forme-analyse-AAAA-MM-JJ.md` puis le partage (Android `ACTION_SEND`) à l'app IA choisie ; l'utilisateur n'a plus qu'à envoyer.
+  Forme n'appelle aucune IA et n'envoie rien elle-même.
+- Contenu du fichier : **consignes** (prompt, modifiable), **profil** (âge, sexe, taille, poids et tendance 4 semaines, objectif,
+  cibles protéines / calories, FC max), **séance(s) du jour** (séries avec RIR, dernière fois, 1RM estimé, stagnation, volume,
+  records, FC et zones, calories, notes), **nutrition du jour** (totaux / objectifs, repas détaillés, whey, créatine),
+  **semaine** (séances / objectif, séries par muscle, bilan nutrition, FC).
+- **Config → Analyse IA** : app IA par défaut (apps IA connues en tête, ou « Demander à chaque fois »), méthode d'envoi,
+  consignes d'analyse modifiables (« Rétablir par défaut »), test avec la journée en cours.
+- Méthode d'envoi testée avec Claude (lot 0) : **fichier seul** (par défaut ; la phrase d'accompagnement est ignorée quand un
+  fichier est joint, les consignes sont donc dans le fichier) ou **texte** (pour les apps qui refusent les fichiers).
+  Le contenu est aussi copié dans le presse-papiers. Le fichier est partagé depuis le cache via un `FileProvider` (lecture seule accordée à l'app cible).
+- Le travail se fait dans la portée de l'application : quitter l'écran pendant la préparation (≈ 1 s) ne l'annule pas.
 
 ### Coaching (V2.3)
 
@@ -370,7 +386,7 @@ gradlew lintDebug               :: analyse statique Android
 
 Couverture : règle de progression, rotation (ajout / archivage / réordonnancement), records et volume,
 moyenne mobile 7 jours, pré-remplissage, bilan texte, export/import JSON (aller-retour sans perte, en mémoire
-et via la base), seed, DAO et repositories, migrations Room 1 → 5, supersets (normalisation), statistiques hebdomadaires, remplacement d'exercice, fréquence cardiaque (décodage Bluetooth, zones, Keytel, fusion direct/Health Connect, source unique, pics par série, synchro, enregistreur), objectif calories (Mifflin-St Jeor), conseil protéines / whey, bilan nutrition de la semaine, 1RM estimé, plateau, conseil de décharge.
+et via la base), seed, DAO et repositories, migrations Room 1 → 5, supersets (normalisation), statistiques hebdomadaires, remplacement d'exercice, fréquence cardiaque (décodage Bluetooth, zones, Keytel, fusion direct/Health Connect, source unique, pics par série, synchro, enregistreur), objectif calories (Mifflin-St Jeor), conseil protéines / whey, bilan nutrition de la semaine, 1RM estimé, plateau, conseil de décharge, fichier d'analyse IA et partage.
 
 Les tests de fumée (`AppSmokeTest`, `RecapSmokeTest`, `FeaturesSmokeTest`, …) écrivent des captures d'écran dans `app/build/smoke-screens/`.
 

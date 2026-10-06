@@ -40,6 +40,7 @@ import fr.olivier.forme.feature.sport.domain.SessionTextFormatter
 import fr.olivier.forme.ui.components.ConfirmDialog
 import fr.olivier.forme.ui.components.FormeTopBar
 import fr.olivier.forme.ui.components.SectionTitle
+import fr.olivier.forme.feature.ai.data.AiAnalysis
 import fr.olivier.forme.feature.heart.data.HeartRepository
 import fr.olivier.forme.feature.heart.data.HeartSync
 import kotlinx.coroutines.flow.SharingStarted
@@ -72,6 +73,7 @@ class SessionDetailViewModel @Inject constructor(
     private val sessions: SessionRepository,
     private val heartRepository: HeartRepository,
     private val heartSync: HeartSync,
+    private val analysis: AiAnalysis,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<SessionDetailRoute>()
     val justFinished = route.justFinished
@@ -122,6 +124,11 @@ class SessionDetailViewModel @Inject constructor(
     }
 
     fun text(): String? = _report.value?.let(SessionTextFormatter::format)
+
+    /** Hands this session's day (session + nutrition) to the AI app (V2.4). */
+    fun analyse() {
+        _report.value?.let { analysis.launch(it.startedAt.toLocalDate()) }
+    }
 
     fun delete(then: () -> Unit) = viewModelScope.launch {
         sessions.delete(route.sessionId)
@@ -220,9 +227,12 @@ fun SessionDetailScreen(
                 Text(it)
             }
 
-            Button(
+            Button(onClick = viewModel::analyse, modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) {
+                Text("Analyse IA de cette journée")
+            }
+            OutlinedButton(
                 onClick = { viewModel.text()?.let { copy(context, it) } },
-                modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) { Text("Copier le bilan texte") }
             OutlinedButton(onClick = onCreateTemplate, modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp)) {
                 Text("Créer un modèle depuis cette séance")
