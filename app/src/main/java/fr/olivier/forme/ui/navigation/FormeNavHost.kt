@@ -24,6 +24,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import fr.olivier.forme.core.launch.QuickAction
 import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.nutrition.ui.AddFoodScreen
 import fr.olivier.forme.feature.nutrition.ui.FoodEditScreen
@@ -46,6 +47,8 @@ import fr.olivier.forme.feature.sport.ui.templates.TemplateEditScreen
 import fr.olivier.forme.feature.sport.ui.templates.TemplatesScreen
 import fr.olivier.forme.feature.ai.ui.AiSettingsScreen
 import kotlinx.coroutines.flow.first
+import java.time.LocalDate
+import java.time.LocalTime
 
 private data class TopLevel(val route: Any, val label: String, val icon: ImageVector)
 
@@ -57,18 +60,42 @@ private val topLevels = listOf(
 )
 
 @Composable
-fun FormeNavHost(resumeOnStart: Boolean, hasActiveSession: suspend () -> Boolean) {
+fun FormeNavHost(
+    resumeOnStart: Boolean,
+    hasActiveSession: suspend () -> Boolean,
+    pendingAction: QuickAction? = null,
+    startProposedSession: (then: () -> Unit) -> Unit = { it() },
+    onActionHandled: () -> Unit = {},
+) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val destination = backStack?.destination
     val showBar = topLevels.any { top -> destination?.hasRoute(top.route::class) == true }
 
     LaunchedEffect(Unit) {
-        if (resumeOnStart && hasActiveSession()) {
+        // A launch action (shortcut, widget) decides where to go instead.
+        if (resumeOnStart && pendingAction == null && hasActiveSession()) {
             // The graph is set by NavHost on its first composition: wait for it before navigating.
             nav.currentBackStackEntryFlow.first()
             nav.navigate(ActiveSessionRoute)
         }
+    }
+
+    // Launcher shortcuts and widget (V2.6): opened above the home screen, so "back" returns to it.
+    LaunchedEffect(pendingAction) {
+        val action = pendingAction ?: return@LaunchedEffect
+        nav.currentBackStackEntryFlow.first()
+        fun open(route: Any) = nav.navigate(route) {
+            popUpTo<HomeRoute>()
+            launchSingleTop = true
+        }
+        val meal = MealType.at(LocalTime.now()).name
+        when (action) {
+            QuickAction.START_SESSION -> startProposedSession { open(ActiveSessionRoute) }
+            QuickAction.ADD_MEAL -> open(AddFoodRoute(LocalDate.now().toEpochDay(), meal))
+            QuickAction.SCAN -> open(ScanRoute(LocalDate.now().toEpochDay(), meal))
+        }
+        onActionHandled()
     }
 
     Scaffold(

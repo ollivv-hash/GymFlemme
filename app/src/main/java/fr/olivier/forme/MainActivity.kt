@@ -1,5 +1,6 @@
 package fr.olivier.forme
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,27 +11,51 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import fr.olivier.forme.core.launch.QuickAction
+import fr.olivier.forme.core.launch.QuickStart
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.core.settings.ThemeMode
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.ui.navigation.FormeNavHost
 import fr.olivier.forme.ui.theme.FormeTheme
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     settings: SettingsRepository,
     private val sessions: SessionRepository,
+    private val quickStart: QuickStart,
 ) : ViewModel() {
     val themeMode: StateFlow<ThemeMode> =
         settings.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.DARK)
 
     /** A session still running at launch (process killed mid-workout) is resumed. */
     suspend fun hasActiveSession(): Boolean = sessions.observeActive().first() != null
+
+    /** Launcher shortcut or widget action waiting for the navigation (V2.6). */
+    private val _pendingAction = MutableStateFlow<QuickAction?>(null)
+    val pendingAction: StateFlow<QuickAction?> = _pendingAction.asStateFlow()
+
+    fun onIntent(intent: Intent?) {
+        QuickAction.from(intent)?.let { _pendingAction.value = it }
+    }
+
+    fun actionHandled() {
+        _pendingAction.value = null
+    }
+
+    /** Starts the proposed session (or keeps the running one), then [then] on the main thread. */
+    fun startProposedSession(then: () -> Unit) = viewModelScope.launch {
+        quickStart.startProposedSession()
+        then()
+    }
 }
 
 @AndroidEntryPoint
@@ -40,14 +65,25 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // After a recreation (rotation), the launching action was already performed.
+        if (savedInstanceState == null) viewModel.onIntent(intent)
         setContent {
             val theme = viewModel.themeMode.collectAsStateWithLifecycle()
+            val pendingAction = viewModel.pendingAction.collectAsStateWithLifecycle()
             FormeTheme(theme.value) {
                 FormeNavHost(
                     resumeOnStart = savedInstanceState == null,
                     hasActiveSession = viewModel::hasActiveSession,
+                    pendingAction = pendingAction.value,
+                    startProposedSession = { then -> viewModel.startProposedSession(then) },
+                    onActionHandled = viewModel::actionHandled,
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        viewModel.onIntent(intent)
     }
 }

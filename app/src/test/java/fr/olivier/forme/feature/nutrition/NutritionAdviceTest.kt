@@ -21,6 +21,15 @@ class NutritionAdviceTest {
     private val today = LocalDate.of(2026, 10, 7) // a Wednesday
 
     @Test
+    fun mealOfTheHour() {
+        assertEquals(MealType.BREAKFAST, MealType.at(LocalTime.of(7, 30)))
+        assertEquals(MealType.LUNCH, MealType.at(LocalTime.of(11, 0)))
+        assertEquals(MealType.SNACK, MealType.at(LocalTime.of(16, 0)))
+        assertEquals(MealType.DINNER, MealType.at(LocalTime.of(18, 30)))
+        assertEquals(MealType.DINNER, MealType.at(LocalTime.of(23, 50)))
+    }
+
+    @Test
     fun fatAndCarbTargetsFromCaloriesAndProtein() {
         // 2300 kcal, 160 g of protein (640 kcal): fat 30 % = 690 kcal = 77 g, carbs (2300 - 640 - 690) / 4 = 243 g.
         assertEquals(MacroTargets(fatG = 77, carbsG = 243), EnergyMath.macroTargets(2300, 160.0, 80.0, NutritionGoal.MAINTAIN))
