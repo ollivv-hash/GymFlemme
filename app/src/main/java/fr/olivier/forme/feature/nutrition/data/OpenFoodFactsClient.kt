@@ -46,7 +46,7 @@ class OpenFoodFactsClient @Inject constructor() {
         try {
             connection.connectTimeout = TIMEOUT_MS
             connection.readTimeout = TIMEOUT_MS
-            connection.setRequestProperty("User-Agent", "Forme/${BuildConfig.VERSION_NAME} (personal Android app)")
+            connection.setRequestProperty("User-Agent", "GymBro/${BuildConfig.VERSION_NAME} (personal Android app)")
             when (connection.responseCode) {
                 200 -> parse(barcode, connection.inputStream.use { it.readBytes().decodeToString() })
                 404 -> OffResult.NotFound

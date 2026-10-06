@@ -139,10 +139,10 @@ class AiShareSmokeTest {
             assertNull(started.getStringExtra(Intent.EXTRA_TEXT)) // Claude drops it when a file is attached
             @Suppress("DEPRECATION")
             val uri = started.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)!!
-            assertTrue(uri.toString().endsWith("forme-analyse-${LocalDate.now()}.md"))
+            assertTrue(uri.toString().endsWith("gymbro-analyse-${LocalDate.now()}.md"))
             assertTrue(started.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
 
-            val markdown = File(File(app.cacheDir, "share"), "forme-analyse-${LocalDate.now()}.md").readText()
+            val markdown = File(File(app.cacheDir, "share"), "gymbro-analyse-${LocalDate.now()}.md").readText()
             File("build/smoke-screens").apply { mkdirs() }.resolve("ai-analyse.md").writeText(markdown)
             listOf(
                 "## Consignes", "## Profil", "46 ans · homme · 178 cm", "Objectif : prise de masse",

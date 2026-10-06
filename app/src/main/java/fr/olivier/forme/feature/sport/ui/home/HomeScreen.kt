@@ -61,7 +61,6 @@ import fr.olivier.forme.feature.sport.domain.WeeklyStats
 import fr.olivier.forme.core.settings.SettingsRepository
 import kotlinx.coroutines.flow.combine
 import fr.olivier.forme.feature.sport.ui.templates.title
-import fr.olivier.forme.ui.components.FormeTopBar
 import fr.olivier.forme.ui.components.SectionTitle
 import fr.olivier.forme.ui.theme.accentButtonColors
 import kotlinx.coroutines.flow.SharingStarted
@@ -163,7 +162,7 @@ fun HomeScreen(
     var addingWeight by remember { mutableStateOf(false) }
     var choosingSession by remember { mutableStateOf(false) }
 
-    Scaffold(topBar = { FormeTopBar("Forme") }) { padding ->
+    Scaffold { padding ->
         Column(
             Modifier
                 .padding(padding)
