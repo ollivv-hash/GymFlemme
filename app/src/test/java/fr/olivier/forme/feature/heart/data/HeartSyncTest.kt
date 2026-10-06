@@ -4,10 +4,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.olivier.forme.core.db.SeedData
 import fr.olivier.forme.core.db.TestClock
 import fr.olivier.forme.core.db.testDatabase
+import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
 import fr.olivier.forme.feature.heart.domain.HeartSource
 import fr.olivier.forme.feature.heart.domain.KcalInterval
 import fr.olivier.forme.feature.heart.domain.KcalSource
+import fr.olivier.forme.feature.heart.domain.Sex
 import fr.olivier.forme.feature.heart.domain.SourcedSample
+import fr.olivier.forme.feature.nutrition.data.ProfileEntity
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -17,6 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 
 @RunWith(AndroidJUnit4::class)
 class HeartSyncTest {
@@ -106,6 +110,44 @@ class HeartSyncTest {
         val saved = heart.get(id)!!
         assertEquals(120, saved.maxBpm) // Fitbit's 160 bpm ignored
         assertEquals(20.0, saved.kcal!!, 1e-9) // not 59
+    }
+
+    @Test
+    fun implausibleWatchCaloriesKeepTheEstimate() = runTest {
+        db.profileDao().upsert(ProfileEntity(birthYear = LocalDate.now(clock).year - 46, sex = Sex.MALE))
+        BodyWeightRepository(db.bodyWeightDao()).save(LocalDate.now(clock), 80.0)
+        val (id, start) = session()
+        heart.saveSession(id, samples(start, 0, 120, 130).map { it.time to it.bpm }, HeartSource.BLE)
+        val estimate = heart.get(id)!!.kcal!! // Keytel, ~25 kcal for 2 min at 130 bpm
+        assertEquals(KcalSource.ESTIMATE, heart.get(id)!!.kcalSource)
+
+        // Outside a workout, Mi Fitness writes a few calories now and then: not a measure of the session.
+        data = HealthConnectData(emptyList(), listOf(kcal(start, 120, 2.0)))
+        assertEquals(SyncOutcome.RETRY, sync.sync(id))
+        assertEquals(estimate, heart.get(id)!!.kcal!!, 1e-9)
+        assertEquals(KcalSource.ESTIMATE, heart.get(id)!!.kcalSource)
+
+        // A plausible figure (at least half the estimate) wins and ends the sync.
+        data = HealthConnectData(emptyList(), listOf(kcal(start, 120, estimate * 0.8)))
+        assertEquals(SyncOutcome.DONE, sync.sync(id))
+        assertEquals(KcalSource.WATCH, heart.get(id)!!.kcalSource)
+    }
+
+    @Test
+    fun implausibleWatchCaloriesStoredBeforeAreFixedEvenLater() = runTest {
+        db.profileDao().upsert(ProfileEntity(birthYear = LocalDate.now(clock).year - 46, sex = Sex.MALE))
+        BodyWeightRepository(db.bodyWeightDao()).save(LocalDate.now(clock), 80.0)
+        val (id, start) = session()
+        heart.saveSession(id, samples(start, 0, 120, 130).map { it.time to it.bpm }, HeartSource.BLE)
+        val estimate = heart.get(id)!!.kcal!!
+        // As stored by version 2.1 / 2.2, which took any watch figure.
+        db.sessionHeartDao().upsert(heart.get(id)!!.copy(kcal = 2.0, kcalSource = KcalSource.WATCH))
+
+        clock.advance(Duration.ofHours(30))
+        data = null
+        assertEquals(SyncOutcome.DONE, sync.sync(id))
+        assertEquals(estimate, heart.get(id)!!.kcal!!, 1e-9)
+        assertEquals(KcalSource.ESTIMATE, heart.get(id)!!.kcalSource)
     }
 
     @Test

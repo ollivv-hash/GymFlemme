@@ -124,6 +124,20 @@ data class HeartSummary(
 
 object Calories {
     /**
+     * Below this share of the heart-rate estimate, the watch's figure is not a workout measure: outside a workout,
+     * Mi Fitness only writes a few active calories now and then (2 kcal for a 1-hour session was seen).
+     */
+    const val WATCH_MIN_SHARE = 0.5
+
+    /** The watch's calories when plausible, else the estimate. */
+    fun pick(watchKcal: Double?, estimatedKcal: Double?): Pair<Double, KcalSource>? = when {
+        watchKcal != null && watchKcal > 0 && (estimatedKcal == null || watchKcal >= estimatedKcal * WATCH_MIN_SHARE) ->
+            watchKcal to KcalSource.WATCH
+        estimatedKcal != null -> estimatedKcal to KcalSource.ESTIMATE
+        else -> null
+    }
+
+    /**
      * Keytel et al. (2005) energy expenditure from heart rate, weight, age and sex, summed over each slot.
      * Null when a needed profile value is missing. Valid for exercise heart rates; slots giving a negative rate count 0.
      */

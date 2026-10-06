@@ -207,6 +207,10 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   Si une séance la dépasse (moyenne sur 5 s, les pics parasites sont ignorés), le bilan propose de l'ajuster.
 - **Zones** : Z1 50-60 %, Z2 60-70 %, Z3 70-80 %, Z4 80-90 %, Z5 90-100 % de la FC max. « Intensité de travail » = zone 3 et +.
 - **Calories estimées** (sans données de la montre) : formule de Keytel (FC, poids, âge, sexe), sommée par tranche de 5 s.
+- **Calories de la montre** (calories actives écrites par Mi Fitness dans Health Connect) : retenues seulement si elles valent
+  **au moins 50 % de l'estimation** par la FC. Hors entraînement lancé sur la montre, Mi Fitness n'écrit que quelques calories
+  éparses (2 kcal pour une séance d'une heure observés) : l'estimation est alors gardée et la synchro réessaie jusqu'à 24 h.
+  Les séances déjà enregistrées avec un chiffre trop faible sont corrigées à l'ouverture de leur bilan (2.3.1).
 - **Bilan** : courbe avec bandes de zones et repères des séries validées, temps par zone, **pic de FC par série** (maximum
   dans la minute qui précède la validation). **Semaine** : séances mesurées, FC moyenne, temps en zone 3 et +, kcal.
   **Nutrition** : dépense des séances du jour et apport net.
