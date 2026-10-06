@@ -204,7 +204,7 @@ private fun WheyCard(ui: JournalUi, onAdd: () -> Unit, onProfile: () -> Unit) {
                 Text(
                     ProteinAdvice.message(plan),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (plan.reached) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
+                    color = if (plan.reached) ReachedGreen else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
             }

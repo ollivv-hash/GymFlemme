@@ -87,8 +87,8 @@ fun SessionSpendLine(eatenKcal: Double, sessionKcal: Double?) {
     )
 }
 
-/** Protein ring once the target is reached: going beyond it is fine. */
-private val ReachedGreen = Color(0xFF43A047)
+/** Protein target reached (ring and advice): going beyond it is fine. */
+internal val ReachedGreen = Color(0xFF43A047)
 
 /**
  * The day at a glance: large rings for calories and protein (eaten / target, what is left), small ones for carbs
