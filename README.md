@@ -27,6 +27,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.3** ✅ | Coaching : 1RM estimé, détection de plateau (séance + historique), conseil de semaine de décharge sur l'accueil |
 | **V2.4** ✅ | Analyse IA : fichier Markdown du jour (consignes + profil + séance + nutrition + semaine) partagé à l'app IA choisie (Claude, ChatGPT…) |
 | **V2.5** ✅ | Journal nutrition en anneaux : kcal et protéines (consommé / objectif, reste), glucides et lipides face à leur cible conseillée |
+| **V2.6** ✅ | Raccourcis d'icône (séance, repas, scanner), widget d'écran d'accueil 4 × 2, sauvegardes relues et vérifiées |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -63,7 +64,8 @@ Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets
 | `sh.calvin.reorderable` | Glisser-déposer dans une `LazyColumn` (absent de Compose) ; petite lib Apache 2, maintenue. **Seule dépendance tierce.** |
 | `androidx.work:work-runtime` | Sauvegarde automatique quotidienne, rattrapage Health Connect après séance |
 | `androidx.health.connect:connect-client` | Lecture de la FC et des calories écrites par Mi Fitness (V2.1) |
-| Tests : JUnit 4, `kotlinx-coroutines-test`, Turbine, `androidx.test`, Robolectric, `compose-ui-test-junit4` | Tests unitaires et instrumentés ; Robolectric exécute aussi les tests Room sur le JVM (sans téléphone) |
+| `androidx.glance:glance-appwidget` | Widget d'écran d'accueil écrit en Compose (V2.6) ; bibliothèque officielle Google, remplace les `RemoteViews` écrites à la main |
+| Tests : JUnit 4, `kotlinx-coroutines-test`, Turbine, `androidx.test`, Robolectric, `compose-ui-test-junit4`, `glance-appwidget-testing` | Tests unitaires et instrumentés ; Robolectric exécute aussi les tests Room sur le JVM (sans téléphone) |
 
 Volontairement **sans** bibliothèque de graphiques (courbes dessinées en Compose Canvas) ni chargeur d'images (`BitmapFactory` sous-échantillonné suffit pour les photos de machines).
 
@@ -101,7 +103,7 @@ app_sport/
         └── androidTest/
 ```
 
-V1.1 a ajouté `feature/nutrition/` (data · domain · reminder · ui) et la migration Room 1 → 2 ; V1.2 a ajouté la sauvegarde automatique dans `core/backup/` (`AutoBackupManager`, worker WorkManager) ; V2.1 a ajouté `feature/heart/` (data · domain · service · ui) et la migration 3 → 4.
+V1.1 a ajouté `feature/nutrition/` (data · domain · reminder · ui) et la migration Room 1 → 2 ; V1.2 a ajouté la sauvegarde automatique dans `core/backup/` (`AutoBackupManager`, worker WorkManager) ; V2.1 a ajouté `feature/heart/` (data · domain · service · ui) et la migration 3 → 4 ; V2.6 a ajouté `core/launch/` (raccourcis) et `feature/widget/`.
 Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv` depuis le fichier Excel publié par l'ANSES.
 
 ---
@@ -237,6 +239,19 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   dans la minute qui précède la validation). **Semaine** : séances mesurées, FC moyenne, temps en zone 3 et +, kcal.
   **Nutrition** : dépense des séances du jour et apport net.
 
+### Raccourcis et widget (V2.6)
+
+- **Raccourcis** (appui long sur l'icône) : **Démarrer la séance** lance directement la séance proposée par la rotation
+  (ou rouvre la séance en cours), **Ajouter un repas** ouvre la recherche et **Scanner** le scanner, sur le repas de
+  l'heure (petit-déjeuner avant 11 h, déjeuner avant 15 h, collation avant 18 h 30, dîner ensuite). Raccourcis
+  dynamiques publiés au démarrage : un raccourci statique écrit le nom du package en dur et casserait la variante debug.
+  « Retour » ramène à l'accueil.
+- **Widget 4 × 2** (redimensionnable) : prochaine séance (ou séance en cours), séances de la semaine / objectif,
+  bouton **Démarrer** (même action que le raccourci) ; anneaux **kcal** et **protéines** du jour (mêmes calculs et
+  couleurs que le journal), qui ouvrent le journal nutrition. Thème sombre fixe, lisible sur tous les fonds d'écran.
+- **Mise à jour** sans réveil périodique : redessiné quand ses données changent pendant que l'app tourne (repas, séance,
+  pesée, profil ; regroupé sur 1 s) et juste après minuit (WorkManager) pour la nouvelle journée.
+
 ### Nutrition (V1.1)
 
 - **Objectif protéines** = facteur du profil (1,8 g/kg par défaut, modifiable de 0,8 à 3,0) × **dernier poids saisi**.
@@ -324,8 +339,12 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
   « Sauvegarder maintenant ». L'app Drive se charge de l'envoi (différé si hors ligne) et conserve les **versions
   précédentes** (⋮ → Gérer les versions).
 - Les **3 dernières sauvegardes** sont aussi gardées dans le stockage privé de l'app (`files/auto-backups/`).
-- Dernière sauvegarde réussie et erreur éventuelle affichées dans les réglages ; si le fichier est supprimé, déplacé ou
-  si le droit est perdu : message clair, il suffit de rechoisir l'emplacement.
+- **Vérification** (V2.6) : après écriture, le fichier cible et la copie locale sont **relus**, comparés octet par octet
+  à ce qui a été écrit, puis décodés comme pour une restauration (sans toucher à la base). « Relue et vérifiée »
+  s'affiche dans les réglages ; un fichier tronqué, différent ou illisible compte comme un échec.
+- Dernière sauvegarde réussie et erreur éventuelle affichées dans les réglages ; un échec de la sauvegarde en
+  arrière-plan (écriture ou vérification) envoie aussi une **notification**, effacée à la sauvegarde réussie suivante.
+  Si le fichier est supprimé, déplacé ou si le droit est perdu : message clair, il suffit de rechoisir l'emplacement.
 - **Restaurer** : « Importer une sauvegarde… » puis choisir le fichier dans Drive (même import que ci-dessous).
 
 ### Export / import manuel
