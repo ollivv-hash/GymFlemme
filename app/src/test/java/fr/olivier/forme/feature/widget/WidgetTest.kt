@@ -34,6 +34,8 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 
 /** V2.6 home-screen widget: its data (same rules as the app) and what it displays. */
 @RunWith(AndroidJUnit4::class)
@@ -82,6 +84,7 @@ class WidgetTest {
         val id = sessions.start(SeedData.templateC.id)
         val running = source.observe(today).first()
         assertTrue(running.sessionRunning)
+        assertEquals(SeedData.templateC.name, running.sessionTitle) // name only, without the code
         assertEquals(400.0, running.kcal, 0.0)
         assertEquals(50.0, running.proteinG, 0.0)
         assertEquals(144.0, running.proteinTargetG!!, 0.01) // 1.8 g/kg × 80 kg
@@ -92,6 +95,13 @@ class WidgetTest {
         val done = source.observe(today).first()
         assertFalse(done.sessionRunning)
         assertEquals(empty.weekDone + 1, done.weekDone)
+    }
+
+    @Test
+    fun updateLabelShowsTheDayOnlyWhenNotToday() {
+        val today = LocalDate.of(2026, 10, 7)
+        assertEquals("Màj 10:35", updatedLabel(LocalDateTime.of(2026, 10, 7, 10, 35), today))
+        assertEquals("Màj 6 oct. 22:06", updatedLabel(LocalDateTime.of(2026, 10, 6, 22, 6), today))
     }
 
     @Test
@@ -110,9 +120,10 @@ class WidgetTest {
                     proteinG = 95.0,
                     proteinTargetG = 160.0,
                 ),
+                LocalDateTime.of(LocalDate.now(), LocalTime.of(10, 35)),
             )
         }
-        listOf("Prochaine séance", "B · Dos", "Semaine : 2 / 3", "Démarrer", "1 240", "/ 2 300", "95", "/ 160")
+        listOf("Màj 10:35", "Prochaine séance", "B · Dos", "Semaine : 2 / 3", "Démarrer", "1 240", "/ 2 300", "95", "/ 160")
             .forEach { onNode(hasText(it)).assertExists() }
     }
 }

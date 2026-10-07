@@ -28,7 +28,7 @@ import javax.inject.Singleton
 
 /** What the home-screen widget shows (V2.6). */
 data class WidgetData(
-    /** Running session label, or the session the rotation proposes; null without any template. */
+    /** Name of the running session, or of the one the rotation proposes (without its code); null without any. */
     val sessionTitle: String?,
     val sessionRunning: Boolean,
     val weekDone: Int,
@@ -61,7 +61,12 @@ class WidgetDataSource @Inject constructor(
         ) { active, proposed, finished, goals ->
             val week = WeeklyStats.weekStart(today)
             Triple(
-                active?.label() ?: proposed?.title(),
+                // The template's name only: its code usually repeats it ("JAMBES-30 · Jambes – 30 min").
+                if (active != null) {
+                    active.templateNameSnapshot?.takeIf { it.isNotBlank() } ?: active.label()
+                } else {
+                    proposed?.let { t -> t.name.takeIf { it.isNotBlank() } ?: t.title() }
+                },
                 active != null,
                 finished.count { WeeklyStats.weekStart(it.startedAt.atZone(clock.zone).toLocalDate()) == week } to goals.sessionsPerWeek,
             )
