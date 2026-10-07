@@ -34,6 +34,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.9** ✅ | Étape 2 : fiche exercice animée (séance, historique, catalogue), choix / retrait de l'illustration |
 | **V2.10** ✅ | Étape 3 : écran Bibliothèque (recherche, filtres, ajout au catalogue) |
 | **V2.11** ✅ | Étape 4 : écran Sources et licences, poids de l'APK mesuré ; release et APK nommés GymBro |
+| **V2.12** ✅ | Volume hebdomadaire par muscle de la bibliothèque (séries fractionnaires), repère par muscle réglable, export IA |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -183,6 +184,17 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   de la semaine (lundi → dimanche), comparées à une zone repère **10 à 20 séries** (modifiable dans Configuration → Objectifs d'entraînement).
   Séances de la semaine / objectif (**3 par défaut**, modifiable), série de semaines consécutives où l'objectif est tenu,
   calendrier des 12 dernières semaines. L'accueil affiche « Cette semaine : x/3 séances ».
+- **Volume par muscle** (V2.12) : sélecteur **Groupes | Muscles** au-dessus des barres (choix retenu). La vue Muscles
+  répartit les séries sur les muscles de la bibliothèque d'exercices, en **séries fractionnaires** : une série compte
+  **1** pour chaque muscle principal de l'exercice et **½** pour chaque muscle sollicité en appui (secondaires et
+  adducteurs) ; un muscle à la fois principal et secondaire compte une fois, comme principal. Barre en deux tons : part
+  directe pleine, part en appui plus claire. Zone repère (par défaut **10 à 20**, réglable à part de celle des groupes
+  dans Réglages → Objectifs, avec « Revenir à 10–20 ») pour les 11 grands muscles (pectoraux, grand dorsal, haut du dos,
+  épaules, biceps, triceps, quadriceps, ischios, fessiers, mollets, abdominaux) ; les petits muscles (avant-bras,
+  trapèzes, lombaires, obliques, adducteurs, tibial, cou) n'apparaissent que travaillés, sans zone. Les séries
+  d'exercices sans illustration sont signalées à part (elles restent comptées dans la vue Groupes). Calcul fait à la
+  volée depuis le lien exercice → bibliothèque : pas de migration, l'historique est couvert. L'export IA du jour ajoute
+  la ligne « Séries par muscle ».
 - **Remplacer une machine occupée** (menu ⋮ d'un exercice en séance) : pour **cette séance uniquement**, le modèle n'est pas modifié.
   Choix proposés : même groupe musculaire d'abord, puis tous les exercices. Cibles du créneau conservées si le type d'exercice est identique,
   sinon cibles par défaut du remplaçant. Si des séries sont déjà faites, l'original reste « fait » et le remplaçant est inséré juste après.
