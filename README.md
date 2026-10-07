@@ -32,7 +32,8 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.7** ✅ | Nouveau nom **GymBro** et nouvelle icône (G bleu de l'app, fond blanc, icône à thème Android 13+) ; accueil sans titre, onglet « Accueil » avec le G ; nouveaux fichiers `gymbro-*` |
 | **V2.8** ✅ | Bibliothèque d'exercices illustrée (Open Exercise Illustrations, CC0) — étape 1 : données embarquées, table en lecture seule, liens des 23 exercices |
 | **V2.9** ✅ | Étape 2 : fiche exercice animée (séance, historique, catalogue), choix / retrait de l'illustration |
-| **V2.10** 🚧 | Étape 3 : écran Bibliothèque (recherche, filtres, ajout au catalogue) ; sources et licences à venir |
+| **V2.10** ✅ | Étape 3 : écran Bibliothèque (recherche, filtres, ajout au catalogue) |
+| **V2.11** ✅ | Étape 4 : écran Sources et licences, poids de l'APK mesuré ; release et APK nommés GymBro |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -253,7 +254,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   dans la minute qui précède la validation). **Semaine** : séances mesurées, FC moyenne, temps en zone 3 et +, kcal.
   **Nutrition** : dépense des séances du jour et apport net.
 
-### Bibliothèque d'exercices (V2.8 – V2.10)
+### Bibliothèque d'exercices (V2.8 – V2.11)
 
 - **Fiche exercice** : illustration animée (fondu enchaîné entre les images dans l'ordre de la bibliothèque, 0,9 s
   de maintien, 0,35 s de fondu ; image de maintien fixe ; **toucher = pause**), dans une carte sombre de 340 dp de
@@ -274,6 +275,22 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   déduit (machine cardio → Cardio 1 × 20 min ; image de maintien → Durée 3 × 30 s, par côté si unilatéral ; sans
   matériel → Poids du corps ; sinon Charge + reps, 3 × 10–12), relié à son illustration. Le message de confirmation
   propose **Modifier** pour ajuster aussitôt.
+- **Config → Sources et licences** (V2.11) : pour chaque donnée embarquée ou interrogée, son auteur, son usage, sa
+  licence et deux liens (site, texte de la licence) : Open Exercise Illustrations (CC0 1.0, commit `2786aef`, avec la
+  mise en garde « générées par IA »), table Ciqual 2025 (Licence Ouverte / Etalab 2.0), Open Food Facts (ODbL 1.0) ;
+  puis les logiciels (Android Jetpack, Kotlin : Apache 2.0 ; ML Kit : conditions Google ; Reorderable : Apache 2.0).
+  Un test vérifie que le commit affiché est celui de `SOURCE.md` et de `ExerciseLibraryLoader.DATASET_VERSION`.
+- **Poids de l'APK** (release, mesuré sur les releases GitHub) :
+
+  | Version | APK | Écart |
+  |---|---|---|
+  | 2.7.2 (avant la bibliothèque) | 14,08 Mo | |
+  | 2.8.0 (bibliothèque embarquée) | 37,52 Mo | + 23,44 Mo |
+  | 2.11.0 | 37,58 Mo | |
+
+  Les 796 images WebP et `exercises.json` pèsent 23,6 Mo dans l'APK (le WebP ne se recompresse pas) : c'est tout
+  l'écart. Rester à moins de 40 Mo évite de redimensionner les images ; une réduction (WebP plus petit, ou
+  téléchargement à la demande) reste possible si le poids devient gênant.
 - Images décodées à la taille affichée (sous-échantillonnage) et gardées en cache : les listes n'affichent que des
   vignettes fixes, l'animation n'existe que sur la fiche. Libellés français dans `LibraryLabels` (textes de l'app
   écrits en Kotlin, comme le reste de l'interface) ; un test vérifie que chaque valeur de la bibliothèque a son libellé.
@@ -478,7 +495,7 @@ Les tests de fumée (`AppSmokeTest`, `RecapSmokeTest`, `FeaturesSmokeTest`, …)
 `.github/workflows/android.yml` lance à chaque pull request (et à chaque push sur `main`) :
 `testDebugUnitTest`, `lintDebug` et `assembleRelease`.
 
-- **APK de la PR** : onglet *Actions* → le run → artefact `forme-<version>-apk` (conservé 30 jours).
+- **APK de la PR** : onglet *Actions* → le run → artefact `gymbro-<version>-apk` (`forme-…` avant 2.11.0) (conservé 30 jours).
 - **Release** : quand une nouvelle `versionName` arrive sur `main`, une release GitHub `v<version>` est publiée
   avec l'APK signé (une seule fois par version : penser à monter `versionCode`/`versionName`).
   Sur le téléphone : page *Releases* du dépôt → télécharger l'APK → installer (mise à jour sans perte de données,

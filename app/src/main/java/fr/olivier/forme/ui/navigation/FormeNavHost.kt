@@ -38,6 +38,7 @@ import fr.olivier.forme.feature.nutrition.ui.ProfileScreen
 import fr.olivier.forme.feature.nutrition.ui.ScanScreen
 import fr.olivier.forme.feature.settings.ui.ConfigScreen
 import fr.olivier.forme.feature.settings.ui.SettingsScreen
+import fr.olivier.forme.feature.settings.ui.SourcesScreen
 import fr.olivier.forme.feature.heart.ui.WatchTestScreen
 import fr.olivier.forme.feature.library.ui.ExerciseSheetScreen
 import fr.olivier.forme.feature.library.ui.LibraryPickerScreen
@@ -173,6 +174,7 @@ fun FormeNavHost(
                 ConfigScreen(
                     onCatalog = { nav.navigate(CatalogRoute) },
                     onLibrary = { nav.navigate(LibraryRoute) },
+                    onSources = { nav.navigate(SourcesRoute) },
                     onTemplates = { nav.navigate(TemplatesRoute) },
                     onRotation = { nav.navigate(RotationRoute) },
                     onSettings = { nav.navigate(SettingsRoute) },
@@ -243,6 +245,7 @@ fun FormeNavHost(
                     onEdit = { nav.navigate(ExerciseEditRoute(it)) },
                 )
             }
+            composable<SourcesRoute> { SourcesScreen(onBack = { nav.popBackStack() }) }
             composable<TemplatesRoute> {
                 TemplatesScreen(
                     onBack = { nav.popBackStack() },

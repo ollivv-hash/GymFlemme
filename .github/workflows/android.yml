@@ -5,6 +5,7 @@
 #   FORME_STORE_PASSWORD   keystore password
 #   FORME_KEY_ALIAS        key alias (forme)
 #   FORME_KEY_PASSWORD     key password
+#   (secret names kept from the app's former name "Forme"; the APK and release are named GymBro since 2.11.0)
 # Without them the APK is built unsigned (not installable) and no release is published.
 name: Android
 
@@ -76,11 +77,11 @@ jobs:
         run: |
           src=$(ls app/build/outputs/apk/release/*.apk | head -1)
           suffix=$([ "${{ steps.signing.outputs.signed }}" = true ] && echo "" || echo "-unsigned")
-          mkdir -p dist && cp "$src" "dist/forme-${{ steps.version.outputs.name }}$suffix.apk"
+          mkdir -p dist && cp "$src" "dist/gymbro-${{ steps.version.outputs.name }}$suffix.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: forme-${{ steps.version.outputs.name }}-apk
+          name: gymbro-${{ steps.version.outputs.name }}-apk
           path: dist/*.apk
           retention-days: 30
 
@@ -102,7 +103,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: forme-${{ needs.build.outputs.version }}-apk
+          name: gymbro-${{ needs.build.outputs.version }}-apk
           path: dist
 
       - name: Publish release (once per version)
@@ -115,4 +116,4 @@ jobs:
             exit 0
           fi
           gh release create "v$VERSION" dist/*.apk --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "Forme $VERSION" --generate-notes
+            --title "GymBro $VERSION" --generate-notes

@@ -128,4 +128,18 @@ class LibrarySmokeTest {
             waitFor("Voir la fiche") // linked to its illustration
         }
     }
+
+    @Test
+    fun sourcesAndLicences() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitFor("Nutrition du jour")
+            rule.onNode(hasText("Config") and hasClickAction()).performClick()
+            rule.onNode(hasText("Sources et licences") and hasClickAction()).performScrollTo().performClick()
+            waitFor("Open Exercise Illustrations")
+            waitFor("CC0 1.0")
+            waitFor("2786aef")
+            waitFor("Licence Ouverte / Etalab 2.0")
+            shot("l8-sources")
+        }
+    }
 }
