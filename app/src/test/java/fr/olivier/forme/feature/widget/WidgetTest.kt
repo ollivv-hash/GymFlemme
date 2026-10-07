@@ -140,4 +140,17 @@ class WidgetTest {
         onNode(hasText("Démarrer")).assertExists()
         onNode(hasText("Reprendre")).assertDoesNotExist()
     }
+
+    @Test
+    fun onlyTheButtonStartsASessionTheRestOpensTheApp() = runGlanceAppWidgetUnitTest {
+        setContext(context())
+        provideComposable {
+            WidgetContent(context(), WidgetData("Jambes – 30 min", false, 2, 3, 1004.0, 1860, 33.0, 148.0), LocalDateTime.now())
+        }
+        // Clickable: the card (home), the logo (home), the Démarrer button, the rings (nutrition) and ↻.
+        // The session text column has no action of its own since 2.12.1: it opens the home screen like the card.
+        onAllNodes(androidx.glance.testing.unit.hasClickAction()).assertCountEquals(5)
+        onNode(hasText("Démarrer")).assert(androidx.glance.testing.unit.hasClickAction())
+        onNode(hasText("Jambes – 30 min")).assert(androidx.glance.testing.unit.hasNoClickAction())
+    }
 }
