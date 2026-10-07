@@ -30,6 +30,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.5** ✅ | Journal nutrition en anneaux : kcal et protéines (consommé / objectif, reste), glucides et lipides face à leur cible conseillée |
 | **V2.6** ✅ | Raccourcis d'icône (séance, repas, scanner), widget d'écran d'accueil 4 × 2, sauvegardes relues et vérifiées |
 | **V2.7** ✅ | Nouveau nom **GymBro** et nouvelle icône (G bleu de l'app, fond blanc, icône à thème Android 13+) ; accueil sans titre, onglet « Accueil » avec le G ; nouveaux fichiers `gymbro-*` |
+| **V2.8** 🚧 | Bibliothèque d'exercices illustrée (Open Exercise Illustrations, CC0) — étape 1 : données embarquées, table en lecture seule, liens des 23 exercices ; fiches animées, écran Bibliothèque et mentions dans les étapes suivantes |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -106,17 +107,20 @@ app_sport/
 ```
 
 V1.1 a ajouté `feature/nutrition/` (data · domain · reminder · ui) et la migration Room 1 → 2 ; V1.2 a ajouté la sauvegarde automatique dans `core/backup/` (`AutoBackupManager`, worker WorkManager) ; V2.1 a ajouté `feature/heart/` (data · domain · service · ui) et la migration 3 → 4 ; V2.6 a ajouté `core/launch/` (raccourcis) et `feature/widget/`.
+V2.8 a ajouté `feature/library/` et `third_party/open-exercise-illustrations/` : `LICENSE`, `README.md` et `SOURCE.md`
+(URL, commit figé `2786aef`, date) **hors APK** comme preuve de licence ; `assets/exercise_library/` (`exercises.json`
++ 796 images WebP, copies à l'octet près) ajouté aux assets par `app/build.gradle.kts`. APK release : 14,1 Mo → 37,5 Mo.
 Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv` depuis le fichier Excel publié par l'ANSES.
 
 ---
 
-## Modèle de données (Room, version 5)
+## Modèle de données (Room, version 6)
 
 Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distances en mètres. `Instant` ↔ epoch millis, `LocalDate` ↔ epochDay. Les enums sont stockées en texte.
 
 | Table | Colonnes principales | Remarques |
 |---|---|---|
-| `exercise` | id, name, muscleGroup, type, perSide, loadIncrementKg (2,5), **defaultTargetSets, defaultRepsMin, defaultRepsMax, defaultDurationSec**, settingsNote, loadNote, photoUri, archived, nextNote (v3) | Cible par défaut utilisée à l'ajout de l'exercice dans un modèle ou une séance libre. Archivé = masqué des choix, historique conservé. |
+| `exercise` | id, name, muscleGroup, type, perSide, loadIncrementKg (2,5), **defaultTargetSets, defaultRepsMin, defaultRepsMax, defaultDurationSec**, settingsNote, loadNote, photoUri, archived, nextNote (v3), libraryId (v6) | Cible par défaut utilisée à l'ajout de l'exercice dans un modèle ou une séance libre. Archivé = masqué des choix, historique conservé. |
 | `workout_template` | id, name, code, orderInRotation (nullable = hors rotation), archived | |
 | `template_exercise` | id, templateId, exerciseId, position, targetSets, targetRepsMin, targetRepsMax, targetDurationSec, optional, restSec (nullable → réglage par défaut), supersetGroup (v3) | Le modèle fait foi sur la cible du catalogue. |
 | `session` | id, templateId (nullable, SET NULL), templateNameSnapshot, startedAt, endedAt (null = en cours), feeling 1–5, notes, isSeed | La séance en cours est persistée en base → reprise après kill du process. |
@@ -136,6 +140,7 @@ Tables Nutrition (V1.1, migration explicite 1 → 2) :
 | `food` | id, source (CIQUAL / OFF / CUSTOM), sourceCode (code Ciqual ou code-barres), nom, marque, valeurs /100 g, portion, favori, dernière utilisation | « Mes aliments » : perso, cache Open Food Facts, aliments Ciqual déjà utilisés (récents / favoris). |
 | `meal_entry` | id, date, mealType, foodId?, nom, quantité (g), protéines, kcal, glucides, lipides, isWhey, heure | **Copie des valeurs** : modifier ou supprimer un aliment ne change jamais l'historique. |
 | `creatine_entry` | id, date (unique), dose, heure | Une prise par jour. |
+| `library_exercise` | id (ex. `leg-press`), nom, alias, variante (`imageOf`, `difference`), matériel, type de machine, muscles principaux / secondaires / `alsoTargets`, mouvement, catégorie, niveau, impact, unilatéral, échauffement, lieux, vue, images (`frames`, dossier, largeur, hauteur) | Bibliothèque **Open Exercise Illustrations** (CC0) en lecture seule : 415 exercices + 44 variantes, rechargée depuis l'APK quand sa version change (`ExerciseLibraryLoader.DATASET_VERSION`). Une variante montre les images de l'exercice d'origine mais garde son matériel, ses muscles et sa différence. **Non exportée.** |
 
 Migration explicite **2 → 3** (V1.1.1) : 4 colonnes nullables ajoutées (`exercise.nextNote`, `template_exercise.supersetGroup`,
 `session_exercise.supersetGroup`, `session_exercise.replacedExerciseId`), aucune donnée modifiée.
@@ -144,6 +149,11 @@ Migration explicite **3 → 4** (V2.1) : `profile.birthYear`, `profile.sex`, `pr
 `session_heart` (une ligne par séance, supprimée avec elle) : courbe de FC ré-échantillonnée toutes les 5 s et stockée en
 texte compact (`"72,75,0,80"`, 0 = pas de mesure, ~3 Ko/h), résumé **figé** au moment du calcul (moyenne, min, max, FC max
 utilisée, secondes par zone), calories et leur source (montre ou estimation), source de la courbe (direct / Health Connect / mixte).
+
+Migration explicite **5 → 6** (V2.8) : table `library_exercise` (remplie au démarrage, pas par la migration) et colonne
+`exercise.libraryId` (nullable), renseignée pour les 23 exercices connus **par nom exact** (`ExerciseLibraryLinks`) ;
+un exercice au nom différent reste sans illustration, à relier à la main. Les nouvelles installations reçoivent les liens
+dès les données initiales.
 
 Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionGoal`, `profile.kcalTargetOverride` (nullables).
 
@@ -356,8 +366,8 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 ### Export / import manuel
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
-- Format versionné : `{ "schemaVersion": 5, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" } }`.
-  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5. Les fichiers **v1** à **v4** restent importables (champs absents = valeurs par défaut). La table Ciqual n'est pas exportée (elle est dans l'APK).
+- Format versionné : `{ "schemaVersion": 6, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" } }`.
+  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6. Les fichiers **v1** à **v5** restent importables (champs absents = valeurs par défaut). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 

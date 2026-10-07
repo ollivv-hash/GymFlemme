@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import fr.olivier.forme.core.backup.AutoBackupScheduler
 import fr.olivier.forme.core.di.ApplicationScope
 import fr.olivier.forme.core.launch.QuickAction
+import fr.olivier.forme.feature.library.data.ExerciseLibraryLoader
 import fr.olivier.forme.feature.nutrition.data.CiqualLoader
 import fr.olivier.forme.feature.nutrition.reminder.CreatineReminder
 import fr.olivier.forme.feature.widget.WidgetRefresher
@@ -23,6 +24,7 @@ class AppStartup @Inject constructor(
     private val creatineReminder: CreatineReminder,
     private val autoBackup: AutoBackupScheduler,
     private val widget: WidgetRefresher,
+    private val library: ExerciseLibraryLoader,
 ) {
     fun run() {
         autoBackup.scheduleDaily()
@@ -31,6 +33,7 @@ class AppStartup @Inject constructor(
         scope.launch {
             runCatching { creatineReminder.reschedule() }.onFailure { Log.e("Forme", "Reminder scheduling failed", it) }
             runCatching { ciqual.ensureLoaded() }.onFailure { Log.e("Forme", "Ciqual load failed", it) }
+            runCatching { library.ensureLoaded() }.onFailure { Log.e("Forme", "Exercise library load failed", it) }
         }
     }
 }

@@ -6,7 +6,7 @@ class BackupFormatException(message: String, cause: Throwable? = null) : Excepti
 
 /** JSON encoding of [BackupFile]; pure, unit-tested for lossless round trips. */
 object BackupCodec {
-    const val CURRENT_VERSION = 5
+    const val CURRENT_VERSION = 6
 
     private val json = Json {
         prettyPrint = true

@@ -1,5 +1,6 @@
 package fr.olivier.forme.core.db
 
+import fr.olivier.forme.feature.library.data.ExerciseLibraryLinks
 import fr.olivier.forme.feature.sport.data.ExerciseEntity
 import fr.olivier.forme.feature.sport.data.SessionEntity
 import fr.olivier.forme.feature.sport.data.SessionExerciseEntity
@@ -48,6 +49,7 @@ object SeedData {
         defaultRepsMax = reps,
         defaultDurationSec = durationSec,
         loadNote = loadNote,
+        libraryId = ExerciseLibraryLinks.BY_NAME[name],
     )
 
     val rower = ex("Rameur", MuscleGroup.CARDIO, CARDIO, sets = 1, durationSec = ROWER_DEFAULT_SEC)

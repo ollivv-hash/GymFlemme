@@ -30,6 +30,8 @@ data class ExerciseEntity(
     val archived: Boolean = false,
     /** "For next time" note, shown in the next session containing the exercise until dismissed. */
     val nextNote: String? = null,
+    /** Illustration from the exercise library (library_exercise.id), V2.8; null = none. */
+    val libraryId: String? = null,
 )
 
 @Entity(tableName = "workout_template")

@@ -16,7 +16,7 @@ class BackupCodecTest {
         sport = SportBackup(
             exercises = listOf(
                 ExerciseDto(1, "Rameur", MuscleGroup.CARDIO, ExerciseType.CARDIO, false, 2.5, 1, null, null, 300, null, null, null, false),
-                ExerciseDto(2, "Hack squat", MuscleGroup.JAMBES, ExerciseType.WEIGHTED, false, 2.5, 3, 12, 12, null, "Cran 4", "Chariot vide + X kg", "/data/p.jpg", true),
+                ExerciseDto(2, "Hack squat", MuscleGroup.JAMBES, ExerciseType.WEIGHTED, false, 2.5, 3, 12, 12, null, "Cran 4", "Chariot vide + X kg", "/data/p.jpg", true, libraryId = "hack-squat"),
             ),
             templates = listOf(TemplateDto(1, "Bas du corps", "BAS", null, false), TemplateDto(2, "A", "A", 1, false)),
             templateExercises = listOf(TemplateExerciseDto(1, 1, 2, 0, 3, 12, 12, null, true, 120)),

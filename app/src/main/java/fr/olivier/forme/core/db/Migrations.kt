@@ -2,6 +2,7 @@ package fr.olivier.forme.core.db
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import fr.olivier.forme.feature.library.data.ExerciseLibraryLinks
 
 /**
  * Explicit migrations, registered on the database builder. Destructive migration is never enabled.
@@ -102,5 +103,27 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+    /**
+     * V2.8: exercise library (Open Exercise Illustrations, filled from the APK at startup) and the link of the
+     * user's exercises to it, set for the 23 known exercises by exact name.
+     */
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `library_exercise` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                    "`aliases` TEXT NOT NULL, `imageOf` TEXT, `difference` TEXT, `equipment` TEXT NOT NULL, " +
+                    "`equipmentLabel` TEXT NOT NULL, `machineType` TEXT, `primaryMuscles` TEXT NOT NULL, " +
+                    "`secondaryMuscles` TEXT NOT NULL, `alsoTargets` TEXT NOT NULL, `movementPattern` TEXT NOT NULL, " +
+                    "`category` TEXT NOT NULL, `level` TEXT NOT NULL, `impact` TEXT NOT NULL, `unilateral` INTEGER NOT NULL, " +
+                    "`isWarmUp` INTEGER NOT NULL, `suitableFor` TEXT NOT NULL, `view` TEXT NOT NULL, `frames` TEXT NOT NULL, " +
+                    "`imageId` TEXT NOT NULL, `width` INTEGER NOT NULL, `height` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+            )
+            db.execSQL("ALTER TABLE `exercise` ADD COLUMN `libraryId` TEXT")
+            ExerciseLibraryLinks.BY_NAME.forEach { (name, libraryId) ->
+                db.execSQL("UPDATE `exercise` SET `libraryId` = ? WHERE `name` = ?", arrayOf(libraryId, name))
+            }
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 }
