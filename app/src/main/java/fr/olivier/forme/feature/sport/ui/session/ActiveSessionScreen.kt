@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -84,6 +85,7 @@ fun ActiveSessionScreen(
     onBack: () -> Unit,
     onFinished: (Long) -> Unit,
     onAbandoned: () -> Unit,
+    onSheet: (Long) -> Unit = {},
     viewModel: ActiveSessionViewModel = hiltViewModel(),
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
@@ -145,6 +147,7 @@ fun ActiveSessionScreen(
                     isLast = item == ui.exercises.last(),
                     notedThisSession = noted,
                     viewModel = viewModel,
+                    onSheet = onSheet,
                 )
             }
             item {
@@ -242,6 +245,7 @@ private fun ExerciseCard(
     linkedWithNext: Boolean,
     notedThisSession: Set<Long>,
     viewModel: ActiveSessionViewModel,
+    onSheet: (Long) -> Unit,
 ) {
     val skipped = item.line.status == SessionExerciseStatus.SKIPPED
     var menu by remember { mutableStateOf(false) }
@@ -306,6 +310,8 @@ private fun ExerciseCard(
                     }
                 }
             }
+            // Exercise sheet (V2.9): illustration, muscles, settings, machine photo.
+            IconButton(onClick = { onSheet(item.exercise.id) }) { Icon(Icons.Filled.Info, contentDescription = "Fiche de l'exercice") }
             IconButton(onClick = { noting = true }) { Icon(Icons.Filled.Edit, contentDescription = "Note pour la prochaine fois") }
             IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "Actions") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

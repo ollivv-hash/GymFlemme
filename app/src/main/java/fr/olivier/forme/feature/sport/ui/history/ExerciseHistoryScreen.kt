@@ -11,6 +11,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -98,10 +102,16 @@ private val shortDate = DateTimeFormatter.ofPattern("dd/MM", Fmt.locale)
 private val longDate = DateTimeFormatter.ofPattern("EEE d MMM yyyy", Fmt.locale)
 
 @Composable
-fun ExerciseHistoryScreen(onBack: () -> Unit, viewModel: ExerciseHistoryViewModel = hiltViewModel()) {
+fun ExerciseHistoryScreen(onBack: () -> Unit, onSheet: (Long) -> Unit = {}, viewModel: ExerciseHistoryViewModel = hiltViewModel()) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val exercise = ui.exercise
-    Scaffold(topBar = { FormeTopBar(exercise?.name ?: "Exercice", onBack) }) { padding ->
+    Scaffold(
+        topBar = {
+            FormeTopBar(exercise?.name ?: "Exercice", onBack) {
+                exercise?.let { e -> IconButton(onClick = { onSheet(e.id) }) { Icon(Icons.Filled.Info, contentDescription = "Fiche de l'exercice") } }
+            }
+        },
+    ) { padding ->
         if (exercise == null) return@Scaffold
         LazyColumn(Modifier.padding(padding).padding(horizontal = 16.dp)) {
             if (exercise.type == ExerciseType.CARDIO) {
