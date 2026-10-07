@@ -107,7 +107,7 @@ class AutoBackupManagerTest {
         // Truncated upload, or a provider that kept an older version.
         assertTrue(BackupVerifier.check(good, good.copyOf(good.size / 2))!!.contains("différent"))
         // Bytes faithfully copied, but not a backup this version can restore.
-        val newer = good.decodeToString().replaceFirst("\"schemaVersion\": 5", "\"schemaVersion\": 99").toByteArray()
+        val newer = good.decodeToString().replaceFirst("\"schemaVersion\": ${BackupCodec.CURRENT_VERSION}", "\"schemaVersion\": 99").toByteArray()
         assertTrue(BackupVerifier.check(newer, newer)!!.contains("plus récent"))
 
         // A successful run reads its copies back: no error.
