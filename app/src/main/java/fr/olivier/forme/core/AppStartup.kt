@@ -33,6 +33,9 @@ class AppStartup @Inject constructor(
         scope.launch {
             runCatching { creatineReminder.reschedule() }.onFailure { Log.e("Forme", "Reminder scheduling failed", it) }
             runCatching { ciqual.ensureLoaded() }.onFailure { Log.e("Forme", "Ciqual load failed", it) }
+        }
+        // Not queued behind the (longer) Ciqual load: the exercise sheets need it on the first launch.
+        scope.launch {
             runCatching { library.ensureLoaded() }.onFailure { Log.e("Forme", "Exercise library load failed", it) }
         }
     }
