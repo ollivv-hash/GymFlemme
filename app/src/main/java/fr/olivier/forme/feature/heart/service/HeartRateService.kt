@@ -71,6 +71,11 @@ class HeartRateService : Service() {
 
     override fun onDestroy() {
         scope.cancel()
+        // Stopping the recording resets its state, which the collector above may have re-posted as a plain
+        // notification between stopService() and here: that one would outlive the service ("Séance en cours"
+        // left after the session was abandoned). Both run on the main thread, so nothing is posted after this.
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        getSystemService(NotificationManager::class.java).cancel(NOTIF_ID)
         super.onDestroy()
     }
 
@@ -78,7 +83,7 @@ class HeartRateService : Service() {
         /** v2: default importance without sound, so it shows on the lock screen (see RestTimer.CHANNEL_RUNNING). */
         const val CHANNEL = "heart_live_v2"
         private const val CHANNEL_OLD = "heart_live"
-        private const val NOTIF_ID = 3
+        internal const val NOTIF_ID = 3
         private const val UPDATE_EVERY_MS = 5_000L
 
         fun createChannel(context: Context) {
@@ -101,6 +106,8 @@ class HeartRateService : Service() {
 
         fun stop(context: Context) {
             context.stopService(Intent(context, HeartRateService::class.java))
+            // Also when the service is already gone (killed with the app): a notification left behind is removed.
+            context.getSystemService(NotificationManager::class.java).cancel(NOTIF_ID)
         }
 
         fun text(live: LiveHeart): String = when (live.status) {
