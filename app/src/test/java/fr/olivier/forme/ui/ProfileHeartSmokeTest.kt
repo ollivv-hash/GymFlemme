@@ -40,7 +40,9 @@ class ProfileHeartSmokeTest {
         val year = LocalDate.now().year - 46
         rule.onNode(hasSetTextAction() and hasText("Année de naissance")).performTextInput(year.toString())
         rule.onNodeWithText("Homme").performClick()
-        rule.waitUntilAtLeastOneExists(hasText("46 ans : valeur conseillée", substring = true), 5_000)
+        // The profile is saved to the database, which on the very first launch is also busy loading the Ciqual table
+        // and the exercise library: on a loaded CI runner this takes more than a few seconds.
+        rule.waitUntilAtLeastOneExists(hasText("46 ans : valeur conseillée", substring = true), 15_000)
         rule.onNodeWithText("176").assertExists()
         val dir = File("build/smoke-screens").apply { mkdirs() }
         File(dir, "h1-profile-heart.png").outputStream().use {

@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
@@ -75,7 +76,12 @@ class LibrarySmokeTest {
             rule.onNode(hasText("Illustration")).performScrollTo()
             waitFor("Machine Chest Press")
             rule.onNode(hasText("Changer") and hasClickAction()).performScrollTo().performClick()
-            waitFor("exercice(s)")
+            // On the very first launch the library is still being loaded: wait for the list, not just its header.
+            rule.waitUntil(15_000) {
+                rule.onAllNodes(hasText("exercice(s)", substring = true)).fetchSemanticsNodes().any { node ->
+                    node.config.getOrElse(SemanticsProperties.Text) { emptyList() }.none { it.text.startsWith("0 ") }
+                }
+            }
             rule.onNode(hasScrollAction()).performScrollToNode(hasText("Pec Deck"))
             shot("l4-picker")
             rule.onNode(hasText("Pec Deck") and hasClickAction()).performClick()
