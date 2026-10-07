@@ -20,6 +20,9 @@ data class TrainingGoals(
     val sessionsPerWeek: Int = SettingsRepository.DEFAULT_SESSIONS_PER_WEEK,
     val minSets: Int = SettingsRepository.DEFAULT_MIN_SETS,
     val maxSets: Int = SettingsRepository.DEFAULT_MAX_SETS,
+    /** Weekly band per large muscle of the exercise library (V2.12), set apart from the groups' band. */
+    val muscleMinSets: Int = SettingsRepository.DEFAULT_MIN_SETS,
+    val muscleMaxSets: Int = SettingsRepository.DEFAULT_MAX_SETS,
 )
 
 /**
@@ -59,6 +62,8 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
             sessionsPerWeek = prefs[SESSIONS_PER_WEEK] ?: DEFAULT_SESSIONS_PER_WEEK,
             minSets = prefs[MIN_SETS] ?: DEFAULT_MIN_SETS,
             maxSets = prefs[MAX_SETS] ?: DEFAULT_MAX_SETS,
+            muscleMinSets = prefs[MUSCLE_MIN_SETS] ?: DEFAULT_MIN_SETS,
+            muscleMaxSets = prefs[MUSCLE_MAX_SETS] ?: DEFAULT_MAX_SETS,
         )
     }
 
@@ -132,6 +137,13 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
     }
 
     /** Week (Monday) whose deload advice was dismissed; the advice comes back the following week if still due. */
+    /** Semaine tab: volume shown per library muscle rather than per group (V2.12), remembered between visits. */
+    val volumeByMuscle: Flow<Boolean> = dataStore.data.map { prefs -> prefs[VOLUME_BY_MUSCLE] ?: false }
+
+    suspend fun setVolumeByMuscle(byMuscle: Boolean) {
+        dataStore.edit { it[VOLUME_BY_MUSCLE] = byMuscle }
+    }
+
     val deloadDismissedWeek: Flow<LocalDate?> = dataStore.data.map { prefs -> prefs[DELOAD_DISMISSED_WEEK]?.let(LocalDate::ofEpochDay) }
 
     suspend fun dismissDeload(week: LocalDate) {
@@ -143,6 +155,8 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
             it[SESSIONS_PER_WEEK] = goals.sessionsPerWeek.coerceIn(1, 7)
             it[MIN_SETS] = goals.minSets.coerceIn(1, 40)
             it[MAX_SETS] = goals.maxSets.coerceIn(goals.minSets.coerceIn(1, 40), 60)
+            it[MUSCLE_MIN_SETS] = goals.muscleMinSets.coerceIn(1, 40)
+            it[MUSCLE_MAX_SETS] = goals.muscleMaxSets.coerceIn(goals.muscleMinSets.coerceIn(1, 40), 60)
         }
     }
 
@@ -182,6 +196,9 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         private val SESSIONS_PER_WEEK = intPreferencesKey("goal_sessions_per_week")
         private val MIN_SETS = intPreferencesKey("goal_min_sets_per_group")
         private val MAX_SETS = intPreferencesKey("goal_max_sets_per_group")
+        private val MUSCLE_MIN_SETS = intPreferencesKey("goal_min_sets_per_muscle")
+        private val MUSCLE_MAX_SETS = intPreferencesKey("goal_max_sets_per_muscle")
+        private val VOLUME_BY_MUSCLE = booleanPreferencesKey("week_volume_by_muscle")
         private val HR_DEVICE_ADDRESS = stringPreferencesKey("hr_device_address")
         private val HR_DEVICE_NAME = stringPreferencesKey("hr_device_name")
         private val AUTO_BACKUP_URI = stringPreferencesKey("auto_backup_uri")
