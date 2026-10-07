@@ -18,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -195,6 +196,34 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMo
                     onPlus = { viewModel.setGoals(goals.copy(maxSets = goals.maxSets + 1)) },
                     modifier = Modifier.weight(1f),
                 )
+            }
+            // V2.12: band of the "Muscles" view (large muscles of the library), set apart from the groups' one.
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Stepper(
+                    label = "Séries / muscle : min",
+                    valueText = "${goals.muscleMinSets}",
+                    onMinus = { viewModel.setGoals(goals.copy(muscleMinSets = goals.muscleMinSets - 1)) },
+                    onPlus = {
+                        viewModel.setGoals(
+                            goals.copy(muscleMinSets = goals.muscleMinSets + 1, muscleMaxSets = maxOf(goals.muscleMaxSets, goals.muscleMinSets + 1)),
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+                Stepper(
+                    label = "max",
+                    valueText = "${goals.muscleMaxSets}",
+                    onMinus = { viewModel.setGoals(goals.copy(muscleMaxSets = maxOf(goals.muscleMinSets, goals.muscleMaxSets - 1))) },
+                    onPlus = { viewModel.setGoals(goals.copy(muscleMaxSets = goals.muscleMaxSets + 1)) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            if (goals.muscleMinSets != SettingsRepository.DEFAULT_MIN_SETS || goals.muscleMaxSets != SettingsRepository.DEFAULT_MAX_SETS) {
+                TextButton(
+                    onClick = {
+                        viewModel.setGoals(goals.copy(muscleMinSets = SettingsRepository.DEFAULT_MIN_SETS, muscleMaxSets = SettingsRepository.DEFAULT_MAX_SETS))
+                    },
+                ) { Text("Revenir à ${SettingsRepository.DEFAULT_MIN_SETS}–${SettingsRepository.DEFAULT_MAX_SETS} par muscle") }
             }
 
             SectionTitle("Thème")

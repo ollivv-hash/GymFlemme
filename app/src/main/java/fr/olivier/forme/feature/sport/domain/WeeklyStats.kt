@@ -49,3 +49,45 @@ object WeeklyStats {
         override val endInclusive: LocalDate = end.minusDays(1)
     }
 }
+
+/** Weekly sets of one library muscle (V2.12): [direct] as a main muscle, [indirect] already halved. */
+data class MuscleVolume(val direct: Double = 0.0, val indirect: Double = 0.0) {
+    val total get() = direct + indirect
+    operator fun plus(other: MuscleVolume) = MuscleVolume(direct + other.direct, indirect + other.indirect)
+}
+
+data class MuscleWeek(
+    /** By library muscle key ("quads"), only muscles that were trained. */
+    val byMuscle: Map<String, MuscleVolume>,
+    /** Working sets (cardio aside) of exercises without an illustration: their muscles are unknown. */
+    val unlinkedSets: Int,
+)
+
+/** The muscles an exercise of the library works (main, then assisting ones, adductors included). */
+data class Muscles(val primary: List<String>, val secondary: List<String>)
+
+/**
+ * Weekly volume per library muscle with fractional sets: a working set counts 1 for each main muscle and 0.5 for
+ * each assisting one, so that small muscles worked in passing are not overstated (V2.12).
+ */
+object MuscleStats {
+    const val SECONDARY_SHARE = 0.5
+
+    /** Muscles given a 10–20-type band; the others are shown without one (direct work rarely targets them). */
+    val LARGE = listOf("chest", "lats", "back", "shoulders", "biceps", "triceps", "quads", "hamstrings", "glutes", "calves", "core")
+    val SMALL = listOf("forearms", "traps", "lower_back", "obliques", "adductors", "tibialis", "neck")
+
+    /** [sets] paired with the muscles of their exercise's library entry, null when the exercise is not linked. */
+    fun week(sets: List<Pair<TrainedSet, Muscles?>>, weekStart: LocalDate): MuscleWeek {
+        val end = weekStart.plusDays(7)
+        val inWeek = sets.filter { (set, _) -> set.date >= weekStart && set.date < end && set.type != ExerciseType.CARDIO }
+        val byMuscle = mutableMapOf<String, MuscleVolume>()
+        fun add(muscle: String, v: MuscleVolume) { byMuscle[muscle] = (byMuscle[muscle] ?: MuscleVolume()) + v }
+        inWeek.forEach { (_, muscles) ->
+            if (muscles == null) return@forEach
+            muscles.primary.forEach { add(it, MuscleVolume(direct = 1.0)) }
+            (muscles.secondary.distinct() - muscles.primary.toSet()).forEach { add(it, MuscleVolume(indirect = SECONDARY_SHARE)) }
+        }
+        return MuscleWeek(byMuscle, inWeek.count { it.second == null })
+    }
+}

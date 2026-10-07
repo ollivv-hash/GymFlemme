@@ -154,7 +154,7 @@ interface SessionDao {
 
     /** Working sets of finished real sessions since [fromMillis], with the exercise's primary group and type. */
     @Query(
-        """SELECT s.startedAt AS startedAt, x.muscleGroup AS muscleGroup, x.type AS type
+        """SELECT s.startedAt AS startedAt, x.muscleGroup AS muscleGroup, x.type AS type, x.libraryId AS libraryId
            FROM set_entry e JOIN session s ON s.id = e.sessionId JOIN exercise x ON x.id = e.exerciseId
            WHERE e.isWarmup = 0 AND s.isSeed = 0 AND s.endedAt IS NOT NULL AND s.startedAt >= :fromMillis""",
     )

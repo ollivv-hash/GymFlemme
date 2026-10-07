@@ -93,8 +93,13 @@ class FeaturesSmokeTest {
 
             rule.onNode(hasText("Historique") and hasClickAction()).performClick()
             rule.onNode(hasText("Semaine") and hasClickAction()).performClick()
-            waitFor("Séries par groupe musculaire")
+            waitFor("Zone repère : 10 à 20 séries")
             shot("f2-week")
+            // V2.12: the same sets per library muscle (the seeded exercises are all linked).
+            rule.onNode(hasText("Muscles") and hasClickAction()).performClick()
+            waitFor("Zone repère des grands muscles")
+            waitFor("Quadriceps")
+            shot("f2b-week-muscles")
 
             rule.onNode(hasText("Accueil") and hasClickAction()).performClick()
             waitFor("Nouvelle séance")

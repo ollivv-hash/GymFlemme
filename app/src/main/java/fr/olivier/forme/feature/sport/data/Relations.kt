@@ -20,6 +20,8 @@ data class WorkingSetRow(
     val startedAt: Instant,
     val muscleGroup: fr.olivier.forme.feature.sport.domain.MuscleGroup,
     val type: fr.olivier.forme.feature.sport.domain.ExerciseType,
+    /** The exercise's library entry (V2.12: volume per muscle); null when not linked. */
+    val libraryId: String? = null,
 )
 
 /** One working set of a loaded exercise (plateau detection across exercises). */
