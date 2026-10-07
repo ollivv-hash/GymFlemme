@@ -64,6 +64,10 @@ android {
     }
 
     sourceSets {
+        // Open Exercise Illustrations (CC0): exercises.json + images, packaged as is (third_party/…/SOURCE.md).
+        getByName("main") {
+            assets.directories += "$rootDir/third_party/open-exercise-illustrations/assets"
+        }
         // DAO and migration tests run both on device (androidTest) and on the JVM via Robolectric (test).
         getByName("test") {
             kotlin.directories += "src/sharedTest/java"

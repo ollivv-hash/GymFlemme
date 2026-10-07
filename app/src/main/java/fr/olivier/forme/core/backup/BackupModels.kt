@@ -30,8 +30,10 @@ import java.time.LocalDate
  * Full backup file. [schemaVersion] is the backup format version (independent from the Room version):
  * v1 = sport + body weight, v2 adds the `nutrition` section (absent in v1 files → empty),
  * v3 adds supersets, replacements and exercise notes (optional fields, absent → null),
- * v4 adds session heart rate and age / sex / maximum heart rate, v5 adds height, nutrition goal and calorie target.
- * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual reference table is not exported.
+ * v4 adds session heart rate and age / sex / maximum heart rate, v5 adds height, nutrition goal and calorie target,
+ * v6 adds the exercise library link (`libraryId`, absent → null).
+ * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual and exercise library reference tables
+ * (embedded in the APK) are not exported.
  */
 @Serializable
 data class BackupFile(
@@ -151,6 +153,8 @@ data class ExerciseDto(
     val photoUri: String? = null,
     val archived: Boolean,
     val nextNote: String? = null,
+    /** V6: illustration from the exercise library. */
+    val libraryId: String? = null,
 )
 
 @Serializable
@@ -233,11 +237,11 @@ data class BodyWeightDto(val id: Long, val date: String, val weightKg: Double)
 
 fun ExerciseEntity.toDto() = ExerciseDto(
     id, name, muscleGroup, type, perSide, loadIncrementKg, defaultTargetSets, defaultRepsMin, defaultRepsMax,
-    defaultDurationSec, settingsNote, loadNote, photoUri, archived, nextNote,
+    defaultDurationSec, settingsNote, loadNote, photoUri, archived, nextNote, libraryId,
 )
 fun ExerciseDto.toEntity() = ExerciseEntity(
     id, name, muscleGroup, type, perSide, loadIncrementKg, defaultTargetSets, defaultRepsMin, defaultRepsMax,
-    defaultDurationSec, settingsNote, loadNote, photoUri, archived, nextNote,
+    defaultDurationSec, settingsNote, loadNote, photoUri, archived, nextNote, libraryId,
 )
 
 fun WorkoutTemplateEntity.toDto() = TemplateDto(id, name, code, orderInRotation, archived)

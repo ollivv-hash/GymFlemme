@@ -101,9 +101,43 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate1To5() {
+    fun migrate5To6LinksKnownExercisesToTheLibrary() {
+        helper.createDatabase(dbName, 5).apply {
+            listOf("Leg press", "Élévations latérales", "Lower back", "Mon exercice", "leg press").forEachIndexed { i, name ->
+                execSQL(
+                    "INSERT INTO exercise (id, name, muscleGroup, type, perSide, loadIncrementKg, defaultTargetSets, archived) " +
+                        "VALUES (${i + 1}, '$name', 'JAMBES', 'WEIGHTED', 0, 2.5, 3, 0)",
+                )
+            }
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 6, true, Migrations.MIGRATION_5_6).apply {
+            query("SELECT name, libraryId FROM exercise ORDER BY id").use {
+                val links = buildList { while (it.moveToNext()) add(it.getString(0) to it.getString(1)) }
+                assertEquals(
+                    listOf(
+                        "Leg press" to "seated-leg-press",
+                        "Élévations latérales" to "lateral-raises",
+                        "Lower back" to "back-extensions",
+                        // Unknown, or not the exact name: left unlinked (the catalogue shows "sans illustration").
+                        "Mon exercice" to null,
+                        "leg press" to null,
+                    ),
+                    links,
+                )
+            }
+            query("SELECT COUNT(*) FROM library_exercise").use {
+                it.moveToFirst()
+                assertEquals(0, it.getInt(0)) // filled from the APK at startup, not by the migration
+            }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To6() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, 5, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 6, true, *Migrations.ALL).close()
     }
 
     @Test
