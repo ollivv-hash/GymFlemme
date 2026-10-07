@@ -55,7 +55,7 @@ class AutoBackupSmokeTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             rule.waitUntilAtLeastOneExists(hasText("Nouvelle séance"), 10_000)
             rule.onNode(hasText("Config") and hasClickAction()).performClick()
-            rule.onNodeWithText("Réglages et sauvegarde").performClick()
+            rule.onNodeWithText("Réglages et sauvegarde").performScrollTo().performClick() // last entry: below the fold on a phone
             rule.waitUntilAtLeastOneExists(hasText("Sauvegarde automatique"), 10_000)
             rule.waitUntilAtLeastOneExists(hasText("Dernière sauvegarde", substring = true), 10_000)
             rule.onNodeWithText("Désactiver").performScrollTo()

@@ -3,6 +3,8 @@ package fr.olivier.forme.feature.settings.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
@@ -24,7 +26,8 @@ fun ConfigScreen(
     onAi: () -> Unit,
 ) {
     Scaffold(topBar = { FormeTopBar("Configuration") }) { padding ->
-        Column(Modifier.padding(padding)) {
+        // Scrolls: the entries no longer fit a phone screen since the library entry (2.10.1).
+        Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
             Entry("Catalogue des exercices", "Machines, réglages, photos, archivage", onCatalog)
             Entry("Bibliothèque d'exercices", "Exercices illustrés : rechercher, filtrer, ajouter au catalogue", onLibrary)
             Entry("Modèles de séance", "Créer, dupliquer, modifier, archiver", onTemplates)

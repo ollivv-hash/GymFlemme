@@ -266,7 +266,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   catalogue (qui affiche aussi « sans illustration ») ; « Voir la fiche » dans « Modifier l'exercice ».
 - **Modifier l'exercice → Illustration** : voir la fiche, **changer** (liste des 459 entrées avec vignette, recherche
   par mots du nom ou d'un alias, sans accents ni casse, (i) pour prévisualiser) ou **retirer**.
-- **Config → Bibliothèque d'exercices** (V2.10) : les 459 entrées avec vignette, recherche par nom ou alias, filtres
+- **Config → Bibliothèque d'exercices** (V2.10 ; l'écran Config défile depuis 2.10.1, ses entrées ne tenant plus sur un téléphone) : les 459 entrées avec vignette, recherche par nom ou alias, filtres
   **muscle principal**, **matériel** (dont « Poids du corps ») et **lieu** (salle, machines, maison, poids du corps),
   combinables, « Effacer » pour les retirer. Toucher une entrée ouvre sa fiche. Les entrées déjà reliées à un exercice
   du catalogue (archivés compris) sont marquées « Déjà dans mon catalogue » (avec son nom s'il diffère) ; les autres
