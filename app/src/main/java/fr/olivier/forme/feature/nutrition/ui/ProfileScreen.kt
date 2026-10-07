@@ -5,6 +5,8 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -88,6 +91,13 @@ class ProfileViewModel @Inject constructor(
     val lastWeight = weights.observeAll().map { list -> list.maxByOrNull { it.date }?.weightKg }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /**
+     * The form is shown once the stored profile is read: filled in before, it was overwritten by the late read (a
+     * birth year typed on the first launch vanished), and "Enregistrer" could store an empty profile over it.
+     */
+    private val _loaded = MutableStateFlow(false)
+    val loaded = _loaded.asStateFlow()
+
     init {
         viewModelScope.launch {
             val p = repository.currentProfile()
@@ -96,6 +106,7 @@ class ProfileViewModel @Inject constructor(
             _whey.value = WheyText(t(p.wheyProteinPer100g), t(p.wheyKcalPer100g), t(p.wheyCarbsPer100g), t(p.wheyFatPer100g))
             _birthYear.value = p.birthYear?.toString().orEmpty()
             _height.value = p.heightCm?.toString().orEmpty()
+            _loaded.value = true
         }
     }
 
@@ -119,6 +130,7 @@ class ProfileViewModel @Inject constructor(
     fun parsedBirthYear(): Int? = _birthYear.value.toIntOrNull()?.takeIf { it in currentYear - 100..currentYear - 10 }
 
     fun save(onDone: () -> Unit) = viewModelScope.launch {
+        if (!_loaded.value) return@launch
         val w = _whey.value
         repository.saveProfile(
             _profile.value.copy(
@@ -143,11 +155,16 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
     val weight by viewModel.lastWeight.collectAsStateWithLifecycle()
     val birthYear by viewModel.birthYear.collectAsStateWithLifecycle()
     val height by viewModel.height.collectAsStateWithLifecycle()
+    val loaded by viewModel.loaded.collectAsStateWithLifecycle()
     var pickingTime by remember { mutableStateOf(false) }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     fun round1(v: Double) = (v * 10).roundToInt() / 10.0
 
-    Scaffold(topBar = { FormeTopBar("Profil", onDone) { TextButton(onClick = { viewModel.save(onDone) }) { Text("Enregistrer") } } }) { padding ->
+    Scaffold(topBar = { FormeTopBar("Profil", onDone) { TextButton(onClick = { viewModel.save(onDone) }, enabled = loaded) { Text("Enregistrer") } } }) { padding ->
+        if (!loaded) {
+            Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            return@Scaffold
+        }
         Column(
             Modifier
                 .padding(padding)
