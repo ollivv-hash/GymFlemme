@@ -44,6 +44,9 @@ import kotlinx.coroutines.flow.first
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
+import fr.olivier.forme.feature.library.data.LibraryRepository
+import fr.olivier.forme.feature.sport.domain.MuscleStats
+import fr.olivier.forme.feature.sport.domain.Muscles
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
@@ -57,6 +60,7 @@ class AiDayRepository @Inject constructor(
     private val nutritionWeek: NutritionWeekSource,
     private val weights: BodyWeightRepository,
     private val settings: SettingsRepository,
+    private val library: LibraryRepository,
     private val clock: Clock,
 ) {
     suspend fun day(date: LocalDate): AiDay {
@@ -145,8 +149,10 @@ class AiDayRepository @Inject constructor(
 
         val weekStart = WeeklyStats.weekStart(date)
         val goals = settings.trainingGoals.first()
-        val sets = sessions.observeWorkingSetsSince(weekStart.minusWeeks(HISTORY_WEEKS - 1L).atStartOfDay(zone).toInstant()).first()
-            .map { TrainedSet(it.startedAt.atZone(zone).toLocalDate(), it.muscleGroup, it.type) }
+        val rows = sessions.observeWorkingSetsSince(weekStart.minusWeeks(HISTORY_WEEKS - 1L).atStartOfDay(zone).toInstant()).first()
+        val sets = rows.map { TrainedSet(it.startedAt.atZone(zone).toLocalDate(), it.muscleGroup, it.type) }
+        val musclesById = library.observeAll().first().associate { it.id to Muscles(it.primaryList, it.secondaryList + it.alsoTargetsList) }
+        val muscles = MuscleStats.week(rows.zip(sets) { row, set -> set to row.libraryId?.let(musclesById::get) }, weekStart)
         val weekSessionDates = sessions.observeFinished().first().map { it.startedAt.atZone(zone).toLocalDate() }
         val stats = WeeklyStats.week(sets, weekSessionDates, weekStart)
         val hearts = heart.observeRange(weekStart, weekStart.plusDays(7)).first()
@@ -157,6 +163,9 @@ class AiDayRepository @Inject constructor(
             setsByGroup = stats.setsByGroup,
             minSets = goals.minSets,
             maxSets = goals.maxSets,
+            muscles = muscles,
+            muscleMinSets = goals.muscleMinSets,
+            muscleMaxSets = goals.muscleMaxSets,
             nutrition = nutritionWeek.observe(weekStart).first(),
             measuredSessions = hearts.size,
             sessionKcal = hearts.sumOf { it.kcal ?: 0.0 }.roundToInt(),

@@ -7,6 +7,7 @@ import fr.olivier.forme.core.db.TestClock
 import fr.olivier.forme.core.db.testDatabase
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.feature.ai.data.AiDayRepository
+import fr.olivier.forme.feature.library.data.LibraryRepository
 import fr.olivier.forme.feature.ai.domain.AnalysisMarkdown
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
 import fr.olivier.forme.feature.heart.data.HeartRepository
@@ -52,8 +53,13 @@ class AiDayRepositoryTest {
         )
         val weights = BodyWeightRepository(db.bodyWeightDao())
         val settings = SettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "s.preferences_pb") })
-        val repository = AiDayRepository(sessions, heart, nutrition, NutritionWeekSource(nutrition, heart, weights, clock), weights, settings, clock)
+        val repository = AiDayRepository(sessions, heart, nutrition, NutritionWeekSource(nutrition, heart, weights, clock), weights, settings, LibraryRepository(db.libraryDao()), clock)
 
+        // The library, for the volume per muscle (V2.12): the seeded chest press is linked to it.
+        db.libraryDao().insertAll(
+            fr.olivier.forme.core.db.context().assets.open("exercise_library/exercises.json")
+                .use(fr.olivier.forme.feature.library.data.ExerciseLibraryLoader::parse),
+        )
         nutrition.saveProfile(ProfileEntity(birthYear = 1980, sex = Sex.MALE, heightCm = 178, nutritionGoal = NutritionGoal.CUT))
         weights.save(LocalDate.now(clock).minusWeeks(4), 82.0)
         // Last week, then today: chest press 42.5 → 45 kg.
@@ -82,6 +88,7 @@ class AiDayRepositoryTest {
             "Protéines : 30 g",
             "Dîner (30 g prot., 300 kcal) : Saumon 150 g",
             "Séances : 1 / 3",
+            "Séries par muscle (muscle principal 1 par série, en appui ½ ; repère des grands muscles 10 à 20) : Pectoraux 1 ·",
             // History for charts.
             "## Historique pour graphiques",
             "### Chest press (dernières séances)",

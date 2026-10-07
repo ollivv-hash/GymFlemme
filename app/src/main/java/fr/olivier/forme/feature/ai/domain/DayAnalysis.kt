@@ -1,5 +1,8 @@
 package fr.olivier.forme.feature.ai.domain
 
+import fr.olivier.forme.feature.library.domain.LibraryLabels
+import fr.olivier.forme.feature.sport.domain.MuscleStats
+import fr.olivier.forme.feature.sport.domain.MuscleWeek
 import fr.olivier.forme.feature.nutrition.domain.DayTotals
 import fr.olivier.forme.feature.nutrition.domain.KcalTarget
 import fr.olivier.forme.feature.nutrition.domain.NutritionWeek
@@ -64,6 +67,10 @@ data class AiWeek(
     val setsByGroup: Map<MuscleGroup, Int>,
     val minSets: Int,
     val maxSets: Int,
+    /** Per library muscle, fractional (V2.12). */
+    val muscles: MuscleWeek = MuscleWeek(emptyMap(), 0),
+    val muscleMinSets: Int = 10,
+    val muscleMaxSets: Int = 20,
     val nutrition: NutritionWeek?,
     val measuredSessions: Int,
     val sessionKcal: Int,
@@ -260,6 +267,19 @@ object AnalysisMarkdown {
             "- Séries par groupe musculaire (repère ${w.minSets} à ${w.maxSets} par semaine) : " +
                 groups.joinToString(" · ") { "${it.label} ${w.setsByGroup[it] ?: 0}" },
         )
+        val muscles = (MuscleStats.LARGE + MuscleStats.SMALL).mapNotNull { key -> w.muscles.byMuscle[key]?.let { key to it } }
+        if (muscles.isNotEmpty()) {
+            appendLine(
+                "- Séries par muscle (muscle principal 1 par série, en appui ½ ; repère des grands muscles ${w.muscleMinSets} à " +
+                    "${w.muscleMaxSets}) : " + muscles.joinToString(" · ") { (key, v) ->
+                        LibraryLabels.muscle(key) + " " + Fmt.number(v.total, 1) +
+                            (if (v.indirect > 0) " (dont ${Fmt.number(v.indirect, 1)} en appui)" else "")
+                    },
+            )
+        }
+        if (w.muscles.unlinkedSets > 0) {
+            appendLine("- ${w.muscles.unlinkedSets} série(s) d'exercices sans fiche de bibliothèque : non réparties par muscle.")
+        }
         w.nutrition?.takeIf { it.loggedDays > 0 }?.let { n ->
             appendLine(
                 "- Nutrition : " + listOfNotNull(
