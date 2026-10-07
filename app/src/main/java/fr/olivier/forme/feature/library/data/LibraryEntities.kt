@@ -78,6 +78,10 @@ interface LibraryDao {
     @Query("SELECT * FROM library_exercise WHERE id = :id")
     suspend fun get(id: String): LibraryExerciseEntity?
 
+    /** Follows the entry: also emits once the library is loaded, if it was opened during the first startup. */
+    @Query("SELECT * FROM library_exercise WHERE id = :id")
+    fun observe(id: String): Flow<LibraryExerciseEntity?>
+
     @Query("SELECT id FROM library_exercise")
     suspend fun ids(): List<String>
 }

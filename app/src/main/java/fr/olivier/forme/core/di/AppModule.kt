@@ -56,6 +56,7 @@ object AppModule {
     @Provides fun provideMealDao(db: FormeDatabase) = db.mealDao()
     @Provides fun provideCreatineDao(db: FormeDatabase) = db.creatineDao()
     @Provides fun provideSessionHeartDao(db: FormeDatabase) = db.sessionHeartDao()
+    @Provides fun provideLibraryDao(db: FormeDatabase) = db.libraryDao()
 
     @Provides
     @Singleton
