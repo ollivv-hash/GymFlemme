@@ -82,6 +82,7 @@ class WidgetTest {
         val id = sessions.start(SeedData.templateC.id)
         val running = source.observe(today).first()
         assertTrue(running.sessionRunning)
+        assertEquals(SeedData.templateC.name, running.sessionTitle) // name only, without the code
         assertEquals(400.0, running.kcal, 0.0)
         assertEquals(50.0, running.proteinG, 0.0)
         assertEquals(144.0, running.proteinTargetG!!, 0.01) // 1.8 g/kg × 80 kg
