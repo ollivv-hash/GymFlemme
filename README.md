@@ -248,7 +248,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   l'heure (petit-déjeuner avant 11 h, déjeuner avant 15 h, collation avant 18 h 30, dîner ensuite). Raccourcis
   dynamiques publiés au démarrage : un raccourci statique écrit le nom du package en dur et casserait la variante debug.
   « Retour » ramène à l'accueil.
-- **Widget 4 × 2** (redimensionnable) : prochaine séance (ou séance en cours), séances de la semaine / objectif,
+- **Widget 4 × 2** (redimensionnable) : prochaine séance (ou séance en cours ; son nom seul, sans le code qui le répète, 2.7.2), séances de la semaine / objectif,
   bouton **Démarrer** (même action que le raccourci) ; anneaux **kcal** et **protéines** du jour (mêmes calculs et
   couleurs que le journal), qui ouvrent le journal nutrition. Thème sombre fixe, lisible sur tous les fonds d'écran.
   Anneaux et textes dimensionnés d'après la taille réelle du widget (`SizeMode.Exact`, 2.7.1) : les anneaux prennent
