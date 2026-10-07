@@ -30,7 +30,8 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.5** ✅ | Journal nutrition en anneaux : kcal et protéines (consommé / objectif, reste), glucides et lipides face à leur cible conseillée |
 | **V2.6** ✅ | Raccourcis d'icône (séance, repas, scanner), widget d'écran d'accueil 4 × 2, sauvegardes relues et vérifiées |
 | **V2.7** ✅ | Nouveau nom **GymBro** et nouvelle icône (G bleu de l'app, fond blanc, icône à thème Android 13+) ; accueil sans titre, onglet « Accueil » avec le G ; nouveaux fichiers `gymbro-*` |
-| **V2.8** 🚧 | Bibliothèque d'exercices illustrée (Open Exercise Illustrations, CC0) — étape 1 : données embarquées, table en lecture seule, liens des 23 exercices ; fiches animées, écran Bibliothèque et mentions dans les étapes suivantes |
+| **V2.8** ✅ | Bibliothèque d'exercices illustrée (Open Exercise Illustrations, CC0) — étape 1 : données embarquées, table en lecture seule, liens des 23 exercices |
+| **V2.9** 🚧 | Étape 2 : fiche exercice animée (séance, historique, catalogue), choix / retrait de l'illustration ; écran Bibliothèque et mentions à venir |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -251,6 +252,23 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   dans la minute qui précède la validation). **Semaine** : séances mesurées, FC moyenne, temps en zone 3 et +, kcal.
   **Nutrition** : dépense des séances du jour et apport net.
 
+### Bibliothèque d'exercices (V2.8 – V2.9)
+
+- **Fiche exercice** : illustration animée (fondu enchaîné entre les images dans l'ordre de la bibliothèque, 0,9 s
+  de maintien, 0,35 s de fondu ; image de maintien fixe ; **toucher = pause**), dans une carte sombre de 340 dp de
+  haut au plus, puis la mention « Illustration générée par IA, à titre indicatif… », le nom de la bibliothèque, le
+  groupe, le matériel (traduit), les muscles principaux / secondaires / « sollicite aussi », niveau, type de mouvement,
+  catégorie, impact, lieux, vue, « un côté à la fois » et « échauffement » quand c'est le cas, la différence d'une
+  variante (texte anglais de la bibliothèque) ; enfin **mes repères** (réglages, note de charge) et **ma photo** de la
+  machine. Aucune consigne d'exécution n'est inventée.
+- Accès : icône **(i)** sur chaque exercice de la séance en cours et dans l'historique d'un exercice ; vignette du
+  catalogue (qui affiche aussi « sans illustration ») ; « Voir la fiche » dans « Modifier l'exercice ».
+- **Modifier l'exercice → Illustration** : voir la fiche, **changer** (liste des 459 entrées avec vignette, recherche
+  par mots du nom ou d'un alias, sans accents ni casse, (i) pour prévisualiser) ou **retirer**.
+- Images décodées à la taille affichée (sous-échantillonnage) et gardées en cache : les listes n'affichent que des
+  vignettes fixes, l'animation n'existe que sur la fiche. Libellés français dans `LibraryLabels` (textes de l'app
+  écrits en Kotlin, comme le reste de l'interface) ; un test vérifie que chaque valeur de la bibliothèque a son libellé.
+
 ### Raccourcis et widget (V2.6)
 
 - **Raccourcis** (appui long sur l'icône) : **Démarrer la séance** lance directement la séance proposée par la rotation
@@ -261,8 +279,9 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 - **Widget 4 × 2** (redimensionnable) : prochaine séance (ou séance en cours ; son nom seul, sans le code qui le répète, 2.7.2), séances de la semaine / objectif,
   bouton **Démarrer** (même action que le raccourci) ; anneaux **kcal** et **protéines** du jour (mêmes calculs et
   couleurs que le journal), qui ouvrent le journal nutrition. Thème sombre fixe, lisible sur tous les fonds d'écran.
-  Anneaux et textes dimensionnés d'après la taille réelle du widget (`SizeMode.Exact`, 2.7.1) : les anneaux prennent
-  la hauteur disponible en laissant une colonne d'au moins 135 dp au texte ; le bouton garde sa taille.
+  Colonne de texte de 135 dp ; les anneaux se partagent tout le reste, image ajustée à leur place (2.9.0). Leur taille
+  n'est plus calculée d'après celle que déclare le lanceur : certains déclarent la taille minimale du widget, ce qui
+  les laissait petits en 2.7.x. Le bouton garde sa taille.
   Coins libres (2.7.2) : petit **G** bleu en haut à droite ; en bas à droite l'heure du dernier dessin
   (« Màj 10:35 », avec la date si ce n'est pas aujourd'hui) et **↻**, qui redessine le widget depuis la base.
 - **Mise à jour** sans réveil périodique : redessiné quand ses données changent pendant que l'app tourne (repas, séance,
