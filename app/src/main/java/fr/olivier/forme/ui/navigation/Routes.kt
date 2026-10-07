@@ -37,3 +37,10 @@ import kotlinx.serialization.Serializable
 
 // --- AI analysis (V2.4) ---
 @Serializable data object AiSettingsRoute
+
+// --- Exercise library (V2.8 – V2.9) ---
+/** Sheet of a catalogue exercise ([exerciseId]) or of a library entry alone ([libraryId]). */
+@Serializable data class ExerciseSheetRoute(val exerciseId: Long = 0, val libraryId: String = "")
+/** Choice of an illustration; the chosen id is returned to the previous screen as [LIBRARY_PICK_KEY]. */
+@Serializable data object LibraryPickerRoute
+const val LIBRARY_PICK_KEY = "library_pick"

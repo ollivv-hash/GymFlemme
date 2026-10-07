@@ -34,17 +34,23 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import fr.olivier.forme.feature.sport.data.ExerciseEntity
 import fr.olivier.forme.feature.sport.data.ExerciseRepository
 import fr.olivier.forme.feature.sport.domain.Fmt
+import fr.olivier.forme.feature.library.data.LibraryExerciseEntity
+import fr.olivier.forme.feature.library.data.LibraryRepository
+import fr.olivier.forme.feature.library.ui.LibraryThumb
 import fr.olivier.forme.ui.components.FormeTopBar
 import fr.olivier.forme.ui.components.PhotoThumb
 import fr.olivier.forme.ui.components.SectionTitle
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class CatalogViewModel @Inject constructor(private val repository: ExerciseRepository) : ViewModel() {
+class CatalogViewModel @Inject constructor(private val repository: ExerciseRepository, library: LibraryRepository) : ViewModel() {
     val exercises = repository.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val library = library.observeAll().map { list -> list.associateBy { it.id } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
     fun setArchived(id: Long, archived: Boolean) = viewModelScope.launch { repository.setArchived(id, archived) }
 }
 
@@ -53,9 +59,11 @@ fun CatalogScreen(
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
     onHistory: (Long) -> Unit,
+    onSheet: (Long) -> Unit = {},
     viewModel: CatalogViewModel = hiltViewModel(),
 ) {
     val exercises by viewModel.exercises.collectAsStateWithLifecycle()
+    val library by viewModel.library.collectAsStateWithLifecycle()
     var showArchived by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         topBar = {
@@ -85,6 +93,8 @@ fun CatalogScreen(
                 items(list, key = { it.id }) { exercise ->
                     ExerciseRow(
                         exercise,
+                        illustration = exercise.libraryId?.let { library[it] },
+                        onSheet = { onSheet(exercise.id) },
                         onClick = { onEdit(exercise.id) },
                         onHistory = { onHistory(exercise.id) },
                         onToggleArchive = { viewModel.setArchived(exercise.id, !exercise.archived) },
@@ -96,10 +106,22 @@ fun CatalogScreen(
 }
 
 @Composable
-private fun ExerciseRow(exercise: ExerciseEntity, onClick: () -> Unit, onHistory: () -> Unit, onToggleArchive: () -> Unit) {
+private fun ExerciseRow(
+    exercise: ExerciseEntity,
+    illustration: LibraryExerciseEntity?,
+    onSheet: () -> Unit,
+    onClick: () -> Unit,
+    onHistory: () -> Unit,
+    onToggleArchive: () -> Unit,
+) {
     ListItem(
         modifier = Modifier.clickable(onClick = onClick),
-        leadingContent = exercise.photoUri?.let { { PhotoThumb(it, 48.dp) } },
+        // Library illustration (opens the sheet), else the machine photo.
+        leadingContent = when {
+            illustration != null -> { { LibraryThumb(illustration, 48.dp, Modifier.clickable(onClick = onSheet)) } }
+            exercise.photoUri != null -> { { PhotoThumb(exercise.photoUri, 48.dp) } }
+            else -> null
+        },
         headlineContent = { Text(exercise.name) },
         supportingContent = {
             Text(
@@ -107,6 +129,7 @@ private fun ExerciseRow(exercise: ExerciseEntity, onClick: () -> Unit, onHistory
                     exercise.type.label,
                     "pas ${Fmt.kg(exercise.loadIncrementKg)}".takeIf { exercise.type.name == "WEIGHTED" },
                     exercise.settingsNote,
+                    "sans illustration".takeIf { illustration == null && !exercise.archived },
                 ).joinToString(" · "),
             )
         },

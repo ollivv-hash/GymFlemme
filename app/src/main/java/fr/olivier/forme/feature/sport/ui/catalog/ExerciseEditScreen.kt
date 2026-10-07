@@ -25,6 +25,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -40,21 +42,32 @@ import fr.olivier.forme.feature.sport.data.ExerciseRepository
 import fr.olivier.forme.feature.sport.domain.ExerciseType
 import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.feature.sport.domain.MuscleGroup
+import fr.olivier.forme.feature.library.data.LibraryRepository
+import fr.olivier.forme.feature.library.domain.LibraryLabels
+import fr.olivier.forme.feature.library.ui.LibraryThumb
 import fr.olivier.forme.ui.components.FormeTopBar
 import fr.olivier.forme.ui.components.PhotoThumb
 import fr.olivier.forme.ui.components.SectionTitle
 import fr.olivier.forme.ui.components.SmallStepper
 import fr.olivier.forme.ui.navigation.ExerciseEditRoute
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ExerciseEditViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: ExerciseRepository,
+    private val library: LibraryRepository,
 ) : ViewModel() {
     private val exerciseId = savedStateHandle.toRoute<ExerciseEditRoute>().exerciseId
     val isNew = exerciseId == 0L
@@ -63,6 +76,10 @@ class ExerciseEditViewModel @Inject constructor(
         ExerciseEntity(name = "", muscleGroup = MuscleGroup.AUTRE, type = ExerciseType.WEIGHTED, defaultRepsMin = 10, defaultRepsMax = 12),
     )
     val draft = _draft.asStateFlow()
+
+    /** Library entry illustrating the exercise (V2.9). */
+    val illustration = _draft.map { it.libraryId }.distinctUntilChanged().flatMapLatest { id -> id?.let(library::observe) ?: flowOf(null) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     private var originalPhoto: String? = null
 
     init {
@@ -98,8 +115,22 @@ class ExerciseEditViewModel @Inject constructor(
 private val increments = listOf(0.5, 1.0, 1.25, 2.0, 2.5, 5.0)
 
 @Composable
-fun ExerciseEditScreen(onDone: () -> Unit, viewModel: ExerciseEditViewModel = hiltViewModel()) {
+fun ExerciseEditScreen(
+    onDone: () -> Unit,
+    onPickIllustration: () -> Unit = {},
+    onOpenSheet: (String) -> Unit = {},
+    pickedLibraryId: String? = null,
+    onPickConsumed: () -> Unit = {},
+    viewModel: ExerciseEditViewModel = hiltViewModel(),
+) {
     val draft by viewModel.draft.collectAsStateWithLifecycle()
+    val illustration by viewModel.illustration.collectAsStateWithLifecycle()
+    LaunchedEffect(pickedLibraryId) {
+        pickedLibraryId?.let { id ->
+            viewModel.update { it.copy(libraryId = id) }
+            onPickConsumed()
+        }
+    }
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let(viewModel::pickPhoto)
     }
@@ -227,6 +258,26 @@ fun ExerciseEditScreen(onDone: () -> Unit, viewModel: ExerciseEditViewModel = hi
                 label = { Text("Note de charge (ex. chariot vide + X kg)") },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
+
+            SectionTitle("Illustration")
+            val entry = illustration
+            if (entry != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LibraryThumb(entry, 72.dp, Modifier.clickable { onOpenSheet(entry.id) })
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(entry.name, style = MaterialTheme.typography.titleSmall)
+                        Text(LibraryLabels.equipmentOf(entry), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Row {
+                    TextButton(onClick = { onOpenSheet(entry.id) }) { Text("Voir la fiche") }
+                    TextButton(onClick = onPickIllustration) { Text("Changer") }
+                    TextButton(onClick = { viewModel.update { it.copy(libraryId = null) } }) { Text("Retirer") }
+                }
+            } else {
+                OutlinedButton(onClick = onPickIllustration) { Text("Choisir dans la bibliothèque") }
+            }
 
             SectionTitle("Photo")
             Row(verticalAlignment = Alignment.CenterVertically) {

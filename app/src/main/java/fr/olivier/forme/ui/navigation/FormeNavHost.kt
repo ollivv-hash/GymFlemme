@@ -12,6 +12,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
@@ -38,6 +39,8 @@ import fr.olivier.forme.feature.nutrition.ui.ScanScreen
 import fr.olivier.forme.feature.settings.ui.ConfigScreen
 import fr.olivier.forme.feature.settings.ui.SettingsScreen
 import fr.olivier.forme.feature.heart.ui.WatchTestScreen
+import fr.olivier.forme.feature.library.ui.ExerciseSheetScreen
+import fr.olivier.forme.feature.library.ui.LibraryPickerScreen
 import fr.olivier.forme.feature.sport.ui.catalog.CatalogScreen
 import fr.olivier.forme.feature.sport.ui.catalog.ExerciseEditScreen
 import fr.olivier.forme.feature.sport.ui.history.ExerciseHistoryScreen
@@ -185,6 +188,7 @@ fun FormeNavHost(
                         }
                     },
                     onAbandoned = { nav.popBackStack() },
+                    onSheet = { nav.navigate(ExerciseSheetRoute(exerciseId = it)) },
                 )
             }
             composable<SessionDetailRoute> {
@@ -195,15 +199,40 @@ fun FormeNavHost(
                     onCreateTemplate = { nav.navigate(TemplateEditRoute(sourceSessionId = route.sessionId)) },
                 )
             }
-            composable<ExerciseHistoryRoute> { ExerciseHistoryScreen(onBack = { nav.popBackStack() }) }
+            composable<ExerciseHistoryRoute> {
+                ExerciseHistoryScreen(onBack = { nav.popBackStack() }, onSheet = { nav.navigate(ExerciseSheetRoute(exerciseId = it)) })
+            }
             composable<CatalogRoute> {
                 CatalogScreen(
                     onBack = { nav.popBackStack() },
                     onEdit = { nav.navigate(ExerciseEditRoute(it)) },
                     onHistory = { nav.navigate(ExerciseHistoryRoute(it)) },
+                    onSheet = { nav.navigate(ExerciseSheetRoute(exerciseId = it)) },
                 )
             }
-            composable<ExerciseEditRoute> { ExerciseEditScreen(onDone = { nav.popBackStack() }) }
+            composable<ExerciseEditRoute> { entry ->
+                val picked by entry.savedStateHandle.getStateFlow<String?>(LIBRARY_PICK_KEY, null).collectAsState()
+                ExerciseEditScreen(
+                    onDone = { nav.popBackStack() },
+                    onPickIllustration = { nav.navigate(LibraryPickerRoute) },
+                    onOpenSheet = { nav.navigate(ExerciseSheetRoute(libraryId = it)) },
+                    pickedLibraryId = picked,
+                    onPickConsumed = { entry.savedStateHandle[LIBRARY_PICK_KEY] = null },
+                )
+            }
+            composable<ExerciseSheetRoute> {
+                ExerciseSheetScreen(onBack = { nav.popBackStack() }, onEdit = { nav.navigate(ExerciseEditRoute(it)) })
+            }
+            composable<LibraryPickerRoute> {
+                LibraryPickerScreen(
+                    onBack = { nav.popBackStack() },
+                    onPick = { id ->
+                        nav.previousBackStackEntry?.savedStateHandle?.set(LIBRARY_PICK_KEY, id)
+                        nav.popBackStack()
+                    },
+                    onPreview = { nav.navigate(ExerciseSheetRoute(libraryId = it)) },
+                )
+            }
             composable<TemplatesRoute> {
                 TemplatesScreen(
                     onBack = { nav.popBackStack() },

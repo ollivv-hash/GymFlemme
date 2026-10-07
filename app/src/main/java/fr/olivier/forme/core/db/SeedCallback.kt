@@ -54,6 +54,7 @@ class SeedCallback(private val clock: Clock) : RoomDatabase.Callback() {
         put("loadNote", loadNote)
         put("photoUri", photoUri)
         put("archived", archived)
+        put("libraryId", libraryId)
     }
 
     private fun WorkoutTemplateEntity.toValues() = ContentValues().apply {
