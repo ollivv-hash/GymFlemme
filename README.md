@@ -253,6 +253,8 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   couleurs que le journal), qui ouvrent le journal nutrition. Thème sombre fixe, lisible sur tous les fonds d'écran.
   Anneaux et textes dimensionnés d'après la taille réelle du widget (`SizeMode.Exact`, 2.7.1) : les anneaux prennent
   la hauteur disponible en laissant une colonne d'au moins 135 dp au texte ; le bouton garde sa taille.
+  Coins libres (2.7.2) : petit **G** bleu en haut à droite ; en bas à droite l'heure du dernier dessin
+  (« Màj 10:35 », avec la date si ce n'est pas aujourd'hui) et **↻**, qui redessine le widget depuis la base.
 - **Mise à jour** sans réveil périodique : redessiné quand ses données changent pendant que l'app tourne (repas, séance,
   pesée, profil ; regroupé sur 1 s) et juste après minuit (WorkManager) pour la nouvelle journée.
 
