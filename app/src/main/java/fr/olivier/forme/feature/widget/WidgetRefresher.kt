@@ -2,7 +2,6 @@ package fr.olivier.forme.feature.widget
 
 import android.content.Context
 import android.util.Log
-import androidx.glance.appwidget.updateAll
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -57,7 +56,7 @@ class WidgetRefresher @Inject constructor(
     }
 
     suspend fun refresh() {
-        runCatching { FormeWidget().updateAll(context) }.onFailure { Log.w("Forme", "Widget update failed", it) }
+        runCatching { FormeWidget.redrawAll(context) }.onFailure { Log.w("Forme", "Widget update failed", it) }
     }
 
     fun scheduleMidnight() {

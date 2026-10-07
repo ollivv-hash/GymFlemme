@@ -232,7 +232,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   **recherche** (filtre 0x180D, reconnue par adresse ou par nom : l'adresse de diffusion est aléatoire et peut changer) et
   s'y connecte dès que la diffusion est active, puis se reconnecte après chaque coupure. Un **service au premier plan**
   (type *connected device*) garde la liaison écran éteint ; chaque mesure est écrite au fil de l'eau dans un fichier par
-  séance (rien n'est perdu si l'app est tuée). Notification « Séance en cours » avec la FC, *Live Update* Android 16.
+  séance (rien n'est perdu si l'app est tuée). Notification « Séance en cours » avec la FC, *Live Update* Android 16 ; retirée explicitement à l'arrêt (2.9.1 : elle pouvait être republiée juste après l'abandon de la séance et rester affichée).
 - **En séance** : bandeau FC + zone sous le titre ; barre de repos : « récupéré » sous 60 % de la FC max (indication seule).
 - **Complément Health Connect** (après séance) : la FC écrite par Mi Fitness comble les trous de la courbe en direct (le
   direct est prioritaire), et ses calories actives remplacent l'estimation. **Une seule source** est retenue (l'app qui a
@@ -284,6 +284,10 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   les laissait petits en 2.7.x. Le bouton garde sa taille.
   Coins libres (2.7.2) : petit **G** bleu en haut à droite ; en bas à droite l'heure du dernier dessin
   (« Màj 10:35 », avec la date si ce n'est pas aujourd'hui) et **↻**, qui redessine le widget depuis la base.
+  Toucher le reste de la carte (fond, logo) ouvre l'app sur l'**Accueil** (2.9.1).
+- **Données suivies en direct** (2.9.1) : la session Glance survit à son premier dessin, et une mise à jour ne fait que
+  la recomposer. Les données sont donc observées dans la composition elle-même : lues une seule fois, une séance
+  abandonnée restait affichée « Reprendre », même après ↻.
 - **Mise à jour** sans réveil périodique : redessiné quand ses données changent pendant que l'app tourne (repas, séance,
   pesée, profil ; regroupé sur 1 s) et juste après minuit (WorkManager) pour la nouvelle journée.
 
