@@ -31,7 +31,8 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.6** ✅ | Raccourcis d'icône (séance, repas, scanner), widget d'écran d'accueil 4 × 2, sauvegardes relues et vérifiées |
 | **V2.7** ✅ | Nouveau nom **GymBro** et nouvelle icône (G bleu de l'app, fond blanc, icône à thème Android 13+) ; accueil sans titre, onglet « Accueil » avec le G ; nouveaux fichiers `gymbro-*` |
 | **V2.8** ✅ | Bibliothèque d'exercices illustrée (Open Exercise Illustrations, CC0) — étape 1 : données embarquées, table en lecture seule, liens des 23 exercices |
-| **V2.9** 🚧 | Étape 2 : fiche exercice animée (séance, historique, catalogue), choix / retrait de l'illustration ; écran Bibliothèque et mentions à venir |
+| **V2.9** ✅ | Étape 2 : fiche exercice animée (séance, historique, catalogue), choix / retrait de l'illustration |
+| **V2.10** 🚧 | Étape 3 : écran Bibliothèque (recherche, filtres, ajout au catalogue) ; sources et licences à venir |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -252,7 +253,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   dans la minute qui précède la validation). **Semaine** : séances mesurées, FC moyenne, temps en zone 3 et +, kcal.
   **Nutrition** : dépense des séances du jour et apport net.
 
-### Bibliothèque d'exercices (V2.8 – V2.9)
+### Bibliothèque d'exercices (V2.8 – V2.10)
 
 - **Fiche exercice** : illustration animée (fondu enchaîné entre les images dans l'ordre de la bibliothèque, 0,9 s
   de maintien, 0,35 s de fondu ; image de maintien fixe ; **toucher = pause**), dans une carte sombre de 340 dp de
@@ -265,6 +266,14 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   catalogue (qui affiche aussi « sans illustration ») ; « Voir la fiche » dans « Modifier l'exercice ».
 - **Modifier l'exercice → Illustration** : voir la fiche, **changer** (liste des 459 entrées avec vignette, recherche
   par mots du nom ou d'un alias, sans accents ni casse, (i) pour prévisualiser) ou **retirer**.
+- **Config → Bibliothèque d'exercices** (V2.10) : les 459 entrées avec vignette, recherche par nom ou alias, filtres
+  **muscle principal**, **matériel** (dont « Poids du corps ») et **lieu** (salle, machines, maison, poids du corps),
+  combinables, « Effacer » pour les retirer. Toucher une entrée ouvre sa fiche. Les entrées déjà reliées à un exercice
+  du catalogue (archivés compris) sont marquées « Déjà dans mon catalogue » (avec son nom s'il diffère) ; les autres
+  ont un **+** qui crée l'exercice : nom anglais de la bibliothèque, groupe déduit du 1er muscle principal, type
+  déduit (machine cardio → Cardio 1 × 20 min ; image de maintien → Durée 3 × 30 s, par côté si unilatéral ; sans
+  matériel → Poids du corps ; sinon Charge + reps, 3 × 10–12), relié à son illustration. Le message de confirmation
+  propose **Modifier** pour ajuster aussitôt.
 - Images décodées à la taille affichée (sous-échantillonnage) et gardées en cache : les listes n'affichent que des
   vignettes fixes, l'animation n'existe que sur la fiche. Libellés français dans `LibraryLabels` (textes de l'app
   écrits en Kotlin, comme le reste de l'interface) ; un test vérifie que chaque valeur de la bibliothèque a son libellé.
