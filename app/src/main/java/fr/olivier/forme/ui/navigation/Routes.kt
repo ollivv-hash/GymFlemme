@@ -43,4 +43,6 @@ import kotlinx.serialization.Serializable
 @Serializable data class ExerciseSheetRoute(val exerciseId: Long = 0, val libraryId: String = "")
 /** Choice of an illustration; the chosen id is returned to the previous screen as [LIBRARY_PICK_KEY]. */
 @Serializable data object LibraryPickerRoute
+/** Config → Bibliothèque: browse the library and add entries to the catalogue (V2.10). */
+@Serializable data object LibraryRoute
 const val LIBRARY_PICK_KEY = "library_pick"
