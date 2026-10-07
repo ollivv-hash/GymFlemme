@@ -293,6 +293,9 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 
 ### Nutrition (V1.1)
 
+- **Écran Profil** : le formulaire n'apparaît qu'une fois le profil enregistré relu, et « Enregistrer » reste grisé
+  jusque-là (2.9.2). Avant, une saisie faite pendant cette lecture (lente au premier lancement, base occupée par Ciqual
+  et la bibliothèque) était effacée, et « Enregistrer » pouvait écrire un profil vide.
 - **Objectif protéines** = facteur du profil (1,8 g/kg par défaut, modifiable de 0,8 à 3,0) × **dernier poids saisi**.
 - **Anneaux du jour** (V2.5) : deux grands anneaux kcal et protéines (consommé / objectif, reste ; kcal en orange au-delà de +10 %,
   protéines en vert une fois l'objectif atteint), deux petits pour glucides et lipides face à leur cible, puis la répartition
