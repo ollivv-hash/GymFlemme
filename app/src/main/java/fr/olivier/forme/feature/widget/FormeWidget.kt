@@ -8,6 +8,7 @@ import android.graphics.RectF
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.createBitmap
@@ -17,6 +18,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -63,7 +65,7 @@ private object WidgetColors {
  * on the left; today's calorie and protein rings on the right, which open the nutrition journal.
  */
 class FormeWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Single
+    override val sizeMode = SizeMode.Exact
 
     @EntryPoint
     @InstallIn(SingletonComponent::class)
@@ -84,23 +86,26 @@ class FormeWidgetReceiver : GlanceAppWidgetReceiver() {
 @Composable
 fun WidgetContent(context: Context, data: WidgetData) {
     val start = actionStartActivity(QuickAction.START_SESSION.intent(context))
+    // Rings and text as large as the widget allows (see ringSize); the start button keeps its size.
+    val size = LocalSize.current
+    val ring = ringSize(size.width, size.height)
     Row(
-        modifier = GlanceModifier.fillMaxSize().background(WidgetColors.background).cornerRadius(20.dp).padding(12.dp),
+        modifier = GlanceModifier.fillMaxSize().background(WidgetColors.background).cornerRadius(20.dp).padding(PADDING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = GlanceModifier.defaultWeight().fillMaxHeight().clickable(start)) {
             Text(
                 if (data.sessionRunning) "Séance en cours" else "Prochaine séance",
-                style = TextStyle(color = ColorProvider(WidgetColors.muted), fontSize = 12.sp),
+                style = TextStyle(color = ColorProvider(WidgetColors.muted), fontSize = 13.sp),
             )
             Text(
                 data.sessionTitle ?: "Séance libre",
-                style = TextStyle(color = ColorProvider(WidgetColors.text), fontSize = 16.sp, fontWeight = FontWeight.Bold),
+                style = TextStyle(color = ColorProvider(WidgetColors.text), fontSize = 17.sp, fontWeight = FontWeight.Bold),
                 maxLines = 2,
             )
             Text(
                 "Semaine : ${data.weekDone} / ${data.weekGoal}",
-                style = TextStyle(color = ColorProvider(WidgetColors.muted), fontSize = 12.sp),
+                style = TextStyle(color = ColorProvider(WidgetColors.muted), fontSize = 14.sp),
             )
             Spacer(GlanceModifier.defaultWeight())
             Button(
@@ -119,6 +124,7 @@ fun WidgetContent(context: Context, data: WidgetData) {
         ) {
             val kcalTarget = data.kcalTarget?.toDouble()
             WidgetRing(
+                sizeDp = ring,
                 value = data.kcal,
                 target = kcalTarget,
                 unit = "kcal",
@@ -127,6 +133,7 @@ fun WidgetContent(context: Context, data: WidgetData) {
             Spacer(GlanceModifier.width(6.dp))
             val proteinTarget = data.proteinTargetG
             WidgetRing(
+                sizeDp = ring,
                 value = data.proteinG,
                 target = proteinTarget,
                 unit = "g prot.",
@@ -137,30 +144,46 @@ fun WidgetContent(context: Context, data: WidgetData) {
 }
 
 @Composable
-private fun WidgetRing(value: Double, target: Double?, unit: String, color: Color) {
+private fun WidgetRing(sizeDp: Float, value: Double, target: Double?, unit: String, color: Color) {
+    // Text grows with the ring (sizes chosen for the 76 dp ring of the first version).
+    val k = sizeDp / 76f
     val fraction = if (target != null && target > 0) (value / target).toFloat().coerceIn(0f, 1f) else 0f
-    Box(modifier = GlanceModifier.size(RING_DP.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = GlanceModifier.size(sizeDp.dp), contentAlignment = Alignment.Center) {
         Image(
             provider = ImageProvider(ringBitmap(fraction, color)),
             contentDescription = null,
-            modifier = GlanceModifier.size(RING_DP.dp),
+            modifier = GlanceModifier.size(sizeDp.dp),
         )
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 Fmt.number(value, 0),
-                style = TextStyle(color = ColorProvider(WidgetColors.text), fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                style = TextStyle(color = ColorProvider(WidgetColors.text), fontSize = (15 * k).sp, fontWeight = FontWeight.Bold),
             )
             Text(
                 target?.let { "/ ${Fmt.number(it, 0)}" } ?: unit,
-                style = TextStyle(color = ColorProvider(WidgetColors.muted), fontSize = 10.sp),
+                style = TextStyle(color = ColorProvider(WidgetColors.muted), fontSize = (10.5f * k).sp),
             )
-            if (target != null) Text(unit, style = TextStyle(color = ColorProvider(WidgetColors.muted), fontSize = 10.sp))
+            if (target != null) Text(unit, style = TextStyle(color = ColorProvider(WidgetColors.muted), fontSize = (10.5f * k).sp))
         }
     }
 }
 
-private const val RING_DP = 76
-private const val RING_PX = 228 // 3× the ring size: sharp on xxhdpi screens
+/**
+ * Ring diameter (dp) for a widget of [width] × [height]: as tall as the widget allows, the two rings sharing the
+ * width left by the session column ([TEXT_MIN_DP]) and the spacers.
+ */
+internal fun ringSize(width: Dp, height: Dp): Float {
+    val byHeight = height.value - 2 * PADDING_DP
+    val byWidth = (width.value - 2 * PADDING_DP - GAPS_DP - TEXT_MIN_DP) / 2
+    return minOf(byHeight, byWidth).coerceIn(MIN_RING_DP, MAX_RING_DP)
+}
+
+private const val PADDING_DP = 12f
+private const val GAPS_DP = 14f
+private const val TEXT_MIN_DP = 135f
+private const val MIN_RING_DP = 76f
+private const val MAX_RING_DP = 150f
+private const val RING_PX = 450 // 3× the largest ring: sharp on xxhdpi screens
 
 /** Glance has no Canvas: the ring is drawn into a bitmap shown as an image, text on top. */
 internal fun ringBitmap(fraction: Float, color: Color): Bitmap {
