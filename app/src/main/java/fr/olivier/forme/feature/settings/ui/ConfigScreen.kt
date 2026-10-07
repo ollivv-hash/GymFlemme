@@ -24,6 +24,7 @@ fun ConfigScreen(
     onFoods: () -> Unit,
     onWatch: () -> Unit,
     onAi: () -> Unit,
+    onSources: () -> Unit,
 ) {
     Scaffold(topBar = { FormeTopBar("Configuration") }) { padding ->
         // Scrolls: the entries no longer fit a phone screen since the library entry (2.10.1).
@@ -37,6 +38,7 @@ fun ConfigScreen(
             Entry("Montre cardio", "Choisir la montre, tester la FC en direct et Health Connect", onWatch)
             Entry("Analyse IA", "App IA par défaut (Claude, ChatGPT…), test du partage", onAi)
             Entry("Réglages et sauvegarde", "Repos, thème, objectifs, sauvegarde auto (Drive), export / import", onSettings)
+            Entry("Sources et licences", "Bibliothèque d'exercices, Ciqual, Open Food Facts, logiciels", onSources)
         }
     }
 }
