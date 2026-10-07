@@ -61,6 +61,17 @@ import fr.olivier.forme.feature.heart.domain.SessionHeartLine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import fr.olivier.forme.feature.library.data.LibraryRepository
+import fr.olivier.forme.feature.library.domain.LibraryLabels
+import fr.olivier.forme.feature.sport.domain.MuscleStats
+import fr.olivier.forme.feature.sport.domain.MuscleVolume
+import fr.olivier.forme.feature.sport.domain.MuscleWeek
+import fr.olivier.forme.feature.sport.domain.Muscles
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class WeekUi(
@@ -76,6 +87,10 @@ data class WeekUi(
     val heart: HeartWeek = HeartWeek.of(emptyList()),
     /** Nutrition of the shown week (V2.2); null until loaded. */
     val nutrition: NutritionWeek? = null,
+    /** Volume of the shown week per library muscle (V2.12). */
+    val muscles: MuscleWeek = MuscleWeek(emptyMap(), 0),
+    /** Volume shown per muscle (true) or per group (false); remembered in the settings. */
+    val byMuscle: Boolean = false,
 )
 
 const val CALENDAR_WEEKS = 12
@@ -84,9 +99,10 @@ const val CALENDAR_WEEKS = 12
 @HiltViewModel
 class WeekViewModel @Inject constructor(
     sessions: SessionRepository,
-    settings: SettingsRepository,
     heartRepository: HeartRepository,
     private val nutritionWeekSource: NutritionWeekSource,
+    library: LibraryRepository,
+    private val settings: SettingsRepository,
     private val clock: Clock,
 ) : ViewModel() {
     private val today = LocalDate.now(clock)
@@ -109,7 +125,16 @@ class WeekViewModel @Inject constructor(
 
     private val nutritionWeek = shownWeek.flatMapLatest { week -> nutritionWeekSource.observe(week) }
 
-    private val extras = combine(heartWeek, nutritionWeek) { heart, food -> heart to food }
+    /** Muscles of each library entry: main ones, then assisting ones (adductors included). */
+    private val musclesById = library.observeAll().map { entries ->
+        entries.associate { it.id to Muscles(it.primaryList, it.secondaryList + it.alsoTargetsList) }
+    }
+
+    private val extras = combine(heartWeek, nutritionWeek, musclesById, settings.volumeByMuscle) { heart, food, muscles, byMuscle ->
+        Extras(heart, food, muscles, byMuscle)
+    }
+
+    private data class Extras(val heart: HeartWeek, val food: NutritionWeek?, val muscles: Map<String, Muscles>, val byMuscle: Boolean)
 
     val ui = combine(
         shownWeek,
@@ -117,9 +142,10 @@ class WeekViewModel @Inject constructor(
         sessions.observeFinished(),
         settings.trainingGoals,
         extras,
-    ) { week, rows, finished, goals, (heart, food) ->
+    ) { week, rows, finished, goals, (heart, food, musclesById, byMuscle) ->
         val zone = clock.zone
         val sets = rows.map { TrainedSet(it.startedAt.atZone(zone).toLocalDate(), it.muscleGroup, it.type) }
+        val withMuscles = rows.zip(sets) { row, set -> set to row.libraryId?.let(musclesById::get) }
         val sessionDates = finished.map { it.startedAt.atZone(zone).toLocalDate() }
         val calendarStart = currentWeek.minusWeeks((CALENDAR_WEEKS - 1).toLong())
         WeekUi(
@@ -132,12 +158,16 @@ class WeekViewModel @Inject constructor(
             today = today,
             heart = heart,
             nutrition = food,
+            muscles = MuscleStats.week(withMuscles, week),
+            byMuscle = byMuscle,
         )
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
         WeekUi(WeekStats(currentWeek, emptyMap(), 0), calendarStart = currentWeek, today = today),
     )
+
+    fun showByMuscle(byMuscle: Boolean) = viewModelScope.launch { settings.setVolumeByMuscle(byMuscle) }
 
     fun shift(weeks: Long) = shownWeek.update { (it.plusWeeks(weeks)).coerceAtMost(currentWeek) }
 }
@@ -199,23 +229,110 @@ fun WeekContent(viewModel: WeekViewModel = hiltViewModel()) {
         }
         ui.nutrition?.takeIf { it.loggedDays > 0 }?.let { food -> item { NutritionWeekCard(food) } }
         item {
-            SectionTitle("Séries par groupe musculaire")
-            Text(
-                "Zone repère : ${ui.goals.minSets} à ${ui.goals.maxSets} séries par semaine (hors échauffement, groupe principal).",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            SectionTitle("Volume de la semaine")
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                listOf(false to "Groupes", true to "Muscles").forEachIndexed { index, (byMuscle, label) ->
+                    SegmentedButton(
+                        selected = ui.byMuscle == byMuscle,
+                        onClick = { viewModel.showByMuscle(byMuscle) },
+                        shape = SegmentedButtonDefaults.itemShape(index, 2),
+                    ) { Text(label) }
+                }
+            }
         }
-        volumeGroups.forEach { group ->
-            val count = week.setsByGroup[group] ?: 0
-            if (group == MuscleGroup.AUTRE && count == 0) return@forEach
-            item(key = group.name) { VolumeBar(group.label, count, ui.goals) }
-        }
+        if (ui.byMuscle) muscleVolume(ui) else groupVolume(ui)
         item {
             SectionTitle("Régularité (12 semaines)")
             TrainingCalendar(ui)
             Spacer(Modifier.height(24.dp))
         }
+    }
+}
+
+private fun LazyListScope.groupVolume(ui: WeekUi) {
+    item {
+        Text(
+            "Zone repère : ${ui.goals.minSets} à ${ui.goals.maxSets} séries par semaine (hors échauffement, groupe principal).",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    volumeGroups.forEach { group ->
+        val count = ui.stats.setsByGroup[group] ?: 0
+        if (group == MuscleGroup.AUTRE && count == 0) return@forEach
+        item(key = group.name) { VolumeBar(group.label, count, ui.goals) }
+    }
+}
+
+/** V2.12: per library muscle, main muscles count 1 per set and assisting ones 0.5 (lighter part of the bar). */
+private fun LazyListScope.muscleVolume(ui: WeekUi) {
+    val band = ui.goals.muscleMinSets..ui.goals.muscleMaxSets
+    item {
+        Text(
+            "Muscle principal : 1 par série ; muscle sollicité en appui : ½ (partie claire). Zone repère des grands muscles : " +
+                "${band.first} à ${band.last} séries par semaine.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    MuscleStats.LARGE.forEach { key ->
+        item(key = "m-$key") { MuscleBar(LibraryLabels.muscle(key), ui.muscles.byMuscle[key] ?: MuscleVolume(), band) }
+    }
+    val small = MuscleStats.SMALL.filter { (ui.muscles.byMuscle[it]?.total ?: 0.0) > 0 }
+    if (small.isNotEmpty()) {
+        item { Text("Petits muscles (sans zone repère)", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp)) }
+        small.forEach { key -> item(key = "m-$key") { MuscleBar(LibraryLabels.muscle(key), ui.muscles.byMuscle.getValue(key), null) } }
+    }
+    if (ui.muscles.unlinkedSets > 0) {
+        item {
+            Text(
+                "${ui.muscles.unlinkedSets} série(s) d'exercices sans illustration ne sont pas comptées ici : relie-les à la " +
+                    "bibliothèque depuis Config → Catalogue des exercices. Elles restent comptées dans la vue Groupes.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+    }
+}
+
+/** A muscle: direct sets (full colour) then the halved assisting sets (lighter), over the band when it has one. */
+@Composable
+private fun MuscleBar(label: String, volume: MuscleVolume, band: IntRange?) {
+    val total = volume.total
+    val scaleMax = maxOf((band?.last ?: 10) + 5.0, total).toFloat()
+    val bandColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+    val track = MaterialTheme.colorScheme.surfaceContainerHigh
+    val fill = when {
+        band == null -> MaterialTheme.colorScheme.primary
+        total < band.first -> MaterialTheme.colorScheme.onSurfaceVariant
+        total <= band.last -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.tertiary
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 5.dp)) {
+        Text(label, modifier = Modifier.width(112.dp), style = MaterialTheme.typography.bodyMedium, maxLines = 2) // "Haut et milieu du dos"
+        Canvas(Modifier.weight(1f).height(18.dp)) {
+            val r = CornerRadius(6.dp.toPx())
+            drawRoundRect(track, size = size, cornerRadius = r)
+            band?.let {
+                val x0 = size.width * it.first / scaleMax
+                val x1 = size.width * it.last / scaleMax
+                drawRect(bandColor, topLeft = Offset(x0, 0f), size = Size(x1 - x0, size.height))
+            }
+            if (total > 0) {
+                drawRoundRect(fill.copy(alpha = 0.45f), size = Size(size.width * total.toFloat() / scaleMax, size.height), cornerRadius = r)
+                if (volume.direct > 0) {
+                    drawRoundRect(fill, size = Size(size.width * volume.direct.toFloat() / scaleMax, size.height), cornerRadius = r)
+                }
+            }
+        }
+        Text(
+            Fmt.number(total, 1),
+            modifier = Modifier.width(40.dp),
+            textAlign = TextAlign.End,
+            style = MaterialTheme.typography.titleMedium,
+            color = fill,
+        )
     }
 }
 
