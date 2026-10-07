@@ -9,12 +9,15 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.olivier.forme.MainActivity
@@ -46,6 +49,13 @@ class LibrarySmokeTest {
 
     private fun waitFor(text: String) = rule.waitUntilAtLeastOneExists(hasText(text, substring = true), 15_000)
 
+    /** On the very first launch the library is still being loaded: wait for the list, not just its header. */
+    private fun waitForLibraryList() = rule.waitUntil(15_000) {
+        rule.onAllNodes(hasText("exercice(s)", substring = true)).fetchSemanticsNodes().any { node ->
+            node.config.getOrElse(SemanticsProperties.Text) { emptyList() }.none { it.text.startsWith("0 ") }
+        }
+    }
+
     @Test
     fun sheetFromTheRunningSession() {
         val intent = QuickAction.START_SESSION.intent(context()).apply { removeFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
@@ -76,12 +86,7 @@ class LibrarySmokeTest {
             rule.onNode(hasText("Illustration")).performScrollTo()
             waitFor("Machine Chest Press")
             rule.onNode(hasText("Changer") and hasClickAction()).performScrollTo().performClick()
-            // On the very first launch the library is still being loaded: wait for the list, not just its header.
-            rule.waitUntil(15_000) {
-                rule.onAllNodes(hasText("exercice(s)", substring = true)).fetchSemanticsNodes().any { node ->
-                    node.config.getOrElse(SemanticsProperties.Text) { emptyList() }.none { it.text.startsWith("0 ") }
-                }
-            }
+            waitForLibraryList()
             rule.onNode(hasScrollAction()).performScrollToNode(hasText("Pec Deck"))
             shot("l4-picker")
             rule.onNode(hasText("Pec Deck") and hasClickAction()).performClick()
@@ -91,6 +96,36 @@ class LibrarySmokeTest {
             shot("l5-edit-illustration")
             rule.onAllNodes(hasText("Retirer") and hasClickAction())[0].performClick()
             waitFor("Choisir dans la bibliothèque")
+        }
+    }
+
+    @Test
+    fun libraryScreenFiltersAndAddsToTheCatalogue() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitFor("Nutrition du jour")
+            rule.onNode(hasText("Config") and hasClickAction()).performClick()
+            rule.onNode(hasText("Bibliothèque d'exercices") and hasClickAction()).performClick()
+            waitForLibraryList()
+
+            // A filter narrows the list; the seeded hack squat is already linked.
+            rule.onNode(hasText("Muscle") and hasClickAction()).performClick()
+            rule.onNode(hasText("Quadriceps") and hasClickAction()).performClick()
+            rule.onNode(hasText("Lieu") and hasClickAction()).performClick()
+            rule.onNode(hasText("Machines") and hasClickAction()).performClick()
+            rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Leg Press")) // the list, not the filter row
+            waitFor("Déjà dans mon catalogue")
+            shot("l6-library-filtered")
+            rule.onNode(hasText("Effacer") and hasClickAction()).performClick()
+
+            rule.onNode(hasSetTextAction()).performTextInput("rope hammer")
+            waitFor("Rope Hammer Curl")
+            rule.onAllNodes(hasContentDescription("Ajouter à mon catalogue"))[0].performClick()
+            waitFor("ajouté à ton catalogue")
+            waitFor("Déjà dans mon catalogue")
+            shot("l7-library-added")
+            rule.onNode(hasText("Modifier") and hasClickAction()).performClick()
+            rule.waitUntilAtLeastOneExists(hasText("Rope Hammer Curl") and hasSetTextAction(), 15_000)
+            waitFor("Voir la fiche") // linked to its illustration
         }
     }
 }

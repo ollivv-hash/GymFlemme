@@ -14,6 +14,7 @@ import fr.olivier.forme.ui.components.FormeTopBar
 @Composable
 fun ConfigScreen(
     onCatalog: () -> Unit,
+    onLibrary: () -> Unit,
     onTemplates: () -> Unit,
     onRotation: () -> Unit,
     onSettings: () -> Unit,
@@ -25,6 +26,7 @@ fun ConfigScreen(
     Scaffold(topBar = { FormeTopBar("Configuration") }) { padding ->
         Column(Modifier.padding(padding)) {
             Entry("Catalogue des exercices", "Machines, réglages, photos, archivage", onCatalog)
+            Entry("Bibliothèque d'exercices", "Exercices illustrés : rechercher, filtrer, ajouter au catalogue", onLibrary)
             Entry("Modèles de séance", "Créer, dupliquer, modifier, archiver", onTemplates)
             Entry("Rotation", "Modèles de la rotation et leur ordre", onRotation)
             Entry("Profil", "Âge, sexe, FC max, objectif protéines, whey, créatine", onProfile)

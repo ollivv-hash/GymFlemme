@@ -41,6 +41,7 @@ import fr.olivier.forme.feature.settings.ui.SettingsScreen
 import fr.olivier.forme.feature.heart.ui.WatchTestScreen
 import fr.olivier.forme.feature.library.ui.ExerciseSheetScreen
 import fr.olivier.forme.feature.library.ui.LibraryPickerScreen
+import fr.olivier.forme.feature.library.ui.LibraryScreen
 import fr.olivier.forme.feature.sport.ui.catalog.CatalogScreen
 import fr.olivier.forme.feature.sport.ui.catalog.ExerciseEditScreen
 import fr.olivier.forme.feature.sport.ui.history.ExerciseHistoryScreen
@@ -171,6 +172,7 @@ fun FormeNavHost(
             composable<ConfigRoute> {
                 ConfigScreen(
                     onCatalog = { nav.navigate(CatalogRoute) },
+                    onLibrary = { nav.navigate(LibraryRoute) },
                     onTemplates = { nav.navigate(TemplatesRoute) },
                     onRotation = { nav.navigate(RotationRoute) },
                     onSettings = { nav.navigate(SettingsRoute) },
@@ -232,6 +234,13 @@ fun FormeNavHost(
                         nav.popBackStack()
                     },
                     onPreview = { nav.navigate(ExerciseSheetRoute(libraryId = it)) },
+                )
+            }
+            composable<LibraryRoute> {
+                LibraryScreen(
+                    onBack = { nav.popBackStack() },
+                    onSheet = { nav.navigate(ExerciseSheetRoute(libraryId = it)) },
+                    onEdit = { nav.navigate(ExerciseEditRoute(it)) },
                 )
             }
             composable<TemplatesRoute> {
