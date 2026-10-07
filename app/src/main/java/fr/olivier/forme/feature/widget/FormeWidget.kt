@@ -141,7 +141,7 @@ fun WidgetContent(context: Context, data: WidgetData, updatedAt: LocalDateTime) 
     val start = actionStartActivity(QuickAction.START_SESSION.intent(context))
     val home = actionStartActivity(QuickAction.OPEN_HOME.intent(context))
     // Logo and update time sit in the corners left free by the round rings: they take no room from them.
-    // Touching the card anywhere else than its buttons, session or rings opens the app on its home screen.
+    // Touching the card anywhere else than the Démarrer button or the rings opens the app on its home screen.
     Box(modifier = GlanceModifier.fillMaxSize().background(WidgetColors.background).cornerRadius(20.dp).clickable(home)) {
         WidgetMain(context, data, start)
         Box(modifier = GlanceModifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.TopEnd) {
@@ -185,7 +185,8 @@ private fun WidgetMain(context: Context, data: WidgetData, start: Action) {
     ) {
         // Fixed text column; the rings share the rest. Their size is not computed from the widget size reported by
         // the launcher (some report the minimum size, 2.7.2): each ring image is fitted into its share instead.
-        Column(modifier = GlanceModifier.width(TEXT_COLUMN_DP.dp).fillMaxHeight().clickable(start)) {
+        // No action of its own (2.12.1): touching the text opens the home screen; only the button starts a session.
+        Column(modifier = GlanceModifier.width(TEXT_COLUMN_DP.dp).fillMaxHeight()) {
             Text(
                 if (data.sessionRunning) "Séance en cours" else "Prochaine séance",
                 style = TextStyle(color = ColorProvider(WidgetColors.muted), fontSize = 13.sp),

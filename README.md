@@ -181,7 +181,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 ### Améliorations séance (V1.1.1)
 
 - **Onglet Historique → Semaine** : séries de travail (hors échauffement, hors cardio, hors séance d'amorce) par **groupe musculaire principal**
-  de la semaine (lundi → dimanche), comparées à une zone repère **10 à 20 séries** (modifiable dans Configuration → Objectifs d'entraînement).
+  de la semaine (lundi → dimanche), comparées à une zone repère **10 à 20 séries** (modifiable dans Config → Profil → Objectifs d'entraînement, enregistré avec le profil ; dans Réglages avant 2.12.1).
   Séances de la semaine / objectif (**3 par défaut**, modifiable), série de semaines consécutives où l'objectif est tenu,
   calendrier des 12 dernières semaines. L'accueil affiche « Cette semaine : x/3 séances ».
 - **Volume par muscle** (V2.12) : sélecteur **Groupes | Muscles** au-dessus des barres (choix retenu). La vue Muscles
@@ -189,7 +189,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   **1** pour chaque muscle principal de l'exercice et **½** pour chaque muscle sollicité en appui (secondaires et
   adducteurs) ; un muscle à la fois principal et secondaire compte une fois, comme principal. Barre en deux tons : part
   directe pleine, part en appui plus claire. Zone repère (par défaut **10 à 20**, réglable à part de celle des groupes
-  dans Réglages → Objectifs, avec « Revenir à 10–20 ») pour les 11 grands muscles (pectoraux, grand dorsal, haut du dos,
+  dans Profil → Objectifs d'entraînement, avec « Revenir à 10–20 ») pour les 11 grands muscles (pectoraux, grand dorsal, haut du dos,
   épaules, biceps, triceps, quadriceps, ischios, fessiers, mollets, abdominaux) ; les petits muscles (avant-bras,
   trapèzes, lombaires, obliques, adducteurs, tibial, cou) n'apparaissent que travaillés, sans zone. Les séries
   d'exercices sans illustration sont signalées à part (elles restent comptées dans la vue Groupes). Calcul fait à la
@@ -322,7 +322,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   les laissait petits en 2.7.x. Le bouton garde sa taille.
   Coins libres (2.7.2) : petit **G** bleu en haut à droite ; en bas à droite l'heure du dernier dessin
   (« Màj 10:35 », avec la date si ce n'est pas aujourd'hui) et **↻**, qui redessine le widget depuis la base.
-  Toucher le reste de la carte (fond, logo) ouvre l'app sur l'**Accueil** (2.9.1).
+  Toucher le reste de la carte (fond, logo, et depuis 2.12.1 le texte de la séance à gauche) ouvre l'app sur l'**Accueil** (2.9.1) : seul le bouton démarre une séance.
 - **Données suivies en direct** (2.9.1) : la session Glance survit à son premier dessin, et une mise à jour ne fait que
   la recomposer. Les données sont donc observées dans la composition elle-même : lues une seule fois, une séance
   abandonnée restait affichée « Reprendre », même après ↻.

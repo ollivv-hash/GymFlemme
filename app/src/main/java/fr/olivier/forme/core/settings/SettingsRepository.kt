@@ -23,7 +23,14 @@ data class TrainingGoals(
     /** Weekly band per large muscle of the exercise library (V2.12), set apart from the groups' band. */
     val muscleMinSets: Int = SettingsRepository.DEFAULT_MIN_SETS,
     val muscleMaxSets: Int = SettingsRepository.DEFAULT_MAX_SETS,
-)
+) {
+    /** Within the allowed ranges, each max at least its min. */
+    fun coerced(): TrainingGoals {
+        val min = minSets.coerceIn(1, 40)
+        val muscleMin = muscleMinSets.coerceIn(1, 40)
+        return TrainingGoals(sessionsPerWeek.coerceIn(1, 7), min, maxSets.coerceIn(min, 60), muscleMin, muscleMaxSets.coerceIn(muscleMin, 60))
+    }
+}
 
 /**
  * Automatic backup: the JSON file chosen once with the system picker (typically in Google Drive), rewritten after
@@ -152,11 +159,12 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
 
     suspend fun setTrainingGoals(goals: TrainingGoals) {
         dataStore.edit {
-            it[SESSIONS_PER_WEEK] = goals.sessionsPerWeek.coerceIn(1, 7)
-            it[MIN_SETS] = goals.minSets.coerceIn(1, 40)
-            it[MAX_SETS] = goals.maxSets.coerceIn(goals.minSets.coerceIn(1, 40), 60)
-            it[MUSCLE_MIN_SETS] = goals.muscleMinSets.coerceIn(1, 40)
-            it[MUSCLE_MAX_SETS] = goals.muscleMaxSets.coerceIn(goals.muscleMinSets.coerceIn(1, 40), 60)
+            val g = goals.coerced()
+            it[SESSIONS_PER_WEEK] = g.sessionsPerWeek
+            it[MIN_SETS] = g.minSets
+            it[MAX_SETS] = g.maxSets
+            it[MUSCLE_MIN_SETS] = g.muscleMinSets
+            it[MUSCLE_MAX_SETS] = g.muscleMaxSets
         }
     }
 
