@@ -26,6 +26,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -49,7 +51,8 @@ fun Stepper(
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.widthIn(max = 280.dp)) {
-            FilledTonalIconButton(onClick = onMinus, modifier = Modifier.size(52.dp)) {
+            // Named after the label: several steppers sit on one screen (screen readers, tests).
+            FilledTonalIconButton(onClick = onMinus, modifier = Modifier.size(52.dp).semantics { contentDescription = "Diminuer : $label" }) {
                 Text("−", style = MaterialTheme.typography.headlineMedium)
             }
             Text(
@@ -62,7 +65,7 @@ fun Stepper(
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
-            FilledTonalIconButton(onClick = onPlus, modifier = Modifier.size(52.dp)) {
+            FilledTonalIconButton(onClick = onPlus, modifier = Modifier.size(52.dp).semantics { contentDescription = "Augmenter : $label" }) {
                 Text("+", style = MaterialTheme.typography.headlineMedium)
             }
         }

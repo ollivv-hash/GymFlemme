@@ -18,7 +18,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,7 +47,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.core.settings.ThemeMode
-import fr.olivier.forme.core.settings.TrainingGoals
 import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.ui.components.ConfirmDialog
 import fr.olivier.forme.ui.components.FormeTopBar
@@ -72,7 +70,6 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
     val restSec = settings.defaultRestSec.stateIn(viewModelScope, SharingStarted.Eagerly, SettingsRepository.DEFAULT_REST_SEC)
     val theme = settings.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.DARK)
-    val goals = settings.trainingGoals.stateIn(viewModelScope, SharingStarted.Eagerly, TrainingGoals())
     val autoBackup = settings.autoBackup
         .mapLatest { state -> AutoBackupUi(state, state.targetUri?.let { autoBackupManager.targetName(it) }) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, AutoBackupUi(AutoBackupState(), null))
@@ -84,7 +81,6 @@ class SettingsViewModel @Inject constructor(
 
     fun setRest(seconds: Int) = viewModelScope.launch { settings.setDefaultRestSec(seconds) }
     fun setTheme(mode: ThemeMode) = viewModelScope.launch { settings.setThemeMode(mode) }
-    fun setGoals(goals: TrainingGoals) = viewModelScope.launch { settings.setTrainingGoals(goals) }
     fun suggestedFileName() = backup.suggestedFileName()
 
     fun setAutoBackupTarget(uri: Uri) = runAutoBackup { autoBackupManager.setTarget(uri) }
@@ -138,7 +134,6 @@ class SettingsViewModel @Inject constructor(
 fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val rest by viewModel.restSec.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
-    val goals by viewModel.goals.collectAsStateWithLifecycle()
     val autoBackup by viewModel.autoBackup.collectAsStateWithLifecycle()
     val autoBackupRunning by viewModel.autoBackupRunning.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -172,59 +167,6 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMo
                 onValueEntered = { text -> parseDuration(text)?.let(viewModel::setRest) },
                 modifier = Modifier.fillMaxWidth(),
             )
-
-            SectionTitle("Objectifs d'entraînement")
-            Stepper(
-                label = "Séances par semaine",
-                valueText = "${goals.sessionsPerWeek}",
-                onMinus = { viewModel.setGoals(goals.copy(sessionsPerWeek = goals.sessionsPerWeek - 1)) },
-                onPlus = { viewModel.setGoals(goals.copy(sessionsPerWeek = goals.sessionsPerWeek + 1)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                Stepper(
-                    label = "Séries / groupe : min",
-                    valueText = "${goals.minSets}",
-                    onMinus = { viewModel.setGoals(goals.copy(minSets = goals.minSets - 1)) },
-                    onPlus = { viewModel.setGoals(goals.copy(minSets = goals.minSets + 1, maxSets = maxOf(goals.maxSets, goals.minSets + 1))) },
-                    modifier = Modifier.weight(1f),
-                )
-                Stepper(
-                    label = "max",
-                    valueText = "${goals.maxSets}",
-                    onMinus = { viewModel.setGoals(goals.copy(maxSets = maxOf(goals.minSets, goals.maxSets - 1))) },
-                    onPlus = { viewModel.setGoals(goals.copy(maxSets = goals.maxSets + 1)) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            // V2.12: band of the "Muscles" view (large muscles of the library), set apart from the groups' one.
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                Stepper(
-                    label = "Séries / muscle : min",
-                    valueText = "${goals.muscleMinSets}",
-                    onMinus = { viewModel.setGoals(goals.copy(muscleMinSets = goals.muscleMinSets - 1)) },
-                    onPlus = {
-                        viewModel.setGoals(
-                            goals.copy(muscleMinSets = goals.muscleMinSets + 1, muscleMaxSets = maxOf(goals.muscleMaxSets, goals.muscleMinSets + 1)),
-                        )
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-                Stepper(
-                    label = "max",
-                    valueText = "${goals.muscleMaxSets}",
-                    onMinus = { viewModel.setGoals(goals.copy(muscleMaxSets = maxOf(goals.muscleMinSets, goals.muscleMaxSets - 1))) },
-                    onPlus = { viewModel.setGoals(goals.copy(muscleMaxSets = goals.muscleMaxSets + 1)) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            if (goals.muscleMinSets != SettingsRepository.DEFAULT_MIN_SETS || goals.muscleMaxSets != SettingsRepository.DEFAULT_MAX_SETS) {
-                TextButton(
-                    onClick = {
-                        viewModel.setGoals(goals.copy(muscleMinSets = SettingsRepository.DEFAULT_MIN_SETS, muscleMaxSets = SettingsRepository.DEFAULT_MAX_SETS))
-                    },
-                ) { Text("Revenir à ${SettingsRepository.DEFAULT_MIN_SETS}–${SettingsRepository.DEFAULT_MAX_SETS} par muscle") }
-            }
 
             SectionTitle("Thème")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

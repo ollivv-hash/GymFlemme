@@ -43,7 +43,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import fr.olivier.forme.core.settings.SettingsRepository
+import fr.olivier.forme.core.settings.TrainingGoals
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
+import fr.olivier.forme.feature.settings.ui.TrainingGoalsSection
 import fr.olivier.forme.feature.heart.domain.HeartZones
 import fr.olivier.forme.feature.heart.domain.Sex
 import fr.olivier.forme.feature.nutrition.data.NutritionRepository
@@ -60,6 +63,7 @@ import fr.olivier.forme.ui.components.parseDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -76,6 +80,7 @@ data class WheyText(val protein: String = "", val kcal: String = "", val carbs: 
 class ProfileViewModel @Inject constructor(
     private val repository: NutritionRepository,
     private val reminder: CreatineReminder,
+    private val settings: SettingsRepository,
     weights: BodyWeightRepository,
     private val clock: Clock,
 ) : ViewModel() {
@@ -95,6 +100,9 @@ class ProfileViewModel @Inject constructor(
      * The form is shown once the stored profile is read: filled in before, it was overwritten by the late read (a
      * birth year typed on the first launch vanished), and "Enregistrer" could store an empty profile over it.
      */
+    /** Training goals (moved here from Réglages in 2.12.1), saved with the profile. */
+    private val _goals = MutableStateFlow(TrainingGoals())
+    val goals = _goals.asStateFlow()
     private val _loaded = MutableStateFlow(false)
     val loaded = _loaded.asStateFlow()
 
@@ -106,11 +114,16 @@ class ProfileViewModel @Inject constructor(
             _whey.value = WheyText(t(p.wheyProteinPer100g), t(p.wheyKcalPer100g), t(p.wheyCarbsPer100g), t(p.wheyFatPer100g))
             _birthYear.value = p.birthYear?.toString().orEmpty()
             _height.value = p.heightCm?.toString().orEmpty()
+            _goals.value = settings.trainingGoals.first()
             _loaded.value = true
         }
     }
 
     fun update(transform: (ProfileEntity) -> ProfileEntity) = _profile.update(transform)
+    fun updateGoals(goals: TrainingGoals) {
+        _goals.value = goals.coerced()
+    }
+
     fun updateWhey(transform: (WheyText) -> WheyText) = _whey.update(transform)
     fun updateBirthYear(text: String) {
         _birthYear.value = text.filter(Char::isDigit).take(4)
@@ -142,6 +155,7 @@ class ProfileViewModel @Inject constructor(
                 heightCm = parsedHeight(),
             ),
         )
+        settings.setTrainingGoals(_goals.value)
         reminder.reschedule()
         onDone()
     }
@@ -156,6 +170,7 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
     val birthYear by viewModel.birthYear.collectAsStateWithLifecycle()
     val height by viewModel.height.collectAsStateWithLifecycle()
     val loaded by viewModel.loaded.collectAsStateWithLifecycle()
+    val goals by viewModel.goals.collectAsStateWithLifecycle()
     var pickingTime by remember { mutableStateOf(false) }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     fun round1(v: Double) = (v * 10).roundToInt() / 10.0
@@ -284,6 +299,8 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
+            TrainingGoalsSection(goals, viewModel::updateGoals)
 
             SectionTitle("Whey (valeurs de l'étiquette pour 100 g)")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
