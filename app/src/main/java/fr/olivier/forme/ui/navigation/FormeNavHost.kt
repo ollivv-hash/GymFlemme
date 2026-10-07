@@ -104,6 +104,7 @@ fun FormeNavHost(
             QuickAction.ADD_MEAL -> open(AddFoodRoute(LocalDate.now().toEpochDay(), meal))
             QuickAction.SCAN -> open(ScanRoute(LocalDate.now().toEpochDay(), meal))
             QuickAction.OPEN_NUTRITION -> nav.switchTab(NutritionRoute(tab = 0))
+            QuickAction.OPEN_HOME -> nav.switchTab(HomeRoute)
         }
         onActionHandled()
     }

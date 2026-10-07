@@ -6,6 +6,13 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.currentState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
@@ -53,6 +60,7 @@ import dagger.hilt.components.SingletonComponent
 import fr.olivier.forme.R
 import fr.olivier.forme.core.launch.QuickAction
 import fr.olivier.forme.feature.sport.domain.Fmt
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -83,16 +91,44 @@ class FormeWidget : GlanceAppWidget() {
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val data = EntryPointAccessors.fromApplication(context, Deps::class.java).widgetData().observe().first()
-        val updatedAt = LocalDateTime.now()
-        provideContent { WidgetContent(context, data, updatedAt) }
+        val source = EntryPointAccessors.fromApplication(context, Deps::class.java).widgetData()
+        val initial = source.observe().first()
+        provideContent { LiveWidgetContent(context, initial) { source.observe(it) } }
     }
+
+    companion object {
+        /** Bumped by every explicit redraw, so the "Màj" time moves even when the data did not change. */
+        internal val REDRAWN_AT = longPreferencesKey("redrawn_at")
+
+        /** Redraws every placed widget from the database now. */
+        suspend fun redrawAll(context: Context) {
+            GlanceAppWidgetManager(context).getGlanceIds(FormeWidget::class.java).forEach { redraw(context, it) }
+        }
+
+        suspend fun redraw(context: Context, id: GlanceId) {
+            updateAppWidgetState(context, id) { it[REDRAWN_AT] = System.currentTimeMillis() }
+            FormeWidget().update(context, id)
+        }
+    }
+}
+
+/**
+ * The Glance session outlives provideGlance(): update() and the ↻ only recompose it. The data must thus stay live
+ * here; read once, an abandoned session went on showing "Reprendre" until the session ended.
+ */
+@Composable
+internal fun LiveWidgetContent(context: Context, initial: WidgetData, observe: (LocalDate) -> Flow<WidgetData>) {
+    val today = LocalDate.now()
+    val data by remember(today) { observe(today) }.collectAsState(initial)
+    val redrawnAt = currentState(FormeWidget.REDRAWN_AT)
+    val updatedAt = remember(data, redrawnAt) { LocalDateTime.now() }
+    WidgetContent(context, data, updatedAt)
 }
 
 /** The ↻ in the corner: redraws the widget from the database now. */
 class RefreshWidgetAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        FormeWidget().update(context, glanceId)
+        FormeWidget.redraw(context, glanceId)
     }
 }
 
@@ -103,15 +139,17 @@ class FormeWidgetReceiver : GlanceAppWidgetReceiver() {
 @Composable
 fun WidgetContent(context: Context, data: WidgetData, updatedAt: LocalDateTime) {
     val start = actionStartActivity(QuickAction.START_SESSION.intent(context))
+    val home = actionStartActivity(QuickAction.OPEN_HOME.intent(context))
     // Logo and update time sit in the corners left free by the round rings: they take no room from them.
-    Box(modifier = GlanceModifier.fillMaxSize().background(WidgetColors.background).cornerRadius(20.dp)) {
+    // Touching the card anywhere else than its buttons, session or rings opens the app on its home screen.
+    Box(modifier = GlanceModifier.fillMaxSize().background(WidgetColors.background).cornerRadius(20.dp).clickable(home)) {
         WidgetMain(context, data, start)
         Box(modifier = GlanceModifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.TopEnd) {
             Image(
                 provider = ImageProvider(R.drawable.ic_logo_g),
                 contentDescription = "GymBro",
                 colorFilter = ColorFilter.tint(ColorProvider(WidgetColors.primary)),
-                modifier = GlanceModifier.size(18.dp),
+                modifier = GlanceModifier.size(18.dp).clickable(home),
             )
         }
         Box(modifier = GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 6.dp), contentAlignment = Alignment.BottomEnd) {

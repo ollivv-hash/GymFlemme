@@ -19,6 +19,9 @@ enum class QuickAction(val action: String, val shortLabel: String, val longLabel
 
     /** Widget only (no launcher shortcut): the rings open the nutrition journal. */
     OPEN_NUTRITION("fr.olivier.forme.action.OPEN_NUTRITION", "Nutrition", "Journal nutrition", null),
+
+    /** Widget only: the rest of the card opens the app on its home screen. */
+    OPEN_HOME("fr.olivier.forme.action.OPEN_HOME", "Accueil", "Accueil", null),
     ;
 
     fun intent(context: Context): Intent =

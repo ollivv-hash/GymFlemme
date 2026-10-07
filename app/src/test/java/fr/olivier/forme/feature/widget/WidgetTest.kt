@@ -20,6 +20,7 @@ import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.nutrition.domain.NutritionGoal
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.TemplateRepository
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -125,5 +126,18 @@ class WidgetTest {
         }
         listOf("Màj 10:35", "Prochaine séance", "B · Dos", "Semaine : 2 / 3", "Démarrer", "1 240", "/ 2 300", "95", "/ 160")
             .forEach { onNode(hasText(it)).assertExists() }
+    }
+
+    @Test
+    fun liveContentFollowsTheDataWhileTheWidgetSessionRuns() = runGlanceAppWidgetUnitTest {
+        setContext(context())
+        setState(androidx.datastore.preferences.core.emptyPreferences())
+        val running = WidgetData("Jambes – 30 min", true, 2, 3, 1004.0, 1860, 33.0, 148.0)
+        // Drawn while the session ran, then abandoned in the app: the widget, still composed, must follow the
+        // database without a new provideGlance().
+        provideComposable { LiveWidgetContent(context(), running) { flowOf(running.copy(sessionRunning = false)) } }
+        awaitIdle()
+        onNode(hasText("Démarrer")).assertExists()
+        onNode(hasText("Reprendre")).assertDoesNotExist()
     }
 }
