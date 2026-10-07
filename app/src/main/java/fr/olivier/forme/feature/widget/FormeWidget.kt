@@ -17,11 +17,16 @@ import androidx.glance.ButtonDefaults
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
+import androidx.glance.ColorFilter
 import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
+import androidx.glance.action.Action
+import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
@@ -45,9 +50,13 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import fr.olivier.forme.R
 import fr.olivier.forme.core.launch.QuickAction
 import fr.olivier.forme.feature.sport.domain.Fmt
 import kotlinx.coroutines.flow.first
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 /** Colours of the app's dark theme: the widget sits on the wallpaper, a fixed dark card reads everywhere. */
 private object WidgetColors {
@@ -75,7 +84,15 @@ class FormeWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val data = EntryPointAccessors.fromApplication(context, Deps::class.java).widgetData().observe().first()
-        provideContent { WidgetContent(context, data) }
+        val updatedAt = LocalDateTime.now()
+        provideContent { WidgetContent(context, data, updatedAt) }
+    }
+}
+
+/** The ↻ in the corner: redraws the widget from the database now. */
+class RefreshWidgetAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        FormeWidget().update(context, glanceId)
     }
 }
 
@@ -84,13 +101,51 @@ class FormeWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 @Composable
-fun WidgetContent(context: Context, data: WidgetData) {
+fun WidgetContent(context: Context, data: WidgetData, updatedAt: LocalDateTime) {
     val start = actionStartActivity(QuickAction.START_SESSION.intent(context))
     // Rings and text as large as the widget allows (see ringSize); the start button keeps its size.
     val size = LocalSize.current
     val ring = ringSize(size.width, size.height)
+    // Logo and update time sit in the corners left free by the round rings: they take no room from them.
+    Box(modifier = GlanceModifier.fillMaxSize().background(WidgetColors.background).cornerRadius(20.dp)) {
+        WidgetMain(context, data, ring, start)
+        Box(modifier = GlanceModifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.TopEnd) {
+            Image(
+                provider = ImageProvider(R.drawable.ic_logo_g),
+                contentDescription = "GymBro",
+                colorFilter = ColorFilter.tint(ColorProvider(WidgetColors.primary)),
+                modifier = GlanceModifier.size(18.dp),
+            )
+        }
+        Box(modifier = GlanceModifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 6.dp), contentAlignment = Alignment.BottomEnd) {
+            Row(
+                modifier = GlanceModifier.clickable(actionRunCallback<RefreshWidgetAction>()).padding(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(updatedLabel(updatedAt), style = TextStyle(color = ColorProvider(WidgetColors.muted), fontSize = 10.sp))
+                Spacer(GlanceModifier.width(3.dp))
+                Image(
+                    provider = ImageProvider(R.drawable.ic_refresh),
+                    contentDescription = "Actualiser",
+                    colorFilter = ColorFilter.tint(ColorProvider(WidgetColors.muted)),
+                    modifier = GlanceModifier.size(12.dp),
+                )
+            }
+        }
+    }
+}
+
+/** "Màj 10:35" today, "Màj 6 oct. 22:06" when the widget was last drawn on an earlier day. */
+internal fun updatedLabel(at: LocalDateTime, today: LocalDate = LocalDate.now()): String =
+    "Màj " + if (at.toLocalDate() == today) at.format(TIME) else at.format(DAY_TIME)
+
+private val TIME = DateTimeFormatter.ofPattern("HH:mm", Fmt.locale)
+private val DAY_TIME = DateTimeFormatter.ofPattern("d MMM HH:mm", Fmt.locale)
+
+@Composable
+private fun WidgetMain(context: Context, data: WidgetData, ring: Float, start: Action) {
     Row(
-        modifier = GlanceModifier.fillMaxSize().background(WidgetColors.background).cornerRadius(20.dp).padding(PADDING_DP.dp),
+        modifier = GlanceModifier.fillMaxSize().padding(PADDING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = GlanceModifier.defaultWeight().fillMaxHeight().clickable(start)) {

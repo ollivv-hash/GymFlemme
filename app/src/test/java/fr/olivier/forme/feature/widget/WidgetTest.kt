@@ -34,6 +34,8 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 
 /** V2.6 home-screen widget: its data (same rules as the app) and what it displays. */
 @RunWith(AndroidJUnit4::class)
@@ -96,6 +98,13 @@ class WidgetTest {
     }
 
     @Test
+    fun updateLabelShowsTheDayOnlyWhenNotToday() {
+        val today = LocalDate.of(2026, 10, 7)
+        assertEquals("Màj 10:35", updatedLabel(LocalDateTime.of(2026, 10, 7, 10, 35), today))
+        assertEquals("Màj 6 oct. 22:06", updatedLabel(LocalDateTime.of(2026, 10, 6, 22, 6), today))
+    }
+
+    @Test
     fun contentShowsSessionWeekAndRings() = runGlanceAppWidgetUnitTest {
         setContext(context())
         provideComposable {
@@ -111,9 +120,10 @@ class WidgetTest {
                     proteinG = 95.0,
                     proteinTargetG = 160.0,
                 ),
+                LocalDateTime.of(LocalDate.now(), LocalTime.of(10, 35)),
             )
         }
-        listOf("Prochaine séance", "B · Dos", "Semaine : 2 / 3", "Démarrer", "1 240", "/ 2 300", "95", "/ 160")
+        listOf("Màj 10:35", "Prochaine séance", "B · Dos", "Semaine : 2 / 3", "Démarrer", "1 240", "/ 2 300", "95", "/ 160")
             .forEach { onNode(hasText(it)).assertExists() }
     }
 }

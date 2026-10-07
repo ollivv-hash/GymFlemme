@@ -28,7 +28,7 @@ class WidgetRenderTest {
         val data = WidgetData("Jambes – 30 min", false, 2, 3, 357.0, 1860, 6.0, 148.0)
         // Size measured on the phone (4 × 2 cells).
         val size = DpSize(343.dp, 168.dp)
-        val views = GlanceRemoteViews().compose(context(), size) { WidgetContent(context(), data) }.remoteViews
+        val views = GlanceRemoteViews().compose(context(), size) { WidgetContent(context(), data, java.time.LocalDateTime.now().withHour(10).withMinute(35)) }.remoteViews
         val density = context().resources.displayMetrics.density
         val w = (size.width.value * density).toInt()
         val h = (size.height.value * density).toInt()
