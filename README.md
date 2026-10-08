@@ -3,7 +3,7 @@
 Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé depuis les releases GitHub (ou `adb install`), sans Play Store.
 
-> **Statut : V2.12.1 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
+> **Statut : V2.13.0 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
 > release en CI ; chaque version fusionnée sur `main` publie une release GitHub « GymBro x.y.z » avec l'APK signé.
 
 - Nom : **GymBro** (2.7 ; s'appelait « Forme » avant). Package inchangé : `fr.olivier.forme` — le changer ferait une
@@ -35,6 +35,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.10** ✅ | Étape 3 : écran Bibliothèque (recherche, filtres, ajout au catalogue) |
 | **V2.11** ✅ | Étape 4 : écran Sources et licences, poids de l'APK mesuré ; release et APK nommés GymBro |
 | **V2.12** ✅ | Volume hebdomadaire par muscle de la bibliothèque (séries fractionnaires), repère par muscle réglable, export IA |
+| **V2.13** ✅ | Séance conseillée selon les muscles en retard dans « Nouvelle séance », ligne « Muscles en retard » dans l'export IA |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -195,6 +196,16 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   d'exercices sans illustration sont signalées à part (elles restent comptées dans la vue Groupes). Calcul fait à la
   volée depuis le lien exercice → bibliothèque : pas de migration, l'historique est couvert. L'export IA du jour ajoute
   la ligne « Séries par muscle ».
+- **Muscles en retard** (V2.13) : dans la fenêtre « Nouvelle séance », sous la séance proposée par la rotation, une
+  carte « Pour rattraper » apparaît quand un autre modèle rattrape nettement mieux les **grands muscles encore sous le
+  minimum** de leur repère cette semaine. Chaque modèle actif est évalué sur ses séries prévues (même comptage que la
+  vue Muscles : 1 en principal, ½ en appui, plafonné au manque de chaque muscle ; lignes optionnelles, cardio et
+  exercices sans illustration ignorés). Conditions : au moins une séance terminée dans la semaine (avant, tout est
+  « en retard »), au moins une série reliée à la bibliothèque, et un gain d'au moins **3 séries** de plus que le modèle
+  de la rotation (à égalité, l'ordre des modèles décide). La carte liste les muscles en retard (5 plus gros manques,
+  « +n autres ») et ce que le modèle apporterait, avec un bouton pour le démarrer. La rotation n'est pas modifiée : un
+  modèle de la rotation démarré ainsi la fait repartir de lui, comme un choix manuel ; un modèle hors rotation (Bas du
+  corps) ne la décale pas. L'export IA du jour ajoute la ligne « Muscles en retard ».
 - **Remplacer une machine occupée** (menu ⋮ d'un exercice en séance) : pour **cette séance uniquement**, le modèle n'est pas modifié.
   Choix proposés : même groupe musculaire d'abord, puis tous les exercices. Cibles du créneau conservées si le type d'exercice est identique,
   sinon cibles par défaut du remplaçant. Si des séries sont déjà faites, l'original reste « fait » et le remplaçant est inséré juste après.
