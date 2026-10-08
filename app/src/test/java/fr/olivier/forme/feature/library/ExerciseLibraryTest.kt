@@ -45,6 +45,22 @@ class ExerciseLibraryTest {
         assertTrue(rows.all { it.width > 0 && it.height > 0 && it.frameList.isNotEmpty() })
     }
 
+    /** 2.12.2: the re-encoded images (tools/library/recompress.py) still decode, at the size the data announces. */
+    @Test
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun everyImageDecodesAtItsAnnouncedSize() {
+        val assets = context().assets
+        val wrong = rows.filter { !it.isVariant }.flatMap { row ->
+            row.frameList.mapNotNull { frame ->
+                val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                assets.open(row.framePath(frame)).use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) }
+                "${row.framePath(frame)}: ${bounds.outWidth}x${bounds.outHeight}"
+                    .takeIf { bounds.outWidth != row.width || bounds.outHeight != row.height }
+            }
+        }
+        assertEquals(emptyList<String>(), wrong)
+    }
+
     @Test
     fun fieldsAndVariantsKeepWhatTheLibrarySays() {
         val byId = rows.associateBy { it.id }
