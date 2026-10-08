@@ -19,7 +19,7 @@ object Credits {
             title = "Open Exercise Illustrations",
             author = "hitmanrepo",
             usage = "Illustrations et fiches de la bibliothèque d'exercices (415 exercices, 44 variantes), données 1.0.0, " +
-                "commit ${LIBRARY_COMMIT.take(7)}, copiées à l'identique.",
+                "commit ${LIBRARY_COMMIT.take(7)} ; images réencodées (WebP qualité 80, mêmes dimensions) pour alléger l'app.",
             license = "CC0 1.0 Universel (domaine public)",
             licenseUrl = "https://creativecommons.org/publicdomain/zero/1.0/deed.fr",
             url = "https://github.com/hitmanrepo/open-exercise-illustrations/tree/$LIBRARY_COMMIT",
