@@ -1,5 +1,6 @@
 package fr.olivier.forme.core.db
 
+import fr.olivier.forme.feature.badges.data.BadgeRepository
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.olivier.forme.core.backup.BackupCodec
 import fr.olivier.forme.core.backup.BackupRepository
@@ -51,6 +52,8 @@ class BackupRoundTripTest {
         nutrition.addFood(nutrition.food(foodId)!!, LocalDate.of(2026, 10, 2), MealType.EXTRA, 150.0)
         nutrition.addWheyDose(LocalDate.of(2026, 10, 2), MealType.SNACK)
         nutrition.setCreatineTaken(LocalDate.of(2026, 10, 2), true)
+        // V2.17: the first session earned "Pas mort".
+        BadgeRepository(source.badgeDao(), clock).evaluate()
 
         val exported = BackupRepository(source, context(), clock).snapshot()
         val text = BackupCodec.encode(exported)
@@ -66,6 +69,7 @@ class BackupRoundTripTest {
         assertEquals(NutritionGoal.BULK, exported.nutrition.profile!!.nutritionGoal)
         assertEquals(2700, exported.nutrition.profile!!.kcalTargetOverride)
         assertEquals(1980, exported.nutrition.profile!!.birthYear)
+        assertEquals(listOf("NOT_DEAD"), exported.badges.map { it.id })
         assertEquals(exported, reimported)
         assertEquals(text, BackupCodec.encode(reimported))
         source.close()
