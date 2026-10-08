@@ -31,6 +31,7 @@ enum class Quip(
     CREATINE(R.array.humor_creatine, R.string.neutral_creatine),
     CREATINE_STREAK(R.array.humor_creatine_streak, R.string.neutral_creatine_streak),
     PROTEIN_MISSING(R.array.humor_protein_missing, R.string.neutral_protein_missing),
+    PROTEIN_ALMOST(R.array.humor_protein_almost, R.string.neutral_protein_almost),
     PROTEIN_REACHED(R.array.humor_protein_reached, R.string.neutral_protein_reached),
     EMPTY_SESSIONS(R.array.humor_empty_sessions, R.string.neutral_empty_sessions),
     EMPTY_RECORDS(R.array.humor_empty_records, R.string.neutral_empty_records),
@@ -40,6 +41,11 @@ enum class Quip(
     ;
 
     companion object {
+        /** At most this many grams of protein missing: "Presque !" may be drawn. */
+        const val PROTEIN_ALMOST_G = 30
+
+        fun proteinMissing(missingG: Int): Quip = if (missingG <= PROTEIN_ALMOST_G) PROTEIN_ALMOST else PROTEIN_MISSING
+
         /** Greeting slot by local time: morning 5–11 h, noon 11–14 h, afternoon 14–18 h, evening 18–23 h, night. */
         fun greeting(time: LocalTime): Quip = when (time.hour) {
             in 5..10 -> GREETING_MORNING

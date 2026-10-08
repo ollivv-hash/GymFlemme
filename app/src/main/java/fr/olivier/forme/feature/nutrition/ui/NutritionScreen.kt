@@ -219,7 +219,8 @@ private fun WheyCard(ui: JournalUi, onAdd: () -> Unit, onProfile: () -> Unit) {
                 if (plan.reached) {
                     QuipText(Quip.PROTEIN_REACHED, style = MaterialTheme.typography.titleSmall, color = ReachedGreen)
                 } else {
-                    QuipText(Quip.PROTEIN_MISSING, plan.missingG.roundToInt(), style = MaterialTheme.typography.titleSmall)
+                    val missing = plan.missingG.roundToInt()
+                    QuipText(Quip.proteinMissing(missing), missing, style = MaterialTheme.typography.titleSmall)
                 }
                 ProteinAdvice.detail(plan)?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                 Spacer(Modifier.height(8.dp))

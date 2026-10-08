@@ -36,7 +36,7 @@ class QuipCatalogueTest {
     /** Sample arguments of the parameterised entries. */
     private fun args(quip: Quip): Array<Any> = when (quip) {
         Quip.PROGRESSION, Quip.CREATINE -> arrayOf("2,5")
-        Quip.PROTEIN_MISSING, Quip.CREATINE_STREAK -> arrayOf(25)
+        Quip.PROTEIN_MISSING, Quip.PROTEIN_ALMOST, Quip.CREATINE_STREAK -> arrayOf(25)
         else -> emptyArray()
     }
 
@@ -83,6 +83,14 @@ class QuipCatalogueTest {
             last = next
         }
         assertEquals(0, Quips.nextIndex(1, 0, random))
+    }
+
+    @Test
+    fun almostOnlyWhenLittleProteinIsMissing() {
+        assertEquals(Quip.PROTEIN_MISSING, Quip.proteinMissing(148))
+        assertEquals(Quip.PROTEIN_ALMOST, Quip.proteinMissing(30))
+        assertTrue(resources.getStringArray(R.array.humor_protein_missing).none { "Presque" in it })
+        assertTrue(resources.getStringArray(R.array.humor_protein_almost).any { "Presque" in it })
     }
 
     @Test

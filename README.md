@@ -337,7 +337,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   « Nouvelle séance » (le bouton reste « Démarrer ») ; sous le chrono de repos, une ligne discrète à chaque série
   validée (« exercice terminé » pour la dernière) ; fin du repos à l'écran et dans la notification ; suggestion de
   charge `+kg` (pas de charge de l'exercice) ; récap de fin de séance et carte des records ; titre du conseil
-  protéines (ce qui manque, ou objectif atteint), le détail repas / whey suit ; notification et série de jours de
+  protéines (ce qui manque, « Presque ! » seulement s'il manque 30 g ou moins, ou objectif atteint), le détail repas / whey suit ; notification et série de jours de
   créatine (dose du profil) ; listes vides ; chargement de la bibliothèque (phrases de l'ancien écran de démarrage).
 - Restent neutres : poids, repas, mentions santé, Sources et licences, erreurs, confirmations, autorisations.
 - Test garde-fou : chaque tableau a des variantes, sa version neutre et une entrée `Quip` ; les versions féminines

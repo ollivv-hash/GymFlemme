@@ -171,9 +171,16 @@
     <string-array name="humor_protein_missing">
         <item>Il te manque %1$d g de protéines. Ton shaker s\'ennuie.</item>
         <item>Encore %1$d g de protéines. Un shaker, et c\'est réglé ?</item>
-        <item>Plus que %1$d g de protéines. Presque !</item>
     </string-array>
     <string name="neutral_protein_missing">Il te manque %1$d g de protéines</string>
+
+    <!-- Same, when little is missing (Quip.PROTEIN_ALMOST_G or less): "Presque !" only fits then -->
+    <string-array name="humor_protein_almost">
+        <item>Il te manque %1$d g de protéines. Ton shaker s\'ennuie.</item>
+        <item>Encore %1$d g de protéines. Un shaker, et c\'est réglé ?</item>
+        <item>Plus que %1$d g de protéines. Presque !</item>
+    </string-array>
+    <string name="neutral_protein_almost">Il te manque %1$d g de protéines</string>
 
     <string-array name="humor_protein_reached">
         <item>Objectif protéines atteint. Tes muscles disent merci.</item>
