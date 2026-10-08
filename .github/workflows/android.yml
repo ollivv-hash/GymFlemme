@@ -7,6 +7,9 @@
 #   FORME_KEY_PASSWORD     key password
 #   (secret names kept from the app's former name "Forme"; the APK and release are named GymBro since 2.11.0)
 # Without them the APK is built unsigned (not installable) and no release is published.
+#
+# Runner pinned to ubuntu-24.04 (ubuntu-latest moves to Ubuntu 26 from 2026-10-19) and actions on Node 24
+# (Node 20 is deprecated on the runners): bump them on purpose, together, when needed.
 name: Android
 
 on:
@@ -24,7 +27,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     outputs:
       version: ${{ steps.version.outputs.name }}
@@ -79,13 +82,13 @@ jobs:
           suffix=$([ "${{ steps.signing.outputs.signed }}" = true ] && echo "" || echo "-unsigned")
           mkdir -p dist && cp "$src" "dist/gymbro-${{ steps.version.outputs.name }}$suffix.apk"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: gymbro-${{ steps.version.outputs.name }}-apk
           path: dist/*.apk
           retention-days: 30
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: reports
@@ -97,11 +100,11 @@ jobs:
   release:
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.outputs.signed == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: gymbro-${{ needs.build.outputs.version }}-apk
           path: dist
