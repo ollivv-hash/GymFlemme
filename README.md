@@ -1,10 +1,10 @@
 # GymBro — App Sport & Nutrition (Android, usage personnel)
 
 Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
-Usage strictement personnel : un utilisateur, un téléphone, APK signé installé via `adb install`, sans Play Store.
+Usage strictement personnel : un utilisateur, un téléphone, APK signé installé depuis les releases GitHub (ou `adb install`), sans Play Store.
 
-> **Statut : V1.0 à V1.2 validées sur le téléphone. V2.1 (fréquence cardiaque : montre en direct + Health Connect) implémentée** :
-> build, Lint et tests JVM au vert, reste à valider sur le téléphone.
+> **Statut : V2.12.1 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
+> release en CI ; chaque version fusionnée sur `main` publie une release GitHub « GymBro x.y.z » avec l'APK signé.
 
 - Nom : **GymBro** (2.7 ; s'appelait « Forme » avant). Package inchangé : `fr.olivier.forme` — le changer ferait une
   autre app pour Android (installation à côté, base vide), donc les noms internes (`Forme…` dans le code) restent.
@@ -506,6 +506,9 @@ Les tests de fumée (`AppSmokeTest`, `RecapSmokeTest`, `FeaturesSmokeTest`, …)
 
 `.github/workflows/android.yml` lance à chaque pull request (et à chaque push sur `main`) :
 `testDebugUnitTest`, `lintDebug` et `assembleRelease`.
+Runner **épinglé sur `ubuntu-24.04`** (`ubuntu-latest` passe à Ubuntu 26 à partir du 19 octobre 2026) et actions en
+versions **Node 24** (`checkout`/`setup-java`/`setup-gradle` v5, `upload-artifact` v7, `download-artifact` v8) : à
+monter volontairement, ensemble, quand GitHub l'annonce.
 
 - **APK de la PR** : onglet *Actions* → le run → artefact `gymbro-<version>-apk` (`forme-…` avant 2.11.0) (conservé 30 jours).
 - **Release** : quand une nouvelle `versionName` arrive sur `main`, une release GitHub `v<version>` est publiée
