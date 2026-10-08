@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    GymFlemme badges (V2.17): name, condition and message of each. Names keep their wording in serious mode and agree
+    with the profile's gender ("*_f"); messages are humour entries (fr.olivier.forme.core.humor.Quip.BADGE_*) whose
+    neutral version is shared: "Badge obtenu : {nom}".
+-->
+<resources>
+    <string name="badge_name_not_dead">Pas mort</string>
+    <string name="badge_name_not_dead_f">Pas morte</string>
+    <string name="badge_name_well_started">Bien parti</string>
+    <string name="badge_name_well_started_f">Bien partie</string>
+    <string name="badge_name_repeat_offender">Récidiviste</string>
+    <string name="badge_name_pillar">Pilier de la salle</string>
+    <string name="badge_name_beats_the_couch">Plus fort que le canapé</string>
+    <string name="badge_name_beats_the_couch_f">Plus forte que le canapé</string>
+    <string name="badge_name_early_bird">Lève-tôt malgré lui</string>
+    <string name="badge_name_early_bird_f">Lève-tôt malgré elle</string>
+    <string name="badge_name_regular">Régulier</string>
+    <string name="badge_name_regular_f">Régulière</string>
+    <string name="badge_name_first_record">Record en vue</string>
+    <string name="badge_name_all_rounder">Touche-à-tout</string>
+    <string name="badge_name_creatine_loyal">Créatine fidèle</string>
+
+    <string name="badge_condition_not_dead">1re séance</string>
+    <string name="badge_condition_well_started">5 séances</string>
+    <string name="badge_condition_repeat_offender">10 séances</string>
+    <string name="badge_condition_pillar">50 séances</string>
+    <string name="badge_condition_beats_the_couch">4 semaines d\'affilée avec au moins une séance</string>
+    <string name="badge_condition_early_bird">1 séance commencée avant 8 h</string>
+    <string name="badge_condition_regular">3 séances dans la même semaine</string>
+    <string name="badge_condition_first_record">1er record battu</string>
+    <string name="badge_condition_all_rounder">10 exercices différents réalisés</string>
+    <string name="badge_condition_creatine_loyal">30 jours de créatine d\'affilée</string>
+
+    <string-array name="humor_badge_not_dead">
+        <item>Première séance. Tu es vivant, et tu l\'as fait !</item>
+    </string-array>
+    <string-array name="humor_badge_not_dead_f">
+        <item>Première séance. Tu es vivante, et tu l\'as fait !</item>
+    </string-array>
+    <string-array name="humor_badge_well_started">
+        <item>Cinq séances. Ça ressemble dangereusement à une habitude.</item>
+    </string-array>
+    <string-array name="humor_badge_repeat_offender">
+        <item>Dix séances. Tu reviens toujours sur les lieux du crime.</item>
+    </string-array>
+    <string-array name="humor_badge_pillar">
+        <item>Cinquante séances. Tu fais partie des meubles.</item>
+    </string-array>
+    <string-array name="humor_badge_beats_the_couch">
+        <item>Un mois sans laisser gagner le canapé. Respect.</item>
+    </string-array>
+    <string-array name="humor_badge_early_bird">
+        <item>Une séance avant 8 h. Qui t\'a forcé ?</item>
+    </string-array>
+    <string-array name="humor_badge_early_bird_f">
+        <item>Une séance avant 8 h. Qui t\'a forcée ?</item>
+    </string-array>
+    <string-array name="humor_badge_regular">
+        <item>Trois séances cette semaine. On ne te reconnaît plus.</item>
+    </string-array>
+    <string-array name="humor_badge_first_record">
+        <item>Ton tout premier record. Et sûrement pas le dernier.</item>
+    </string-array>
+    <string-array name="humor_badge_all_rounder">
+        <item>Dix exercices différents. Tu explores !</item>
+    </string-array>
+    <string-array name="humor_badge_creatine_loyal">
+        <item>Trente jours sans oubli. Une constance exemplaire.</item>
+    </string-array>
+    <!-- Serious mode, for every badge; %1$s = the badge's name -->
+    <string name="neutral_badge">Badge obtenu : %1$s</string>
+</resources>

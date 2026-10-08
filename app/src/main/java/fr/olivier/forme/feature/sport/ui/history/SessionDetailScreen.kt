@@ -1,5 +1,8 @@
 package fr.olivier.forme.feature.sport.ui.history
 
+import fr.olivier.forme.feature.badges.ui.observeNew
+import fr.olivier.forme.feature.badges.ui.NewBadgesCard
+import fr.olivier.forme.feature.badges.data.BadgeRepository
 import fr.olivier.forme.core.humor.Quip
 import fr.olivier.forme.core.humor.QuipText
 import android.content.ClipData
@@ -76,9 +79,15 @@ class SessionDetailViewModel @Inject constructor(
     private val heartRepository: HeartRepository,
     private val heartSync: HeartSync,
     private val analysis: AiAnalysis,
+    private val badges: BadgeRepository,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<SessionDetailRoute>()
     val justFinished = route.justFinished
+
+    /** V2.17: badges this session earned, on the recap only. */
+    val newBadges = badges.observeNew().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun dismissBadges() = viewModelScope.launch { badges.markSeen(newBadges.value) }
     private val _report = MutableStateFlow<SessionReport?>(null)
     val report = _report.asStateFlow()
     /** Maximum heart rate currently in the profile (for the "adjust it" suggestion). */
@@ -180,6 +189,8 @@ fun SessionDetailScreen(
             // V2.15: a quip to close the session, on the recap only.
             if (viewModel.justFinished) {
                 QuipText(Quip.SESSION_DONE, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+                val newBadges by viewModel.newBadges.collectAsStateWithLifecycle()
+                NewBadgesCard(newBadges, onDismiss = viewModel::dismissBadges, modifier = Modifier.padding(top = 12.dp))
             }
 
             if (r.records.isNotEmpty()) {

@@ -1,5 +1,8 @@
 package fr.olivier.forme.feature.sport.ui.home
 
+import fr.olivier.forme.feature.badges.ui.observeNew
+import fr.olivier.forme.feature.badges.ui.NewBadgesCard
+import fr.olivier.forme.feature.badges.data.BadgeRepository
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -99,6 +102,7 @@ class HomeViewModel @Inject constructor(
     private val sessions: SessionRepository,
     templates: TemplateRepository,
     library: LibraryRepository,
+    private val badges: BadgeRepository,
     private val weights: BodyWeightRepository,
     private val settings: SettingsRepository,
     private val analysis: AiAnalysis,
@@ -181,6 +185,19 @@ class HomeViewModel @Inject constructor(
         HomeNudge(missedGoalNext = next?.title()?.takeIf { missed })
     }.state(HomeNudge())
 
+    /** Badges earned today or yesterday and not acknowledged yet (V2.17). */
+    val newBadges = badges.observeNew().state(emptyList())
+
+    init {
+        // Badges of the history (silent for the past ones: after the update or a restore), and those earned outside
+        // the app (creatine taken from the notification), announced here.
+        viewModelScope.launch {
+            runCatching { badges.evaluate() }.onFailure { android.util.Log.e("Forme", "Badge evaluation failed", it) }
+        }
+    }
+
+    fun dismissBadges() = viewModelScope.launch { badges.markSeen(newBadges.value) }
+
     fun dismissDeload() = viewModelScope.launch { settings.dismissDeload(WeeklyStats.weekStart(LocalDate.now(clock))) }
 
     /** Hands today's session and nutrition to the AI app (V2.4). */
@@ -224,6 +241,7 @@ fun HomeScreen(
     val deload by viewModel.deload.collectAsStateWithLifecycle()
     val catchUp by viewModel.catchUp.collectAsStateWithLifecycle()
     val nudge by viewModel.nudge.collectAsStateWithLifecycle()
+    val newBadges by viewModel.newBadges.collectAsStateWithLifecycle()
     var addingWeight by remember { mutableStateOf(false) }
     var choosingSession by remember { mutableStateOf(false) }
 
@@ -251,6 +269,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
+            NewBadgesCard(newBadges, onDismiss = viewModel::dismissBadges, modifier = Modifier.padding(bottom = 12.dp))
             val running = active
             if (running != null) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {

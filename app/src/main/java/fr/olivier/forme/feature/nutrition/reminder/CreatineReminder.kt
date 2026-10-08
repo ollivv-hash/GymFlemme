@@ -1,5 +1,6 @@
 package fr.olivier.forme.feature.nutrition.reminder
 
+import fr.olivier.forme.feature.badges.data.BadgeRepository
 import fr.olivier.forme.core.humor.Quip
 import fr.olivier.forme.core.humor.QuipRepository
 import android.app.AlarmManager
@@ -38,6 +39,7 @@ class CreatineReminder @Inject constructor(
     private val repository: NutritionRepository,
     private val clock: Clock,
     private val quips: QuipRepository,
+    private val badges: BadgeRepository,
 ) {
     suspend fun reschedule() {
         val profile = repository.currentProfile()
@@ -79,6 +81,7 @@ class CreatineReminder @Inject constructor(
     suspend fun markTaken() {
         repository.setCreatineTaken(repository.today(), true)
         dismissNotification()
+        runCatching { badges.evaluate() } // V2.17: announced at the next opening
     }
 
     companion object {

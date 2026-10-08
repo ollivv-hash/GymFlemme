@@ -1,5 +1,6 @@
 package fr.olivier.forme.feature.nutrition.ui
 
+import fr.olivier.forme.feature.badges.data.BadgeRepository
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -71,6 +72,7 @@ class JournalViewModel @Inject constructor(
     private val reminder: CreatineReminder,
     weights: BodyWeightRepository,
     heart: HeartRepository,
+    private val badges: BadgeRepository,
 ) : ViewModel() {
     private val today = repository.today()
     private val date = MutableStateFlow(today)
@@ -121,6 +123,7 @@ class JournalViewModel @Inject constructor(
     fun setCreatine(taken: Boolean) = viewModelScope.launch {
         repository.setCreatineTaken(date.value, taken)
         if (taken && date.value == repository.today()) reminder.dismissNotification()
+        if (taken) runCatching { badges.evaluate() } // V2.17: 30 days of creatine in a row
     }
 
     /** Whey goes after the session on training days, otherwise with breakfast (morning) or as a snack. */
