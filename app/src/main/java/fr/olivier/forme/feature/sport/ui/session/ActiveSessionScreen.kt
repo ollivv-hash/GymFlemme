@@ -1,5 +1,7 @@
 package fr.olivier.forme.feature.sport.ui.session
 
+import fr.olivier.forme.core.humor.Quip
+import fr.olivier.forme.core.humor.QuipText
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -90,6 +92,7 @@ fun ActiveSessionScreen(
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val rest by viewModel.restTimerState.collectAsStateWithLifecycle()
+    val lastLogged by viewModel.lastLogged.collectAsStateWithLifecycle()
     val catalog by viewModel.catalog.collectAsStateWithLifecycle()
     val noted by viewModel.notedThisSession.collectAsStateWithLifecycle()
     val heart by viewModel.liveHeart.collectAsStateWithLifecycle()
@@ -130,7 +133,7 @@ fun ActiveSessionScreen(
                 )
             }
         },
-        bottomBar = { rest?.let { RestBar(it, heart, onExtend = viewModel::extendRest, onStop = viewModel::stopRest) } },
+        bottomBar = { rest?.let { RestBar(it, heart, lastLogged, onExtend = viewModel::extendRest, onStop = viewModel::stopRest) } },
     ) { padding ->
         LazyColumn(Modifier.padding(padding)) {
             items(ui.exercises, key = { it.line.id }) { item ->
@@ -195,7 +198,7 @@ private val BLUETOOTH_PERMISSIONS =
     }
 
 @Composable
-private fun RestBar(state: RestTimerState, heart: LiveHeart, onExtend: (Int) -> Unit, onStop: () -> Unit) {
+private fun RestBar(state: RestTimerState, heart: LiveHeart, logged: LoggedSet?, onExtend: (Int) -> Unit, onStop: () -> Unit) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(state) {
         while (true) {
@@ -219,16 +222,33 @@ private fun RestBar(state: RestTimerState, heart: LiveHeart, onExtend: (Int) -> 
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    if (remaining == 0) "Repos terminé" else "Repos ${Fmt.mmss(remaining)}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                )
+                if (done) {
+                    // V2.15: one quip per rest.
+                    QuipText(
+                        Quip.REST_DONE,
+                        key = state.endsAtMillis,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    Text(
+                        "Repos ${Fmt.mmss(remaining)}",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
                 val barContent = LocalContentColor.current
                 TextButton(onClick = { onExtend(-15) }) { Text("−15", color = barContent) }
                 TextButton(onClick = { onExtend(15) }) { Text("+15", color = barContent) }
                 IconButton(onClick = onStop) { Icon(Icons.Filled.Close, contentDescription = "Arrêter") }
+            }
+            if (!done && logged != null) {
+                QuipText(
+                    if (logged.exerciseDone) Quip.EXERCISE_DONE else Quip.SET_DONE,
+                    key = logged.key,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
             RecoveryLine(heart)
         }
@@ -395,6 +415,15 @@ private fun SetEditor(item: ExerciseUi, viewModel: ActiveSessionViewModel) {
         )
     }
     item.hint?.suggestion?.let { s ->
+        if (s is Suggestion.Load) {
+            QuipText(
+                Quip.PROGRESSION,
+                Fmt.number(item.exercise.loadIncrementKg),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
         AssistChip(
             colors = AssistChipDefaults.assistChipColors(labelColor = MaterialTheme.colorScheme.tertiary),
             onClick = { viewModel.applySuggestion(item) },

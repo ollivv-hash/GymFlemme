@@ -1,5 +1,7 @@
 package fr.olivier.forme.feature.sport.timer
 
+import fr.olivier.forme.core.humor.Quip
+import fr.olivier.forme.core.humor.QuipRepository
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -35,6 +37,7 @@ class RestTimer @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settings: SettingsRepository,
     private val clock: Clock,
+    private val quips: QuipRepository,
 ) {
     val state: Flow<RestTimerState?> = settings.restTimer
 
@@ -42,7 +45,7 @@ class RestTimer @Inject constructor(
         val endsAt = clock.millis() + seconds * 1000L
         settings.setRestTimer(RestTimerState(endsAt, seconds))
         showRunningNotification(endsAt, label)
-        scheduleAlarm(endsAt, label)
+        scheduleAlarm(endsAt, label, quips.text(Quip.REST_DONE))
     }
 
     /** Adds (or removes, if negative) time to the running timer. */
@@ -51,27 +54,30 @@ class RestTimer @Inject constructor(
         val endsAt = maxOf(clock.millis(), current.endsAtMillis + deltaSec * 1000L)
         settings.setRestTimer(current.copy(endsAtMillis = endsAt, totalSec = maxOf(0, current.totalSec + deltaSec)))
         showRunningNotification(endsAt, label)
-        scheduleAlarm(endsAt, label)
+        scheduleAlarm(endsAt, label, quips.text(Quip.REST_DONE))
     }
 
     suspend fun cancel() {
         settings.setRestTimer(null)
-        alarmManager().cancel(alarmIntent(""))
+        alarmManager().cancel(alarmIntent("", ""))
         NotificationManagerCompat.from(context).cancel(NOTIF_RUNNING)
     }
 
     private fun alarmManager() = context.getSystemService(AlarmManager::class.java)
 
-    private fun alarmIntent(label: String): PendingIntent = PendingIntent.getBroadcast(
+    private fun alarmIntent(label: String, title: String): PendingIntent = PendingIntent.getBroadcast(
         context,
         0,
-        Intent(context, RestAlarmReceiver::class.java).putExtra(RestAlarmReceiver.EXTRA_LABEL, label),
+        Intent(context, RestAlarmReceiver::class.java)
+            .putExtra(RestAlarmReceiver.EXTRA_LABEL, label)
+            .putExtra(RestAlarmReceiver.EXTRA_TITLE, title),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
-    private fun scheduleAlarm(endsAt: Long, label: String) {
+    /** [title]: the end-of-rest quip (V2.15), drawn now since the receiver runs without the app's graph. */
+    private fun scheduleAlarm(endsAt: Long, label: String, title: String) {
         val am = alarmManager()
-        val intent = alarmIntent(label)
+        val intent = alarmIntent(label, title)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()) {
             am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, endsAt, intent)
         } else {
@@ -154,9 +160,10 @@ class RestAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         NotificationManagerCompat.from(context).cancel(RestTimer.NOTIF_RUNNING)
         val label = intent.getStringExtra(EXTRA_LABEL).orEmpty()
+        val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         val notification = NotificationCompat.Builder(context, RestTimer.CHANNEL_DONE)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Repos terminé")
+            .setContentTitle(title.ifEmpty { context.getString(R.string.neutral_rest_done) })
             .setContentText(label.ifEmpty { "Série suivante !" })
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -170,6 +177,7 @@ class RestAlarmReceiver : BroadcastReceiver() {
 
     companion object {
         const val EXTRA_LABEL = "label"
+        const val EXTRA_TITLE = "title"
         private const val TIMEOUT_MS = 60_000L
     }
 }

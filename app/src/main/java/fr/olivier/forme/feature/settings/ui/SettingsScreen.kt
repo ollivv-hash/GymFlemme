@@ -47,6 +47,14 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.core.settings.ThemeMode
+import fr.olivier.forme.core.humor.QuipRepository
+import fr.olivier.forme.R
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.ui.components.ConfirmDialog
 import fr.olivier.forme.ui.components.FormeTopBar
@@ -67,7 +75,9 @@ class SettingsViewModel @Inject constructor(
     private val backup: BackupRepository,
     private val autoBackupManager: AutoBackupManager,
     private val clock: Clock,
+    private val quips: QuipRepository,
 ) : ViewModel() {
+    val seriousMode = quips.seriousMode.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val restSec = settings.defaultRestSec.stateIn(viewModelScope, SharingStarted.Eagerly, SettingsRepository.DEFAULT_REST_SEC)
     val theme = settings.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.DARK)
     val autoBackup = settings.autoBackup
@@ -81,6 +91,7 @@ class SettingsViewModel @Inject constructor(
 
     fun setRest(seconds: Int) = viewModelScope.launch { settings.setDefaultRestSec(seconds) }
     fun setTheme(mode: ThemeMode) = viewModelScope.launch { settings.setThemeMode(mode) }
+    fun setSeriousMode(serious: Boolean) = viewModelScope.launch { quips.setSeriousMode(serious) }
     fun suggestedFileName() = backup.suggestedFileName()
 
     fun setAutoBackupTarget(uri: Uri) = runAutoBackup { autoBackupManager.setTarget(uri) }
@@ -134,6 +145,7 @@ class SettingsViewModel @Inject constructor(
 fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val rest by viewModel.restSec.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
+    val seriousMode by viewModel.seriousMode.collectAsStateWithLifecycle()
     val autoBackup by viewModel.autoBackup.collectAsStateWithLifecycle()
     val autoBackupRunning by viewModel.autoBackupRunning.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -174,6 +186,15 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMo
                     FilterChip(selected = theme == mode, onClick = { viewModel.setTheme(mode) }, label = { Text(mode.label) })
                 }
             }
+
+            SectionTitle("Ton")
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.serious_mode)) },
+                supportingContent = { Text(stringResource(R.string.serious_mode_description)) },
+                trailingContent = { Switch(checked = seriousMode, onCheckedChange = viewModel::setSeriousMode) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.toggleable(value = seriousMode, onValueChange = viewModel::setSeriousMode),
+            )
 
             SectionTitle("Unités")
             Text("Charges en kg, distances en mètres.", style = MaterialTheme.typography.bodyMedium)

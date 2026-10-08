@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    GymFlemme humour catalogue (V2.15). For each entry: a "humor_*" array of variants, a "neutral_*" string shown in
+    serious mode, and, when a variant agrees with the user's gender, "*_f" versions aligned item by item. Wording is
+    the catalogue's: do not rewrite it here. Entries are listed in fr.olivier.forme.core.humor.Quip.
+-->
+<resources>
+    <!-- Library first loading (former start screen) -->
+    <string-array name="humor_loading">
+        <item>Chargement de ta motivation…</item>
+        <item>Étirement des serveurs…</item>
+        <item>On réveille les haltères…</item>
+        <item>Recherche de tes baskets…</item>
+        <item>Négociation avec la flemme…</item>
+    </string-array>
+    <string name="neutral_loading">Chargement…</string>
+
+    <!-- Home greeting -->
+    <string-array name="humor_greeting_morning">
+        <item>Debout, la salle t\'attend. Elle, au moins, est motivée.</item>
+        <item>Un café, et on y va ?</item>
+        <item>La flemme dort encore. C\'est le moment de filer.</item>
+        <item>Belle journée pour soulever des trucs lourds.</item>
+        <item>Le matin, c\'est fait pour les braves. Et pour toi.</item>
+    </string-array>
+    <string name="neutral_greeting_morning">Bonjour</string>
+
+    <string-array name="humor_greeting_noon">
+        <item>Une petite séance avant de manger ?</item>
+        <item>La pause déj\', version musclée.</item>
+        <item>La salle est à moitié vide. Plus d\'excuse.</item>
+        <item>Ton sandwich peut attendre 40 minutes.</item>
+        <item>Midi pile, l\'heure des héros discrets.</item>
+    </string-array>
+    <string name="neutral_greeting_noon">Bonjour</string>
+
+    <string-array name="humor_greeting_afternoon">
+        <item>Le coup de mou de 15 h ? On a un remède.</item>
+        <item>Ton canapé t\'appelle. Ne décroche pas.</item>
+        <item>L\'après-midi a besoin d\'un peu d\'action.</item>
+        <item>Il n\'est jamais trop tard. Bon, presque jamais.</item>
+        <item>Et si on bougeait un peu ?</item>
+    </string-array>
+    <string name="neutral_greeting_afternoon">Bon après-midi</string>
+
+    <string-array name="humor_greeting_evening">
+        <item>Il est encore temps. Techniquement.</item>
+        <item>Le canapé attendra encore un peu.</item>
+        <item>La salle du soir, c\'est un club très select.</item>
+        <item>Une séance, puis une soirée bien méritée.</item>
+        <item>Netflix sera encore là dans une heure.</item>
+    </string-array>
+    <string name="neutral_greeting_evening">Bonsoir</string>
+
+    <string-array name="humor_greeting_night">
+        <item>Il est tard… Le repos, c\'est aussi de l\'entraînement.</item>
+        <item>Les muscles grandissent pendant le sommeil. File au lit !</item>
+        <item>Séance de nuit ? On admire. Mais dors bien après.</item>
+    </string-array>
+    <string name="neutral_greeting_night">Bonsoir</string>
+
+    <!-- Line next to the start button (the button keeps "Démarrer") -->
+    <string-array name="humor_start">
+        <item>C\'est parti (malheureusement).</item>
+        <item>Le plus dur, c\'est d\'appuyer sur ce bouton.</item>
+        <item>Allez, juste une petite séance.</item>
+        <item>Tes baskets n\'attendaient que ça.</item>
+        <item>Une séance faite vaut mieux que dix prévues.</item>
+        <item>On commence, et on verra bien.</item>
+    </string-array>
+    <string name="neutral_start">Prêt pour ta séance ?</string>
+    <string name="neutral_start_f">Prête pour ta séance ?</string>
+
+    <!-- End of the rest -->
+    <string-array name="humor_rest_done">
+        <item>Pause terminée. Tes muscles font semblant de dormir.</item>
+        <item>Le canapé n\'est pas une machine. On repart !</item>
+        <item>Fin de la pause. Ce n\'était pas une sieste.</item>
+        <item>Allez, encore une.</item>
+        <item>Ton téléphone peut attendre. La série, non.</item>
+        <item>On y retourne !</item>
+    </string-array>
+    <string name="neutral_rest_done">Repos terminé</string>
+
+    <!-- Set logged -->
+    <string-array name="humor_set_done">
+        <item>Une de moins.</item>
+        <item>Ton futur toi applaudit.</item>
+        <item>Ça, c\'est fait.</item>
+        <item>Propre !</item>
+        <item>La flemme recule.</item>
+        <item>Et une de plus au compteur.</item>
+    </string-array>
+    <string name="neutral_set_done">Série enregistrée</string>
+
+    <!-- Last set of an exercise -->
+    <string-array name="humor_exercise_done">
+        <item>Exercice terminé. Au suivant !</item>
+        <item>Machine domptée.</item>
+        <item>Un de moins sur la liste.</item>
+        <item>Et de un ! On enchaîne ?</item>
+    </string-array>
+    <string name="neutral_exercise_done">Exercice terminé</string>
+
+    <!-- Load increase suggested; %1$s = the increment computed by the app ("2,5") -->
+    <string-array name="humor_progression">
+        <item>Ça passait trop facilement. On ajoute +%1$s kg ?</item>
+        <item>Tu as de la marge. +%1$s kg, ça te dit ?</item>
+        <item>La machine trouve que tu te la coules douce. +%1$s kg ?</item>
+        <item>Prêt à monter d\'un cran ? +%1$s kg.</item>
+    </string-array>
+    <string-array name="humor_progression_f">
+        <item>Ça passait trop facilement. On ajoute +%1$s kg ?</item>
+        <item>Tu as de la marge. +%1$s kg, ça te dit ?</item>
+        <item>La machine trouve que tu te la coules douce. +%1$s kg ?</item>
+        <item>Prête à monter d\'un cran ? +%1$s kg.</item>
+    </string-array>
+    <string name="neutral_progression">Augmentation de charge suggérée : +%1$s kg</string>
+
+    <!-- Record beaten -->
+    <string-array name="humor_record">
+        <item>Record battu. Qui es-tu et qu\'as-tu fait de la flemme ?</item>
+        <item>Nouveau record ! Tu n\'en reviens pas, nous non plus.</item>
+        <item>Record battu. La flemme n\'a rien vu venir.</item>
+        <item>Record personnel ! On encadre ?</item>
+        <item>Plus fort que la dernière fois. C\'est officiel.</item>
+    </string-array>
+    <string name="neutral_record">Nouveau record</string>
+
+    <!-- End of the session -->
+    <string-array name="humor_session_done">
+        <item>Séance terminée. Tu as officiellement le droit de t\'affaler.</item>
+        <item>La flemme : 0. Toi : 1.</item>
+        <item>Mission accomplie. Le canapé t\'attend, tu l\'as mérité.</item>
+        <item>C\'est dans la boîte. Tu peux être fier.</item>
+        <item>Et voilà ! Le plus dur, c\'était de venir.</item>
+        <item>Séance bouclée. Hydrate-toi, champion.</item>
+    </string-array>
+    <string-array name="humor_session_done_f">
+        <item>Séance terminée. Tu as officiellement le droit de t\'affaler.</item>
+        <item>La flemme : 0. Toi : 1.</item>
+        <item>Mission accomplie. Le canapé t\'attend, tu l\'as mérité.</item>
+        <item>C\'est dans la boîte. Tu peux être fière.</item>
+        <item>Et voilà ! Le plus dur, c\'était de venir.</item>
+        <item>Séance bouclée. Hydrate-toi, championne.</item>
+    </string-array>
+    <string name="neutral_session_done">Séance terminée</string>
+
+    <!-- Creatine reminder (notification); %1$s = dose from the profile ("3") -->
+    <string-array name="humor_creatine">
+        <item>%1$s g de créatine. Même la flemme peut avaler une cuillère.</item>
+        <item>Ta créatine t\'attend. Elle est patiente, mais quand même.</item>
+        <item>Créatine du jour : cochée ou pas encore ?</item>
+        <item>Une cuillère, et on n\'en parle plus.</item>
+        <item>Petit rappel créatine. C\'est l\'effort le plus facile de la journée.</item>
+    </string-array>
+    <string name="neutral_creatine">Rappel : créatine du jour</string>
+
+    <!-- Creatine streak (small line, from 2 days; 1 day uses the plural below); %1$d = days -->
+    <string-array name="humor_creatine_streak">
+        <item>%1$d jours d\'affilée. Quelle régularité !</item>
+        <item>%1$d jours sans oublier. Chapeau.</item>
+    </string-array>
+    <string name="neutral_creatine_streak">%1$d jours consécutifs</string>
+    <plurals name="creatine_streak_days">
+        <item quantity="one">%1$d jour</item>
+        <item quantity="other">%1$d jours</item>
+    </plurals>
+
+    <!-- Protein still missing today; %1$d = grams -->
+    <string-array name="humor_protein_missing">
+        <item>Il te manque %1$d g de protéines. Ton shaker s\'ennuie.</item>
+        <item>Encore %1$d g de protéines. Un shaker, et c\'est réglé ?</item>
+    </string-array>
+    <string name="neutral_protein_missing">Il te manque %1$d g de protéines</string>
+
+    <!-- Same, when little is missing (Quip.PROTEIN_ALMOST_G or less): "Presque !" only fits then -->
+    <string-array name="humor_protein_almost">
+        <item>Il te manque %1$d g de protéines. Ton shaker s\'ennuie.</item>
+        <item>Encore %1$d g de protéines. Un shaker, et c\'est réglé ?</item>
+        <item>Plus que %1$d g de protéines. Presque !</item>
+    </string-array>
+    <string name="neutral_protein_almost">Il te manque %1$d g de protéines</string>
+
+    <string-array name="humor_protein_reached">
+        <item>Objectif protéines atteint. Tes muscles disent merci.</item>
+        <item>Protéines au complet. Ton shaker peut se reposer.</item>
+        <item>Le compte est bon !</item>
+    </string-array>
+    <string name="neutral_protein_reached">Objectif protéines atteint</string>
+
+    <!-- Empty lists -->
+    <string-array name="humor_empty_sessions">
+        <item>Rien ici. Comme ta motivation un lundi matin.</item>
+    </string-array>
+    <string name="neutral_empty_sessions">Aucune séance enregistrée</string>
+
+    <string-array name="humor_empty_records">
+        <item>Pas encore de record. Ça ne saurait tarder.</item>
+    </string-array>
+    <string name="neutral_empty_records">Aucun record</string>
+
+    <string-array name="humor_empty_meals">
+        <item>Rien de noté aujourd\'hui. On commence par le petit-déj\' ?</item>
+    </string-array>
+    <string name="neutral_empty_meals">Aucun repas enregistré aujourd\'hui</string>
+
+    <string-array name="humor_empty_catalogue">
+        <item>Ton catalogue est vide. Va faire un tour dans la bibliothèque !</item>
+    </string-array>
+    <string name="neutral_empty_catalogue">Aucun exercice dans ton catalogue</string>
+
+    <string-array name="humor_empty_exercise_history">
+        <item>Cette machine ne te connaît pas encore.</item>
+    </string-array>
+    <string name="neutral_empty_exercise_history">Aucun historique pour cet exercice</string>
+
+    <!-- Settings -->
+    <string name="serious_mode">Mode sérieux (pour les jours sans)</string>
+    <string name="serious_mode_description">Remplace les petites touches d\'humour par des messages neutres.</string>
+</resources>

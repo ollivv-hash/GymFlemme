@@ -1,9 +1,14 @@
 package fr.olivier.forme.feature.nutrition.ui
 
+import fr.olivier.forme.core.humor.Quip
+import fr.olivier.forme.core.humor.QuipText
+import fr.olivier.forme.R
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -123,10 +128,19 @@ private fun JournalContent(
                     Checkbox(checked = ui.creatineTaken, onCheckedChange = viewModel::setCreatine)
                     Column(Modifier.weight(1f)) {
                         Text("Créatine ${Fmt.number(ui.profile.creatineDoseG)} g", style = MaterialTheme.typography.titleMedium)
-                        if (ui.creatineStreak > 0) Text("${ui.creatineStreak} jour(s) d'affilée", style = MaterialTheme.typography.bodySmall)
+                        when {
+                            ui.creatineStreak >= 2 -> QuipText(Quip.CREATINE_STREAK, ui.creatineStreak, style = MaterialTheme.typography.bodySmall)
+                            ui.creatineStreak == 1 -> Text(
+                                pluralStringResource(R.plurals.creatine_streak_days, 1, 1),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                 }
             }
+        }
+        if (ui.isToday && MealType.entries.all { ui.entriesOf(it).isEmpty() }) {
+            item(key = "empty-meals") { QuipText(Quip.EMPTY_MEALS, modifier = Modifier.padding(top = 12.dp)) }
         }
         MealType.entries.forEach { type ->
             item(key = "h-${type.name}") {
@@ -201,12 +215,15 @@ private fun WheyCard(ui: JournalUi, onAdd: () -> Unit, onProfile: () -> Unit) {
     Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Column(Modifier.padding(12.dp)) {
             ui.proteinPlan?.let { plan ->
-                Text(
-                    ProteinAdvice.message(plan),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (plan.reached) ReachedGreen else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
+                // V2.15: a quip says what is missing (or that the goal is reached), the advice follows.
+                if (plan.reached) {
+                    QuipText(Quip.PROTEIN_REACHED, style = MaterialTheme.typography.titleSmall, color = ReachedGreen)
+                } else {
+                    val missing = plan.missingG.roundToInt()
+                    QuipText(Quip.proteinMissing(missing), missing, style = MaterialTheme.typography.titleSmall)
+                }
+                ProteinAdvice.detail(plan)?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                Spacer(Modifier.height(8.dp))
             }
             if (!ui.wheyConfigured) {
                 Text("Whey", style = MaterialTheme.typography.titleMedium)

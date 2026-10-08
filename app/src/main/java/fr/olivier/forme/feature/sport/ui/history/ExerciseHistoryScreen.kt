@@ -1,5 +1,7 @@
 package fr.olivier.forme.feature.sport.ui.history
 
+import fr.olivier.forme.core.humor.Quip
+import fr.olivier.forme.core.humor.QuipText
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -144,6 +146,7 @@ fun ExerciseHistoryScreen(onBack: () -> Unit, onSheet: (Long) -> Unit = {}, view
             item {
                 Column {
                     SectionTitle("Records")
+                    if (ui.records.bestLoadKg == null && ui.records.bestVolumeKg == null) QuipText(Quip.EMPTY_RECORDS)
                     Text("Meilleure charge : ${ui.records.bestLoadKg?.let(Fmt::kg) ?: "—"}")
                     Text("Meilleur volume (séance) : ${ui.records.bestVolumeKg?.let(Fmt::kg) ?: "—"}")
                     ui.bestOneRepMaxKg?.let { Text("1RM estimé (Epley, ≤ ${OneRepMax.MAX_REPS} reps) : ${Fmt.kg(Math.round(it * 2) / 2.0)}") }
@@ -196,7 +199,7 @@ fun ExerciseHistoryScreen(onBack: () -> Unit, onSheet: (Long) -> Unit = {}, view
             }
 
             item { SectionTitle("Séries") }
-            if (ui.sessions.isEmpty()) item { Text("Pas encore de séance réalisée.") }
+            if (ui.sessions.isEmpty()) item { QuipText(Quip.EMPTY_EXERCISE_HISTORY) }
             items(ui.sessions, key = { it.startedAt.toEpochMilli() }) { group ->
                 ListItem(
                     headlineContent = { Text(group.startedAt.atZone(viewModel.zone).format(longDate)) },

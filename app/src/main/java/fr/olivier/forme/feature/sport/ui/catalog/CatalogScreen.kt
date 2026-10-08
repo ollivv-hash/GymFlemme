@@ -1,5 +1,7 @@
 package fr.olivier.forme.feature.sport.ui.catalog
 
+import fr.olivier.forme.core.humor.Quip
+import fr.olivier.forme.core.humor.QuipText
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -86,6 +88,7 @@ fun CatalogScreen(
     ) { padding ->
         val visible = exercises.filter { showArchived || !it.archived }
         LazyColumn(Modifier.padding(padding)) {
+            if (visible.isEmpty()) item { QuipText(Quip.EMPTY_CATALOGUE, modifier = Modifier.padding(16.dp)) }
             visible.groupBy { if (it.archived) null else it.muscleGroup }.forEach { (group, list) ->
                 item(key = "h-${group?.name ?: "archived"}") {
                     SectionTitle(group?.label ?: "Archivés", Modifier.padding(horizontal = 16.dp))

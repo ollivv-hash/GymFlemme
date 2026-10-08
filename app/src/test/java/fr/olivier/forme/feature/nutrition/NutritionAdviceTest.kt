@@ -142,6 +142,16 @@ class NutritionAdviceTest {
         assertTrue(reached.reached)
         assertEquals("Objectif protéines atteint.", ProteinAdvice.message(reached))
 
+        // V2.15: under the headline quip, only what follows "Il te manque N g".
+        assertEquals(
+            "Ton dîner habituel apporte ~35 g → 2 doses de whey (48 g). Encore ~14 g à trouver : skyr, fromage blanc, œufs, viande ou poisson.",
+            ProteinAdvice.detail(two),
+        )
+        assertEquals("Ton dîner habituel apporte ~35 g, ça devrait suffire.", ProteinAdvice.detail(mealsEnough))
+        assertEquals("Encore ~57 g à trouver : skyr, fromage blanc, œufs, viande ou poisson.", ProteinAdvice.detail(capped))
+        assertEquals("À prévoir : 2 doses de whey (48 g).", ProteinAdvice.detail(ProteinAdvice.plan(100.0, 150.0, emptyList(), 24.0, 0)))
+        assertEquals(null, ProteinAdvice.detail(reached))
+
         // Whey not configured: no dose, only food.
         assertEquals(0, ProteinAdvice.plan(60.0, 157.0, dinner, null, 0).doses)
     }

@@ -78,6 +78,9 @@ import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalTime
+import fr.olivier.forme.core.humor.Quip
+import fr.olivier.forme.core.humor.QuipText
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -165,6 +168,7 @@ class HomeViewModel @Inject constructor(
     fun analyse() = analysis.launch(LocalDate.now(clock))
 
     fun today(): LocalDate = LocalDate.now(clock)
+    fun now(): LocalTime = LocalTime.now(clock)
     val zone: ZoneId get() = clock.zone
 
     fun start(templateId: Long?, then: () -> Unit) = viewModelScope.launch {
@@ -210,6 +214,9 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
+            // V2.15: greeting of the time slot, drawn when the home screen opens.
+            val greeting = remember { Quip.greeting(viewModel.now()) }
+            QuipText(greeting, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp, bottom = 12.dp))
             val running = active
             if (running != null) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
@@ -286,7 +293,7 @@ fun HomeScreen(
             }
 
             SectionTitle("Dernières séances")
-            if (recent.isEmpty()) Text("Aucune séance pour l'instant.", style = MaterialTheme.typography.bodyMedium)
+            if (recent.isEmpty()) QuipText(Quip.EMPTY_SESSIONS, style = MaterialTheme.typography.bodyMedium)
             recent.forEach { session ->
                 ListItem(
                     modifier = Modifier.clickable { onOpenSessionDetail(session.id) },
@@ -346,7 +353,13 @@ private fun NewSessionSheet(
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag(NEW_SESSION_SHEET_TAG)) {
             item {
-                Text("Nouvelle séance", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 12.dp))
+                Text("Nouvelle séance", style = MaterialTheme.typography.headlineSmall)
+                QuipText(
+                    Quip.START,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp, bottom = 12.dp),
+                )
             }
             if (proposed != null) {
                 item {

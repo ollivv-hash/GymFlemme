@@ -3,7 +3,7 @@
 Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé depuis les releases GitHub (ou `adb install`), sans Play Store.
 
-> **Statut : V2.14.0 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
+> **Statut : V2.15.0 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
 > release en CI ; chaque version fusionnée sur `main` publie une release GitHub « GymFlemme x.y.z » avec l'APK signé.
 
 - Nom : **GymFlemme** (2.14 ; « Forme » jusqu'à 2.6, puis « GymBro », nom trop répandu).
@@ -38,6 +38,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.12** ✅ | Volume hebdomadaire par muscle de la bibliothèque (séries fractionnaires), repère par muscle réglable, export IA |
 | **V2.13** ✅ | Séance conseillée selon les muscles en retard dans « Nouvelle séance », ligne « Muscles en retard » dans l'export IA |
 | **V2.14** ✅ | Nouveau nom **GymFlemme** : app, release et APK `gymflemme-*`, fichiers de sauvegarde et d'analyse IA |
+| **V2.15** ✅ | Petites touches d'humour sur les écrans existants, « Mode sérieux », accord selon le sexe du profil |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -321,6 +322,26 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 - Images décodées à la taille affichée (sous-échantillonnage) et gardées en cache : les listes n'affichent que des
   vignettes fixes, l'animation n'existe que sur la fiche. Libellés français dans `LibraryLabels` (textes de l'app
   écrits en Kotlin, comme le reste de l'interface) ; un test vérifie que chaque valeur de la bibliothèque a son libellé.
+
+### Touches d'humour (V2.15)
+
+- Catalogue dans `res/values/humor.xml` : pour chaque entrée, un tableau de variantes `humor_*`, une version neutre
+  `neutral_*` et, quand une phrase s'accorde (fier/fière, champion/championne, prêt/prête), une version féminine
+  `*_f` alignée phrase par phrase, choisie si le profil indique « Femme » (sinon la version d'origine). Le ton du
+  catalogue n'est pas réécrit ; les textes hors catalogue restent dans le code, en dur.
+- Tirage (`QuipRepository`) : jamais deux fois de suite la même variante pour une entrée (dernier index gardé dans
+  DataStore) ; la phrase tirée reste la même tant que l'écran est affiché (rotation, retour arrière), un nouvel
+  évènement (série validée, repos) tire à nouveau.
+- **Mode sérieux** (Réglages → Ton, désactivé par défaut) : toutes les entrées affichent leur version neutre.
+- Emplacements : salutation de l'Accueil selon l'heure (5–11 h, 11–14 h, 14–18 h, 18–23 h, nuit) ; ligne sous
+  « Nouvelle séance » (le bouton reste « Démarrer ») ; sous le chrono de repos, une ligne discrète à chaque série
+  validée (« exercice terminé » pour la dernière) ; fin du repos à l'écran et dans la notification ; suggestion de
+  charge `+kg` (pas de charge de l'exercice) ; récap de fin de séance et carte des records ; titre du conseil
+  protéines (ce qui manque, « Presque ! » seulement s'il manque 30 g ou moins, ou objectif atteint), le détail repas / whey suit ; notification et série de jours de
+  créatine (dose du profil) ; listes vides ; chargement de la bibliothèque (phrases de l'ancien écran de démarrage).
+- Restent neutres : poids, repas, mentions santé, Sources et licences, erreurs, confirmations, autorisations.
+- Test garde-fou : chaque tableau a des variantes, sa version neutre et une entrée `Quip` ; les versions féminines
+  ont autant de phrases ; toutes se formatent avec leurs paramètres.
 
 ### Raccourcis et widget (V2.6)
 

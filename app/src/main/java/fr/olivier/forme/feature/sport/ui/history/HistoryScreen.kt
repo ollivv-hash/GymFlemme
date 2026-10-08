@@ -1,5 +1,7 @@
 package fr.olivier.forme.feature.sport.ui.history
 
+import fr.olivier.forme.core.humor.Quip
+import fr.olivier.forme.core.humor.QuipText
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -67,7 +69,7 @@ fun HistoryScreen(onOpenSession: (Long) -> Unit, onOpenExercise: (Long) -> Unit,
             LazyColumn {
                 if (tab == 0) {
                     if (sessions.isEmpty()) {
-                        item { Text("Aucune séance terminée.", Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium) }
+                        item { QuipText(Quip.EMPTY_SESSIONS, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium) }
                     }
                     items(sessions, key = { it.id }) { s ->
                         ListItem(

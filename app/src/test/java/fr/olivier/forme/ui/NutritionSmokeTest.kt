@@ -1,5 +1,6 @@
 package fr.olivier.forme.ui
 
+import androidx.compose.ui.test.hasScrollToIndexAction
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -84,7 +85,9 @@ class NutritionSmokeTest {
             rule.waitUntilAtLeastOneExists(hasText("/ 148 g", substring = true), 10_000)
             shot("n1-journal-empty")
 
-            rule.onNode(hasContentDescription("Ajouter à Déjeuner")).performScrollTo().performClick()
+            // The journal is a lazy list: bring the lunch header in before tapping (V2.15 added lines above it).
+            rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasContentDescription("Ajouter à Déjeuner"))
+            rule.onNode(hasContentDescription("Ajouter à Déjeuner")).performClick()
             rule.waitUntilAtLeastOneExists(hasText("Rechercher un aliment", substring = true), 10_000)
             rule.mainClock.autoAdvance = false
             rule.onNode(hasSetTextAction()).performTextInput("poulet filet grill")

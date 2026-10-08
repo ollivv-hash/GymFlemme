@@ -97,6 +97,10 @@ class ActiveSessionViewModel @Inject constructor(
     private val _notedThisSession = MutableStateFlow<Set<Long>>(emptySet())
     val notedThisSession: StateFlow<Set<Long>> = _notedThisSession
 
+    /** The last working set logged (V2.15): a quip under the rest countdown, "exercise done" for its last set. */
+    private val _lastLogged = MutableStateFlow<LoggedSet?>(null)
+    val lastLogged: StateFlow<LoggedSet?> = _lastLogged
+
     val restTimerState: StateFlow<RestTimerState?> =
         restTimer.state.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -227,6 +231,7 @@ class ActiveSessionViewModel @Inject constructor(
         if (warmup) return@launch
         val doneCount = item.workingSets.size + 1
         val completesExercise = doneCount >= item.line.targetSets && !item.finished
+        _lastLogged.value = LoggedSet(key = System.nanoTime(), exerciseDone = completesExercise)
         if (completesExercise) {
             sessions.setStatus(item.line.id, SessionExerciseStatus.DONE)
             manualExpanded.value = null
@@ -345,3 +350,6 @@ class ActiveSessionViewModel @Inject constructor(
         then()
     }
 }
+
+/** A working set just logged; a new [key] draws a new quip. */
+data class LoggedSet(val key: Long, val exerciseDone: Boolean)
