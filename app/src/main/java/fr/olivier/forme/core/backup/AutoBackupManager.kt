@@ -79,7 +79,7 @@ class AutoBackupManager @Inject constructor(
         }
     }
 
-    /** Human-readable name of the target file (e.g. "gymbro-sauvegarde.json"), when the provider tells it. */
+    /** Human-readable name of the target file (e.g. "gymflemme-sauvegarde.json"), when the provider tells it. */
     suspend fun targetName(uri: String): String? = withContext(Dispatchers.IO) {
         runCatching {
             context.contentResolver.query(Uri.parse(uri), arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
@@ -88,7 +88,7 @@ class AutoBackupManager @Inject constructor(
     }
 
     fun localCopies(): List<File> =
-        localDir().listFiles { f -> f.name.startsWith(LOCAL_PREFIX) || f.name.startsWith(OLD_LOCAL_PREFIX) }
+        localDir().listFiles { f -> f.name.startsWith(LOCAL_PREFIX) || OLD_LOCAL_PREFIXES.any { f.name.startsWith(it) } }
             ?.sortedByDescending { it.name.substringAfter("-auto-") }
             .orEmpty()
 
@@ -127,11 +127,11 @@ class AutoBackupManager @Inject constructor(
 
     companion object {
         const val LOCAL_KEEP = 3
-        const val TARGET_FILE_NAME = "gymbro-sauvegarde.json"
-        private const val LOCAL_PREFIX = "gymbro-auto-"
+        const val TARGET_FILE_NAME = "gymflemme-sauvegarde.json"
+        private const val LOCAL_PREFIX = "gymflemme-auto-"
 
-        /** Local copies made before the app was renamed (Forme → GymBro, 2.7): kept, then pruned with the new ones. */
-        private const val OLD_LOCAL_PREFIX = "forme-auto-"
+        /** Local copies made under the app's former names (Forme, then GymBro): kept, then pruned with the new ones. */
+        private val OLD_LOCAL_PREFIXES = listOf("forme-auto-", "gymbro-auto-")
         private const val TAG = "Forme"
         private const val GRANT_FLAGS = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
     }

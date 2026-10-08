@@ -35,11 +35,11 @@ class HealthPermissionsRationaleActivity : ComponentActivity() {
 
     private companion object {
         const val RATIONALE =
-            "GymBro lit dans Health Connect la fréquence cardiaque et les calories enregistrées par ta montre, " +
+            "GymFlemme lit dans Health Connect la fréquence cardiaque et les calories enregistrées par ta montre, " +
                 "uniquement pour les rattacher à tes séances de musculation (courbe, zones, calories dépensées).\n\n" +
                 "Ces données restent sur ce téléphone : elles ne sont envoyées à aucun service. Elles sont incluses " +
                 "dans tes sauvegardes (export JSON et sauvegarde automatique vers l'emplacement que tu as choisi).\n\n" +
-                "GymBro n'écrit rien dans Health Connect. Tu peux retirer l'accès à tout moment dans " +
+                "GymFlemme n'écrit rien dans Health Connect. Tu peux retirer l'accès à tout moment dans " +
                 "Paramètres → Health Connect → Autorisations des applications."
     }
 }

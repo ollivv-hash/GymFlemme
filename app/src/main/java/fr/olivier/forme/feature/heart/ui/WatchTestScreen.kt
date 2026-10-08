@@ -147,7 +147,7 @@ class WatchTestViewModel @Inject constructor(
 
     /** Plain-text report to paste back in the conversation. */
     fun report(): String = buildString {
-        appendLine("GymBro — test montre cardio")
+        appendLine("GymFlemme — test montre cardio")
         appendLine("Téléphone : ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
         val s = bleState.value
         appendLine("Bluetooth : ${if (!s.available) "indisponible" else if (!s.enabled) "désactivé" else "actif"}, autorisations ${if (ble.hasPermissions()) "OK" else "manquantes"}")
@@ -215,7 +215,7 @@ fun WatchTestScreen(onBack: () -> Unit, viewModel: WatchTestViewModel = hiltView
             Modifier.padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
         ) {
             Text(
-                "Choisis ici ta montre : pendant les séances, GymBro s'y connecte toute seule dès que la diffusion FC " +
+                "Choisis ici ta montre : pendant les séances, GymFlemme s'y connecte toute seule dès que la diffusion FC " +
                     "est active. Les deux tests ci-dessous servent aussi au diagnostic (« Copier le rapport »).",
                 style = MaterialTheme.typography.bodyMedium,
             )

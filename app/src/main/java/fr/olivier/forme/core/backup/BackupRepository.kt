@@ -103,19 +103,19 @@ class BackupRepository @Inject constructor(
         val stamp = LocalDateTime.now(clock).format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
         val target = File(dir, "${SAFETY_PREFIX}$stamp.json")
         target.writeText(BackupCodec.encode(snapshot()))
-        // Copies made before the app was renamed (Forme → GymBro, 2.7) are pruned with the new ones, oldest first.
-        dir.listFiles { f -> f.name.startsWith(SAFETY_PREFIX) || f.name.startsWith(OLD_SAFETY_PREFIX) }
+        // Copies made under the app's former names (Forme, GymBro) are pruned with the new ones, oldest first.
+        dir.listFiles { f -> f.name.startsWith(SAFETY_PREFIX) || OLD_SAFETY_PREFIXES.any { f.name.startsWith(it) } }
             ?.sortedByDescending { it.name.substringAfter("-avant-import-") }
             ?.drop(SAFETY_KEEP)
             ?.forEach { it.delete() }
         return target
     }
 
-    fun suggestedFileName(): String = "gymbro-sauvegarde-${LocalDateTime.now(clock).toLocalDate()}.json"
+    fun suggestedFileName(): String = "gymflemme-sauvegarde-${LocalDateTime.now(clock).toLocalDate()}.json"
 
     private companion object {
-        const val SAFETY_PREFIX = "gymbro-avant-import-"
-        const val OLD_SAFETY_PREFIX = "forme-avant-import-"
+        const val SAFETY_PREFIX = "gymflemme-avant-import-"
+        val OLD_SAFETY_PREFIXES = listOf("forme-avant-import-", "gymbro-avant-import-")
         const val SAFETY_KEEP = 5
     }
 }
