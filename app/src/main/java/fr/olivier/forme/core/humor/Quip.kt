@@ -38,6 +38,9 @@ enum class Quip(
     EMPTY_MEALS(R.array.humor_empty_meals, R.string.neutral_empty_meals),
     EMPTY_CATALOGUE(R.array.humor_empty_catalogue, R.string.neutral_empty_catalogue),
     EMPTY_EXERCISE_HISTORY(R.array.humor_empty_exercise_history, R.string.neutral_empty_exercise_history),
+    WELCOME_BACK(R.array.humor_welcome_back, R.string.neutral_welcome_back, humorFeminine = R.array.humor_welcome_back_f),
+    LIGHTER_LOADS(R.array.humor_lighter_loads, R.string.neutral_lighter_loads),
+    MISSED_GOAL(R.array.humor_missed_goal, R.string.neutral_missed_goal),
     ;
 
     companion object {

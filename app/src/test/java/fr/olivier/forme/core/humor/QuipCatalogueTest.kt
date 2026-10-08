@@ -36,6 +36,7 @@ class QuipCatalogueTest {
     /** Sample arguments of the parameterised entries. */
     private fun args(quip: Quip): Array<Any> = when (quip) {
         Quip.PROGRESSION, Quip.CREATINE -> arrayOf("2,5")
+        Quip.MISSED_GOAL -> arrayOf("A · Poussée")
         Quip.PROTEIN_MISSING, Quip.PROTEIN_ALMOST, Quip.CREATINE_STREAK -> arrayOf(25)
         else -> emptyArray()
     }
@@ -63,7 +64,7 @@ class QuipCatalogueTest {
             listOf(QuipStyle(), QuipStyle(feminine = true), QuipStyle(serious = true), QuipStyle(serious = true, feminine = true)).forEach { style ->
                 (0 until size).forEach { i ->
                     val text = Quips.text(resources, quip, i, style, *args(quip))
-                    assertTrue("${quip.name}[$i] $style: $text", text.isNotBlank() && "%" !in text)
+                    assertTrue("${quip.name}[$i] $style: $text", text.isNotBlank() && !Regex("%\\d*\\$?[sd]").containsMatchIn(text))
                 }
             }
         }
