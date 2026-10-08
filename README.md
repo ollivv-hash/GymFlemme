@@ -113,7 +113,7 @@ app_sport/
 V1.1 a ajouté `feature/nutrition/` (data · domain · reminder · ui) et la migration Room 1 → 2 ; V1.2 a ajouté la sauvegarde automatique dans `core/backup/` (`AutoBackupManager`, worker WorkManager) ; V2.1 a ajouté `feature/heart/` (data · domain · service · ui) et la migration 3 → 4 ; V2.6 a ajouté `core/launch/` (raccourcis) et `feature/widget/`.
 V2.8 a ajouté `feature/library/` et `third_party/open-exercise-illustrations/` : `LICENSE`, `README.md` et `SOURCE.md`
 (URL, commit figé `2786aef`, date) **hors APK** comme preuve de licence ; `assets/exercise_library/` (`exercises.json`
-+ 796 images WebP, copies à l'octet près) ajouté aux assets par `app/build.gradle.kts`. APK release : 14,1 Mo → 37,5 Mo.
++ 796 images WebP, réencodées en qualité 80 depuis 2.12.2, mêmes dimensions) ajouté aux assets par `app/build.gradle.kts`. APK release : 14,1 Mo → 37,5 Mo.
 Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv` depuis le fichier Excel publié par l'ANSES.
 
 ---
@@ -299,10 +299,12 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   | 2.7.2 (avant la bibliothèque) | 14,08 Mo | |
   | 2.8.0 (bibliothèque embarquée) | 37,52 Mo | + 23,44 Mo |
   | 2.11.0 | 37,58 Mo | |
+  | 2.12.2 (images réencodées) | 25,45 Mo | − 12,17 Mo |
 
-  Les 796 images WebP et `exercises.json` pèsent 23,6 Mo dans l'APK (le WebP ne se recompresse pas) : c'est tout
-  l'écart. Rester à moins de 40 Mo évite de redimensionner les images ; une réduction (WebP plus petit, ou
-  téléchargement à la demande) reste possible si le poids devient gênant.
+  Les images d'origine sont quasi sans perte (23,2 Mo). Depuis 2.12.2, `tools/library/recompress.py` les réencode en
+  WebP avec perte **qualité 80, mêmes dimensions** : 11,1 Mo, sans différence visible aux tailles affichées (fiche :
+  340 dp de haut au plus, ~1 020 px sur un écran xxhdpi ; vignettes de 56 dp). Réduire aussi les dimensions (75 % :
+  7,4 Mo) adoucissait l'image sur la fiche : écarté. Un test vérifie que chaque image se décode à la taille annoncée.
 - Images décodées à la taille affichée (sous-échantillonnage) et gardées en cache : les listes n'affichent que des
   vignettes fixes, l'animation n'existe que sur la fiche. Libellés français dans `LibraryLabels` (textes de l'app
   écrits en Kotlin, comme le reste de l'interface) ; un test vérifie que chaque valeur de la bibliothèque a son libellé.
