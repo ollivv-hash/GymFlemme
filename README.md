@@ -3,7 +3,7 @@
 Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé depuis les releases GitHub (ou `adb install`), sans Play Store.
 
-> **Statut : V2.15.0 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
+> **Statut : V2.16.0 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
 > release en CI ; chaque version fusionnée sur `main` publie une release GitHub « GymFlemme x.y.z » avec l'APK signé.
 
 - Nom : **GymFlemme** (2.14 ; « Forme » jusqu'à 2.6, puis « GymBro », nom trop répandu).
@@ -39,6 +39,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.13** ✅ | Séance conseillée selon les muscles en retard dans « Nouvelle séance », ligne « Muscles en retard » dans l'export IA |
 | **V2.14** ✅ | Nouveau nom **GymFlemme** : app, release et APK `gymflemme-*`, fichiers de sauvegarde et d'analyse IA |
 | **V2.15** ✅ | Petites touches d'humour sur les écrans existants, « Mode sérieux », accord selon le sexe du profil |
+| **V2.16** ✅ | Retour après une pause (accueil, charges à 80 % sur demande), ligne quand l'objectif de la semaine passée n'est pas tenu |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -339,6 +340,13 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   charge `+kg` (pas de charge de l'exercice) ; récap de fin de séance et carte des records ; titre du conseil
   protéines (ce qui manque, « Presque ! » seulement s'il manque 30 g ou moins, ou objectif atteint), le détail repas / whey suit ; notification et série de jours de
   créatine (dose du profil) ; listes vides ; chargement de la bibliothèque (phrases de l'ancien écran de démarrage).
+- **Retour après une pause** (V2.16) : plus de 7 jours sans séance → la salutation devient un « bon retour » (jamais
+  le nombre de jours manqués), jusqu'à la séance suivante. Plus de 14 jours → la première séance de retour propose
+  un bandeau « On reprend un cran en dessous… » : **Appliquer** met les charges proposées des exercices chargés à
+  80 %, arrondies au pas de chaque machine (« Non merci » le ferme ; il disparaît aussi à la première série).
+- **Objectif non tenu** (V2.16) : si la semaine passée compte moins de séances que l'objectif, une ligne sous la
+  salutation nomme la prochaine séance de la rotation, jusqu'à la première séance de la semaine (pas pour un
+  premier entraînement ; le « bon retour » passe avant).
 - Restent neutres : poids, repas, mentions santé, Sources et licences, erreurs, confirmations, autorisations.
 - Test garde-fou : chaque tableau a des variantes, sa version neutre et une entrée `Quip` ; les versions féminines
   ont autant de phrases ; toutes se formatent avec leurs paramètres.
