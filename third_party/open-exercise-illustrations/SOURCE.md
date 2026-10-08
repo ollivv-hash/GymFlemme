@@ -8,9 +8,11 @@
 Layout in this project:
 
 - `LICENSE`, `README.md`, `SOURCE.md`: proof of license, **not** packaged in the APK.
-- `assets/exercise_library/`: `exercises.json` and `images/{id}/*.webp`, byte-identical copies of the upstream files,
-  packaged as Android assets (`app/build.gradle.kts`, `sourceSets.main.assets`).
+- `assets/exercise_library/`: `exercises.json` (byte-identical copy of the upstream file) and `images/{id}/*.webp`,
+  packaged as Android assets (`app/build.gradle.kts`, `sourceSets.main.assets`). Since app 2.12.2 the images are
+  **re-encoded** as lossy WebP quality 80, same dimensions, by `tools/library/recompress.py` (23.2 MB → 11.1 MB, no
+  visible difference at the sizes shown; CC0 allows it). Nothing else is changed: same files, names, frames, crops.
   The upstream `exercises.csv` and `preview.jpg` are not copied (same data / not used).
 
-To update: replace `assets/exercise_library/` with a newer release, update this file and
-`ExerciseLibraryLoader.DATASET_VERSION`; the app reloads the library without touching the user's exercises.
+To update: replace `assets/exercise_library/` with a newer release, run `tools/library/recompress.py` on its
+`images/` folder, update this file and `ExerciseLibraryLoader.DATASET_VERSION`; the app reloads the library without touching the user's exercises.
