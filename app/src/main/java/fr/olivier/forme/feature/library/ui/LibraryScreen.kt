@@ -1,5 +1,7 @@
 package fr.olivier.forme.feature.library.ui
 
+import fr.olivier.forme.core.humor.Quip
+import fr.olivier.forme.core.humor.QuipText
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -125,11 +127,16 @@ fun LibraryScreen(
                     TextButton(onClick = { muscle = null; equipment = null; place = null }) { Text("Effacer") }
                 }
             }
-            Text(
-                "${shown.size} exercice(s)",
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
+            if (all.isEmpty()) {
+                // V2.15: the former start screen's lines, while the library loads (first launch).
+                QuipText(Quip.LOADING, modifier = Modifier.padding(16.dp))
+            } else {
+                Text(
+                    "${shown.size} exercice(s)",
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
             LazyColumn {
                 items(shown, key = { it.id }) { entry ->
                     LibraryCatalogueRow(

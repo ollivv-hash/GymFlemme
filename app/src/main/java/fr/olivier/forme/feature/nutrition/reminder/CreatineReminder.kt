@@ -1,5 +1,7 @@
 package fr.olivier.forme.feature.nutrition.reminder
 
+import fr.olivier.forme.core.humor.Quip
+import fr.olivier.forme.core.humor.QuipRepository
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -35,6 +37,7 @@ class CreatineReminder @Inject constructor(
     @ApplicationContext private val context: Context,
     private val repository: NutritionRepository,
     private val clock: Clock,
+    private val quips: QuipRepository,
 ) {
     suspend fun reschedule() {
         val profile = repository.currentProfile()
@@ -62,7 +65,7 @@ class CreatineReminder @Inject constructor(
             val notification = NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("Créatine")
-                .setContentText("Pense à ta dose de ${Fmt.number(dose)} g")
+                .setContentText(quips.text(Quip.CREATINE, Fmt.number(dose)))
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setAutoCancel(true)
                 .setContentIntent(RestTimer.openAppIntent(context))

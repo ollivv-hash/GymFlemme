@@ -1,5 +1,7 @@
 package fr.olivier.forme.feature.sport.ui.history
 
+import fr.olivier.forme.core.humor.Quip
+import fr.olivier.forme.core.humor.QuipText
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -175,6 +177,10 @@ fun SessionDetailScreen(
                     r.feeling?.let { "ressenti $it/5" },
                 ).joinToString(" · "),
             )
+            // V2.15: a quip to close the session, on the recap only.
+            if (viewModel.justFinished) {
+                QuipText(Quip.SESSION_DONE, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+            }
 
             if (r.records.isNotEmpty()) {
                 Card(
@@ -185,7 +191,7 @@ fun SessionDetailScreen(
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                 ) {
                     Column(Modifier.padding(12.dp)) {
-                        Text("🏆 Records battus", style = MaterialTheme.typography.titleMedium)
+                        QuipText(Quip.RECORD, style = MaterialTheme.typography.titleMedium)
                         r.records.forEach { ex ->
                             Text(
                                 ex.name + " : " + listOfNotNull(

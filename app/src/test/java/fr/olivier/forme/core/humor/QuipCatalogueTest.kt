@@ -36,7 +36,7 @@ class QuipCatalogueTest {
     /** Sample arguments of the parameterised entries. */
     private fun args(quip: Quip): Array<Any> = when (quip) {
         Quip.PROGRESSION, Quip.CREATINE -> arrayOf("2,5")
-        Quip.PROTEIN_MISSING -> arrayOf(25)
+        Quip.PROTEIN_MISSING, Quip.CREATINE_STREAK -> arrayOf(25)
         else -> emptyArray()
     }
 

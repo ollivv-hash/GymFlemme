@@ -156,6 +156,17 @@
     </string-array>
     <string name="neutral_creatine">Rappel : créatine du jour</string>
 
+    <!-- Creatine streak (small line, from 2 days; 1 day uses the plural below); %1$d = days -->
+    <string-array name="humor_creatine_streak">
+        <item>%1$d jours d\'affilée. Quelle régularité !</item>
+        <item>%1$d jours sans oublier. Chapeau.</item>
+    </string-array>
+    <string name="neutral_creatine_streak">%1$d jours consécutifs</string>
+    <plurals name="creatine_streak_days">
+        <item quantity="one">%1$d jour</item>
+        <item quantity="other">%1$d jours</item>
+    </plurals>
+
     <!-- Protein still missing today; %1$d = grams -->
     <string-array name="humor_protein_missing">
         <item>Il te manque %1$d g de protéines. Ton shaker s\'ennuie.</item>

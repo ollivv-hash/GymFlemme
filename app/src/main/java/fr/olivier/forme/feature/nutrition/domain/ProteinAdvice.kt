@@ -83,15 +83,7 @@ object ProteinAdvice {
     /** One sentence for the journal, e.g. "Il te manque 62 g. Ton dîner habituel en apporte ~35 g → 1 dose de whey (24 g)." */
     fun message(plan: ProteinPlan): String {
         if (plan.reached) return "Objectif protéines atteint."
-        val meals = when (plan.upcoming.size) {
-            0 -> null
-            1 -> "ton ${plan.upcoming[0].type.label.lowercase()} habituel apporte ~${plan.expectedFromMealsG.roundToInt()} g"
-            else -> "tes repas à venir (${plan.upcoming.joinToString(", ") { it.type.label.lowercase() }}) " +
-                "apportent ~${plan.expectedFromMealsG.roundToInt()} g"
-        }
-        val whey = plan.doses.takeIf { it > 0 }?.let { n ->
-            "$n dose${if (n > 1) "s" else ""} de whey (${(n * plan.proteinPerDoseG!!).roundToInt()} g)"
-        }
+        val (meals, whey) = parts(plan)
         val sentence = buildString {
             append("Il te manque ${plan.missingG.roundToInt()} g")
             meals?.let { append(" : ").append(it) }
@@ -101,10 +93,45 @@ object ProteinAdvice {
             }
             append(".")
         }
-        return if (plan.shortAfterG > 0) {
-            "$sentence Encore ~${plan.shortAfterG.roundToInt()} g à trouver : skyr, fromage blanc, œufs, viande ou poisson."
-        } else {
-            sentence
+        return listOfNotNull(sentence, rest(plan)).joinToString(" ")
+    }
+
+    /**
+     * What follows the headline in the journal (V2.15: the headline, a quip, says how much is missing): the usual
+     * meals still to come, the whey doses, what is left to find. Null when there is nothing to add.
+     */
+    fun detail(plan: ProteinPlan): String? {
+        if (plan.reached) return null
+        val (meals, whey) = parts(plan)
+        val first = when {
+            meals != null -> buildString {
+                append(meals.replaceFirstChar { it.uppercase() })
+                when {
+                    whey != null -> append(" → ").append(whey)
+                    plan.shortAfterG == 0.0 -> append(", ça devrait suffire")
+                }
+                append(".")
+            }
+            whey != null -> "À prévoir : $whey."
+            else -> null
         }
+        return listOfNotNull(first, rest(plan)).joinToString(" ").ifEmpty { null }
+    }
+
+    private fun parts(plan: ProteinPlan): Pair<String?, String?> {
+        val meals = when (plan.upcoming.size) {
+            0 -> null
+            1 -> "ton ${plan.upcoming[0].type.label.lowercase()} habituel apporte ~${plan.expectedFromMealsG.roundToInt()} g"
+            else -> "tes repas à venir (${plan.upcoming.joinToString(", ") { it.type.label.lowercase() }}) " +
+                "apportent ~${plan.expectedFromMealsG.roundToInt()} g"
+        }
+        val whey = plan.doses.takeIf { it > 0 }?.let { n ->
+            "$n dose${if (n > 1) "s" else ""} de whey (${(n * plan.proteinPerDoseG!!).roundToInt()} g)"
+        }
+        return meals to whey
+    }
+
+    private fun rest(plan: ProteinPlan): String? = plan.shortAfterG.takeIf { it > 0 }?.let {
+        "Encore ~${it.roundToInt()} g à trouver : skyr, fromage blanc, œufs, viande ou poisson."
     }
 }

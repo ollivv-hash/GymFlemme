@@ -29,6 +29,7 @@ enum class Quip(
     RECORD(R.array.humor_record, R.string.neutral_record),
     SESSION_DONE(R.array.humor_session_done, R.string.neutral_session_done, humorFeminine = R.array.humor_session_done_f),
     CREATINE(R.array.humor_creatine, R.string.neutral_creatine),
+    CREATINE_STREAK(R.array.humor_creatine_streak, R.string.neutral_creatine_streak),
     PROTEIN_MISSING(R.array.humor_protein_missing, R.string.neutral_protein_missing),
     PROTEIN_REACHED(R.array.humor_protein_reached, R.string.neutral_protein_reached),
     EMPTY_SESSIONS(R.array.humor_empty_sessions, R.string.neutral_empty_sessions),
