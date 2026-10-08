@@ -12,6 +12,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import androidx.compose.runtime.CompositionLocalProvider
+import fr.olivier.forme.core.humor.LocalQuips
+import fr.olivier.forme.core.humor.QuipRepository
 import fr.olivier.forme.core.launch.QuickAction
 import fr.olivier.forme.core.launch.QuickStart
 import fr.olivier.forme.core.settings.SettingsRepository
@@ -63,6 +66,8 @@ class MainViewModel @Inject constructor(
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
 
+    @Inject lateinit var quips: QuipRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -72,13 +77,15 @@ class MainActivity : ComponentActivity() {
             val theme = viewModel.themeMode.collectAsStateWithLifecycle()
             val pendingAction = viewModel.pendingAction.collectAsStateWithLifecycle()
             FormeTheme(theme.value) {
-                FormeNavHost(
-                    resumeOnStart = savedInstanceState == null,
-                    hasActiveSession = viewModel::hasActiveSession,
-                    pendingAction = pendingAction.value,
-                    startProposedSession = { then -> viewModel.startProposedSession(then) },
-                    onActionHandled = viewModel::actionHandled,
-                )
+                CompositionLocalProvider(LocalQuips provides quips) {
+                    FormeNavHost(
+                        resumeOnStart = savedInstanceState == null,
+                        hasActiveSession = viewModel::hasActiveSession,
+                        pendingAction = pendingAction.value,
+                        startProposedSession = { then -> viewModel.startProposedSession(then) },
+                        onActionHandled = viewModel::actionHandled,
+                    )
+                }
             }
         }
     }
