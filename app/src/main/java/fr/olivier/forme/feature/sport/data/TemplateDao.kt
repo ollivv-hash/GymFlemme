@@ -38,6 +38,13 @@ interface TemplateDao {
     @Query("SELECT * FROM template_exercise WHERE templateId = :templateId ORDER BY position")
     fun observeLines(templateId: Long): Flow<List<TemplateLineWithExercise>>
 
+    /** Lines of every template, with their exercise's type and library entry. */
+    @Query(
+        """SELECT t.templateId AS templateId, t.targetSets AS targetSets, t.optional AS optional, x.type AS type, x.libraryId AS libraryId
+           FROM template_exercise t JOIN exercise x ON x.id = t.exerciseId""",
+    )
+    fun observePlannedLines(): Flow<List<PlannedLineRow>>
+
     @Query("SELECT * FROM template_exercise")
     suspend fun getAllLines(): List<TemplateExerciseEntity>
 
