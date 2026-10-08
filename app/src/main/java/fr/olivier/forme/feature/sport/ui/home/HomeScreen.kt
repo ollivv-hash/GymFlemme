@@ -58,6 +58,7 @@ import fr.olivier.forme.feature.ai.data.AiAnalysis
 import fr.olivier.forme.feature.library.data.LibraryRepository
 import fr.olivier.forme.feature.library.domain.LibraryLabels
 import fr.olivier.forme.feature.sport.domain.CatchUpAdvice
+import fr.olivier.forme.feature.sport.domain.Comeback
 import fr.olivier.forme.feature.sport.domain.CatchUpAdvisor
 import fr.olivier.forme.feature.sport.domain.DeloadAdvisor
 import fr.olivier.forme.feature.sport.domain.MuscleStats
@@ -86,6 +87,9 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class WeightSummary(val lastKg: Double, val lastDate: LocalDate, val average7Kg: Double)
+
+/** Home line under the greeting (V2.16): welcome back after a break, or last week's goal missed. */
+data class HomeNudge(val welcomeBack: Boolean = false, val missedGoalNext: String? = null)
 
 /** "Pour rattraper" in the new session sheet (V2.13): the lagging muscles and the template catching up best. */
 data class CatchUpUi(val advice: CatchUpAdvice, val title: String)
@@ -162,6 +166,21 @@ class HomeViewModel @Inject constructor(
         }.state(null)
     }
 
+    val nudge = combine(sessions.observeFinished(), settings.trainingGoals, proposed) { finished, goals, next ->
+        val today = LocalDate.now(clock)
+        val days = finished.map { it.startedAt.atZone(clock.zone).toLocalDate() }
+        if (Comeback.isBack(days.maxOrNull(), today)) return@combine HomeNudge(welcomeBack = true)
+        val week = WeeklyStats.weekStart(today)
+        val lastWeek = week.minusWeeks(1)
+        val missed = Comeback.missedLastWeek(
+            sessionsLastWeek = days.count { it >= lastWeek && it < week },
+            sessionsThisWeek = days.count { it >= week },
+            goal = goals.sessionsPerWeek,
+            trainedBefore = days.any { it < lastWeek },
+        )
+        HomeNudge(missedGoalNext = next?.title()?.takeIf { missed })
+    }.state(HomeNudge())
+
     fun dismissDeload() = viewModelScope.launch { settings.dismissDeload(WeeklyStats.weekStart(LocalDate.now(clock))) }
 
     /** Hands today's session and nutrition to the AI app (V2.4). */
@@ -204,6 +223,7 @@ fun HomeScreen(
     val weekProgress by viewModel.weekProgress.collectAsStateWithLifecycle()
     val deload by viewModel.deload.collectAsStateWithLifecycle()
     val catchUp by viewModel.catchUp.collectAsStateWithLifecycle()
+    val nudge by viewModel.nudge.collectAsStateWithLifecycle()
     var addingWeight by remember { mutableStateOf(false) }
     var choosingSession by remember { mutableStateOf(false) }
 
@@ -215,8 +235,22 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState()),
         ) {
             // V2.15: greeting of the time slot, drawn when the home screen opens.
+            // V2.16: after a break, a welcome back replaces it; a missed goal last week adds a line.
             val greeting = remember { Quip.greeting(viewModel.now()) }
-            QuipText(greeting, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp, bottom = 12.dp))
+            QuipText(
+                if (nudge.welcomeBack) Quip.WELCOME_BACK else greeting,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp, bottom = if (nudge.missedGoalNext == null) 12.dp else 2.dp),
+            )
+            nudge.missedGoalNext?.let { next ->
+                QuipText(
+                    Quip.MISSED_GOAL,
+                    next,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+            }
             val running = active
             if (running != null) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {

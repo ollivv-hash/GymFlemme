@@ -93,6 +93,7 @@ fun ActiveSessionScreen(
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val rest by viewModel.restTimerState.collectAsStateWithLifecycle()
     val lastLogged by viewModel.lastLogged.collectAsStateWithLifecycle()
+    val offerLighterLoads by viewModel.offerLighterLoads.collectAsStateWithLifecycle()
     val catalog by viewModel.catalog.collectAsStateWithLifecycle()
     val noted by viewModel.notedThisSession.collectAsStateWithLifecycle()
     val heart by viewModel.liveHeart.collectAsStateWithLifecycle()
@@ -136,6 +137,11 @@ fun ActiveSessionScreen(
         bottomBar = { rest?.let { RestBar(it, heart, lastLogged, onExtend = viewModel::extendRest, onStop = viewModel::stopRest) } },
     ) { padding ->
         LazyColumn(Modifier.padding(padding)) {
+            if (offerLighterLoads) {
+                item(key = "lighter-loads") {
+                    LighterLoadsCard(onApply = viewModel::applyLighterLoads, onDismiss = viewModel::dismissLighterLoads)
+                }
+            }
             items(ui.exercises, key = { it.line.id }) { item ->
                 val partner = item.line.supersetGroup?.let { g ->
                     ui.exercises.firstOrNull { it.line.supersetGroup == g && it.line.id != item.line.id }
@@ -196,6 +202,28 @@ private val BLUETOOTH_PERMISSIONS =
     } else {
         arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
     }
+
+/** First session after a long break (V2.16): lighter loads, only if asked. */
+@Composable
+private fun LighterLoadsCard(onApply: () -> Unit, onDismiss: () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            QuipText(Quip.LIGHTER_LOADS, style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Charges proposées à 80 %, arrondies au pas de chaque machine.",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDismiss) { Text("Non merci") }
+                Button(onClick = onApply) { Text("Appliquer") }
+            }
+        }
+    }
+}
 
 @Composable
 private fun RestBar(state: RestTimerState, heart: LiveHeart, logged: LoggedSet?, onExtend: (Int) -> Unit, onStop: () -> Unit) {

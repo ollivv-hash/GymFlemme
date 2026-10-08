@@ -215,6 +215,38 @@
     </string-array>
     <string name="neutral_empty_exercise_history">Aucun historique pour cet exercice</string>
 
+    <!-- Back after more than 7 days without a session (V2.16): never the number of missed days -->
+    <string-array name="humor_welcome_back">
+        <item>Tiens, un revenant ! La salle a gardé ta place.</item>
+        <item>Te revoilà ! On reprend en douceur ?</item>
+        <item>Les machines se demandaient où tu étais passé.</item>
+        <item>Une pause, ça arrive. On repart ensemble ?</item>
+        <item>Bon retour ! Le meilleur moment pour reprendre, c\'est maintenant.</item>
+    </string-array>
+    <string-array name="humor_welcome_back_f">
+        <item>Tiens, une revenante ! La salle a gardé ta place.</item>
+        <item>Te revoilà ! On reprend en douceur ?</item>
+        <item>Les machines se demandaient où tu étais passée.</item>
+        <item>Une pause, ça arrive. On repart ensemble ?</item>
+        <item>Bon retour ! Le meilleur moment pour reprendre, c\'est maintenant.</item>
+    </string-array>
+    <string name="neutral_welcome_back">Bon retour</string>
+
+    <!-- First session after more than 14 days: lighter loads offered (button) -->
+    <string-array name="humor_lighter_loads">
+        <item>On reprend un cran en dessous pour retrouver le rythme ?</item>
+    </string-array>
+    <string name="neutral_lighter_loads">Reprise : charges réduites à 80 % ?</string>
+
+    <!-- Last week's sessions goal missed (until the first session of the week); %1$s = next session of the rotation -->
+    <string-array name="humor_missed_goal">
+        <item>On ne juge pas. Enfin, un peu.</item>
+        <item>La séance %1$s t\'attend sagement. Elle n\'est pas rancunière.</item>
+        <item>Pas grave, on reprend où on en était.</item>
+        <item>La rotation est patiente. Plus que la flemme, en tout cas.</item>
+    </string-array>
+    <string name="neutral_missed_goal">Prochaine séance : %1$s</string>
+
     <!-- Settings -->
     <string name="serious_mode">Mode sérieux (pour les jours sans)</string>
     <string name="serious_mode_description">Remplace les petites touches d\'humour par des messages neutres.</string>

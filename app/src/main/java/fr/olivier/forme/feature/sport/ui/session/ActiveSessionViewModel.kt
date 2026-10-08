@@ -17,6 +17,7 @@ import fr.olivier.forme.feature.sport.data.SessionExerciseEntity
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.SetEntryEntity
 import fr.olivier.forme.feature.sport.data.toWorkSet
+import fr.olivier.forme.feature.sport.domain.Comeback
 import fr.olivier.forme.feature.sport.domain.ExerciseType
 import fr.olivier.forme.feature.sport.domain.Prefill
 import fr.olivier.forme.feature.sport.domain.ProgressionRule
@@ -168,6 +169,38 @@ class ActiveSessionViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ActiveSessionUi())
 
     private val loadingHints = mutableSetOf<Long>()
+
+    private val lighterLoadsDone = MutableStateFlow(false)
+
+    /**
+     * First session after a long break (V2.16): loads at 80 % are offered, until applied, dismissed or a working set is
+     * logged.
+     */
+    val offerLighterLoads: StateFlow<Boolean> =
+        combine(ui, sessions.observeFinished(), lighterLoadsDone) { u, finished, done ->
+            val s = u.session ?: return@combine false
+            if (done || u.exercises.any { it.workingSets.isNotEmpty() }) return@combine false
+            val zone = java.time.ZoneId.systemDefault()
+            val previous = finished.filter { it.id != s.id && it.startedAt < s.startedAt }.maxOfOrNull { it.startedAt }
+            Comeback.offersLighterLoads(previous?.atZone(zone)?.toLocalDate(), s.startedAt.atZone(zone).toLocalDate())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /** Every pending loaded exercise starts at 80 % of its proposed load, rounded to its load step. */
+    fun applyLighterLoads() {
+        val items = ui.value.exercises.filter { !it.finished && it.exercise.type == ExerciseType.WEIGHTED }
+        drafts.update { current ->
+            current + items.mapNotNull { item ->
+                item.draft.loadKg?.takeIf { it > 0 }?.let { load ->
+                    item.line.id to item.draft.copy(loadKg = Comeback.lighterLoad(load, item.exercise.loadIncrementKg))
+                }
+            }
+        }
+        lighterLoadsDone.value = true
+    }
+
+    fun dismissLighterLoads() {
+        lighterLoadsDone.value = true
+    }
 
     private fun loadHint(sessionId: Long, exercise: ExerciseEntity) {
         if (!loadingHints.add(exercise.id)) return
