@@ -132,10 +132,10 @@ object AnalysisMarkdown {
         - Pas de diagnostic médical ; signale seulement si quelque chose mérite l'avis d'un professionnel.
     """.trimIndent()
 
-    fun fileName(date: LocalDate) = "gymbro-analyse-$date.md"
+    fun fileName(date: LocalDate) = "gymflemme-analyse-$date.md"
 
     fun build(day: AiDay, prompt: String = DEFAULT_PROMPT): String = buildString {
-        appendLine("# GymBro · analyse du ${day.date.format(dayFormat)}")
+        appendLine("# GymFlemme · analyse du ${day.date.format(dayFormat)}")
         appendLine()
         appendLine("_Données exportées le ${day.exportedAt.format(shortDate)} à ${day.exportedAt.format(timeFormat)}._")
         appendLine()

@@ -1,12 +1,13 @@
-# GymBro — App Sport & Nutrition (Android, usage personnel)
+# GymFlemme — App Sport & Nutrition (Android, usage personnel)
 
 Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé depuis les releases GitHub (ou `adb install`), sans Play Store.
 
-> **Statut : V2.13.0 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
-> release en CI ; chaque version fusionnée sur `main` publie une release GitHub « GymBro x.y.z » avec l'APK signé.
+> **Statut : V2.14.0 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
+> release en CI ; chaque version fusionnée sur `main` publie une release GitHub « GymFlemme x.y.z » avec l'APK signé.
 
-- Nom : **GymBro** (2.7 ; s'appelait « Forme » avant). Package inchangé : `fr.olivier.forme` — le changer ferait une
+- Nom : **GymFlemme** (2.14 ; « Forme » jusqu'à 2.6, puis « GymBro », nom trop répandu).
+  Icône « G » inchangée. Package inchangé : `fr.olivier.forme` — le changer ferait une
   autre app pour Android (installation à côté, base vide), donc les noms internes (`Forme…` dans le code) restent.
 - Interface en français, code (identifiants, commentaires) en anglais
 - **Hors ligne d'abord** : tout fonctionne sans réseau ; seule la recherche d'un produit **jamais scanné** interroge Open Food Facts.
@@ -36,6 +37,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.11** ✅ | Étape 4 : écran Sources et licences, poids de l'APK mesuré ; release et APK nommés GymBro |
 | **V2.12** ✅ | Volume hebdomadaire par muscle de la bibliothèque (séries fractionnaires), repère par muscle réglable, export IA |
 | **V2.13** ✅ | Séance conseillée selon les muscles en retard dans « Nouvelle séance », ligne « Muscles en retard » dans l'export IA |
+| **V2.14** ✅ | Nouveau nom **GymFlemme** : app, release et APK `gymflemme-*`, fichiers de sauvegarde et d'analyse IA |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -218,9 +220,9 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 
 ### Analyse IA (V2.4)
 
-- Boutons **« Analyse IA du jour »** (accueil) et **« Analyse IA de cette journée »** (bilan de séance) : GymBro écrit
-  `gymbro-analyse-AAAA-MM-JJ.md` puis le partage (Android `ACTION_SEND`) à l'app IA choisie ; l'utilisateur n'a plus qu'à envoyer.
-  GymBro n'appelle aucune IA et n'envoie rien elle-même.
+- Boutons **« Analyse IA du jour »** (accueil) et **« Analyse IA de cette journée »** (bilan de séance) : GymFlemme écrit
+  `gymflemme-analyse-AAAA-MM-JJ.md` puis le partage (Android `ACTION_SEND`) à l'app IA choisie ; l'utilisateur n'a plus qu'à envoyer.
+  GymFlemme n'appelle aucune IA et n'envoie rien elle-même.
 - Contenu du fichier : **consignes** (prompt, modifiable), **profil** (âge, sexe, taille, poids et tendance 4 semaines, objectif,
   cibles protéines / calories, FC max), **séance(s) du jour** (séries avec RIR, dernière fois, 1RM estimé, stagnation, volume,
   records, FC et zones, calories, notes), **nutrition du jour** (totaux / objectifs, repas détaillés, whey, créatine),
@@ -253,7 +255,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 ### Fréquence cardiaque (V2.1)
 
 - **FC en direct (source principale)** : la montre diffuse sa FC en Bluetooth LE (profil standard *Heart Rate*,
-  service 0x180D). Config → Montre cardio : choisir la montre parmi les appareils qui diffusent une FC. En séance, GymBro la
+  service 0x180D). Config → Montre cardio : choisir la montre parmi les appareils qui diffusent une FC. En séance, GymFlemme la
   **recherche** (filtre 0x180D, reconnue par adresse ou par nom : l'adresse de diffusion est aléatoire et peut changer) et
   s'y connecte dès que la diffusion est active, puis se reconnecte après chaque coupure. Un **service au premier plan**
   (type *connected device*) garde la liaison écran éteint ; chaque mesure est écrite au fil de l'eau dans un fichier par
@@ -426,7 +428,7 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 ### Sauvegarde automatique (V1.2)
 
 - **Réglages → Sauvegarde automatique → Choisir l'emplacement…** : le sélecteur Android (Storage Access Framework) s'ouvre ;
-  choisir **Google Drive**, le dossier voulu, et valider `gymbro-sauvegarde.json` (un fichier `forme-sauvegarde.json` déjà choisi reste utilisé tel quel). L'app garde un droit d'écriture
+  choisir **Google Drive**, le dossier voulu, et valider `gymflemme-sauvegarde.json` (un fichier déjà choisi, `forme-sauvegarde.json` ou `gymbro-sauvegarde.json`, reste utilisé tel quel). L'app garde un droit d'écriture
   **persistant sur ce seul fichier** : aucun compte Google dans l'app, aucun projet Google Cloud, aucune clé.
 - Le fichier est **réécrit en place** après chaque **séance terminée**, **une fois par jour** (WorkManager) et via
   « Sauvegarder maintenant ». L'app Drive se charge de l'envoi (différé si hors ligne) et conserve les **versions
@@ -523,7 +525,7 @@ Runner **épinglé sur `ubuntu-24.04`** (`ubuntu-latest` passe à Ubuntu 26 à p
 versions **Node 24** (`checkout`/`setup-java`/`setup-gradle` v5, `upload-artifact` v7, `download-artifact` v8) : à
 monter volontairement, ensemble, quand GitHub l'annonce.
 
-- **APK de la PR** : onglet *Actions* → le run → artefact `gymbro-<version>-apk` (`forme-…` avant 2.11.0) (conservé 30 jours).
+- **APK de la PR** : onglet *Actions* → le run → artefact `gymflemme-<version>-apk` (`gymbro-…` de 2.11.0 à 2.13.0, `forme-…` avant) (conservé 30 jours).
 - **Release** : quand une nouvelle `versionName` arrive sur `main`, une release GitHub `v<version>` est publiée
   avec l'APK signé (une seule fois par version : penser à monter `versionCode`/`versionName`).
   Sur le téléphone : page *Releases* du dépôt → télécharger l'APK → installer (mise à jour sans perte de données,

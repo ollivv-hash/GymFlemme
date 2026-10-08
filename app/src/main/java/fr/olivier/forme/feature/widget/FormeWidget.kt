@@ -147,7 +147,7 @@ fun WidgetContent(context: Context, data: WidgetData, updatedAt: LocalDateTime) 
         Box(modifier = GlanceModifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.TopEnd) {
             Image(
                 provider = ImageProvider(R.drawable.ic_logo_g),
-                contentDescription = "GymBro",
+                contentDescription = "GymFlemme",
                 colorFilter = ColorFilter.tint(ColorProvider(WidgetColors.primary)),
                 modifier = GlanceModifier.size(18.dp).clickable(home),
             )

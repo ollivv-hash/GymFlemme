@@ -43,9 +43,10 @@ class AutoBackupManagerTest {
     @Test
     fun withoutTargetOnlyTheLastThreeLocalCopiesAreKept() = runTest {
         val (manager, settings) = manager()
-        // Copies left by the app before its rename (Forme → GymBro): pruned like the others, oldest first.
+        // Copies left by the app before its rename (Forme, GymBro): pruned like the others, oldest first.
         val localDir = File(context().filesDir, "auto-backups").apply { mkdirs() }
         File(localDir, "forme-auto-20200101-080000.json").writeText("{}")
+        File(localDir, "gymbro-auto-20200102-080000.json").writeText("{}")
         repeat(5) {
             val result = manager.runNow()
             assertFalse(result.targetWritten)
@@ -55,7 +56,7 @@ class AutoBackupManagerTest {
         val copies = manager.localCopies()
         assertEquals(AutoBackupManager.LOCAL_KEEP, copies.size)
         assertTrue(copies.zipWithNext().all { (newer, older) -> newer.name > older.name })
-        assertTrue(copies.all { it.name.startsWith("gymbro-auto-") })
+        assertTrue(copies.all { it.name.startsWith("gymflemme-auto-") })
         BackupCodec.decode(copies.first().readText())
         assertEquals(AutoBackupState(), settings.autoBackup.first())
     }

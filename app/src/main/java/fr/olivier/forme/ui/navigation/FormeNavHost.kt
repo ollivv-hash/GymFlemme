@@ -63,7 +63,7 @@ private data class TopLevel(val route: Any, val label: String, val icon: @Compos
 private fun vector(image: ImageVector): @Composable () -> Painter = { rememberVectorPainter(image) }
 
 private val topLevels = listOf(
-    // Home is the app itself: its tab shows the GymBro "G" (V2.7).
+    // Home is the app itself: its tab shows the app's "G" (V2.7).
     TopLevel(HomeRoute, "Accueil") { painterResource(R.drawable.ic_logo_g) },
     TopLevel(HistoryRoute, "Historique", vector(Icons.Filled.DateRange)),
     TopLevel(NutritionRoute(), "Nutrition", vector(Icons.Filled.Favorite)),

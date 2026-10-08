@@ -36,7 +36,7 @@ fun SourcesScreen(onBack: () -> Unit) {
             SectionTitle("Logiciels")
             Credits.software.forEach { CreditCard(it) }
             Text(
-                "GymBro ${BuildConfig.VERSION_NAME} · application personnelle, données gardées sur le téléphone.",
+                "GymFlemme ${BuildConfig.VERSION_NAME} · application personnelle, données gardées sur le téléphone.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 16.dp),

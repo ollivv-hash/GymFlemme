@@ -5,7 +5,7 @@
 #   FORME_STORE_PASSWORD   keystore password
 #   FORME_KEY_ALIAS        key alias (forme)
 #   FORME_KEY_PASSWORD     key password
-#   (secret names kept from the app's former name "Forme"; the APK and release are named GymBro since 2.11.0)
+#   (secret names kept from the app's former name "Forme"; the APK and release are named GymBro from 2.11.0, GymFlemme since 2.14.0)
 # Without them the APK is built unsigned (not installable) and no release is published.
 #
 # Runner pinned to ubuntu-24.04 (ubuntu-latest moves to Ubuntu 26 from 2026-10-19) and actions on Node 24
@@ -80,11 +80,11 @@ jobs:
         run: |
           src=$(ls app/build/outputs/apk/release/*.apk | head -1)
           suffix=$([ "${{ steps.signing.outputs.signed }}" = true ] && echo "" || echo "-unsigned")
-          mkdir -p dist && cp "$src" "dist/gymbro-${{ steps.version.outputs.name }}$suffix.apk"
+          mkdir -p dist && cp "$src" "dist/gymflemme-${{ steps.version.outputs.name }}$suffix.apk"
 
       - uses: actions/upload-artifact@v7
         with:
-          name: gymbro-${{ steps.version.outputs.name }}-apk
+          name: gymflemme-${{ steps.version.outputs.name }}-apk
           path: dist/*.apk
           retention-days: 30
 
@@ -106,7 +106,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: gymbro-${{ needs.build.outputs.version }}-apk
+          name: gymflemme-${{ needs.build.outputs.version }}-apk
           path: dist
 
       - name: Publish release (once per version)
@@ -119,4 +119,4 @@ jobs:
             exit 0
           fi
           gh release create "v$VERSION" dist/*.apk --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "GymBro $VERSION" --generate-notes
+            --title "GymFlemme $VERSION" --generate-notes
