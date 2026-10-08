@@ -17,6 +17,7 @@ class TemplateRepository @Inject constructor(
 ) {
     fun observeAll(): Flow<List<WorkoutTemplateEntity>> = dao.observeAll()
     fun observeLines(templateId: Long): Flow<List<TemplateLineWithExercise>> = dao.observeLines(templateId)
+    fun observePlannedLines(): Flow<List<PlannedLineRow>> = dao.observePlannedLines()
     suspend fun get(id: Long): WorkoutTemplateEntity? = dao.getById(id)
     suspend fun getLines(templateId: Long): List<TemplateLineWithExercise> = dao.getLines(templateId)
 

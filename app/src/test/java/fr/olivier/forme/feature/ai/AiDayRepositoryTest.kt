@@ -89,6 +89,8 @@ class AiDayRepositoryTest {
             "Dîner (30 g prot., 300 kcal) : Saumon 150 g",
             "Séances : 1 / 3",
             "Séries par muscle (muscle principal 1 par série, en appui ½ ; repère des grands muscles 10 à 20) : Pectoraux 1 ·",
+            "- Muscles en retard (grands muscles sous 10 séries) : ",
+            "Pectoraux 1/10",
             // History for charts.
             "## Historique pour graphiques",
             "### Chest press (dernières séances)",

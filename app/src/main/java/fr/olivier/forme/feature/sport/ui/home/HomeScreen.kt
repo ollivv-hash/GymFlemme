@@ -55,7 +55,15 @@ import fr.olivier.forme.feature.sport.data.SessionEntity
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.TemplateRepository
 import fr.olivier.forme.feature.ai.data.AiAnalysis
+import fr.olivier.forme.feature.library.data.LibraryRepository
+import fr.olivier.forme.feature.library.domain.LibraryLabels
+import fr.olivier.forme.feature.sport.domain.CatchUpAdvice
+import fr.olivier.forme.feature.sport.domain.CatchUpAdvisor
 import fr.olivier.forme.feature.sport.domain.DeloadAdvisor
+import fr.olivier.forme.feature.sport.domain.MuscleStats
+import fr.olivier.forme.feature.sport.domain.Muscles
+import fr.olivier.forme.feature.sport.domain.PlannedLine
+import fr.olivier.forme.feature.sport.domain.TrainedSet
 import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.feature.sport.domain.WeeklyStats
 import fr.olivier.forme.core.settings.SettingsRepository
@@ -76,10 +84,14 @@ import javax.inject.Inject
 
 data class WeightSummary(val lastKg: Double, val lastDate: LocalDate, val average7Kg: Double)
 
+/** "Pour rattraper" in the new session sheet (V2.13): the lagging muscles and the template catching up best. */
+data class CatchUpUi(val advice: CatchUpAdvice, val title: String)
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val sessions: SessionRepository,
     templates: TemplateRepository,
+    library: LibraryRepository,
     private val weights: BodyWeightRepository,
     private val settings: SettingsRepository,
     private val analysis: AiAnalysis,
@@ -116,6 +128,34 @@ class HomeViewModel @Inject constructor(
             if (dismissed == currentWeek) return@combine null
             val perWeek = sets.groupingBy { WeeklyStats.weekStart(it.startedAt.atZone(clock.zone).toLocalDate()) }.eachCount()
             DeloadAdvisor.advise(perWeek, currentWeek, plateaus)
+        }.state(null)
+    }
+
+    /** Template catching up the lagging muscles of the current week better than the rotation's, if any. */
+    val catchUp = run {
+        val currentWeek = WeeklyStats.weekStart(LocalDate.now(clock))
+        val musclesById = library.observeAll().map { entries ->
+            entries.associate { it.id to Muscles(it.primaryList, it.secondaryList + it.alsoTargetsList) }
+        }
+        val week = combine(
+            sessions.observeWorkingSetsSince(currentWeek.atStartOfDay(clock.zone).toInstant()),
+            sessions.observeFinished(),
+            musclesById,
+        ) { rows, finished, muscles ->
+            val sets = rows.map { row ->
+                TrainedSet(row.startedAt.atZone(clock.zone).toLocalDate(), row.muscleGroup, row.type) to row.libraryId?.let(muscles::get)
+            }
+            val done = finished.count { WeeklyStats.weekStart(it.startedAt.atZone(clock.zone).toLocalDate()) == currentWeek }
+            Triple(MuscleStats.week(sets, currentWeek), done, muscles)
+        }
+        combine(week, settings.trainingGoals, this.templates, proposed, templates.observePlannedLines()) { (muscleWeek, done, muscles), goals, active, next, lines ->
+            val byTemplate = lines.groupBy { it.templateId }
+            val planned = active.map { t ->
+                t.id to byTemplate[t.id].orEmpty().map { PlannedLine(it.targetSets, it.type, it.libraryId?.let(muscles::get), it.optional) }
+            }
+            CatchUpAdvisor.advise(muscleWeek, done, goals.muscleMinSets, planned, next?.id)?.let { advice ->
+                CatchUpUi(advice, active.first { it.id == advice.suggested.templateId }.title())
+            }
         }.state(null)
     }
 
@@ -159,6 +199,7 @@ fun HomeScreen(
     val weight by viewModel.weight.collectAsStateWithLifecycle()
     val weekProgress by viewModel.weekProgress.collectAsStateWithLifecycle()
     val deload by viewModel.deload.collectAsStateWithLifecycle()
+    val catchUp by viewModel.catchUp.collectAsStateWithLifecycle()
     var addingWeight by remember { mutableStateOf(false) }
     var choosingSession by remember { mutableStateOf(false) }
 
@@ -267,6 +308,7 @@ fun HomeScreen(
         NewSessionSheet(
             proposed = proposed?.let { it.id to it.title() },
             others = templates.filter { it.id != proposed?.id }.map { it.id to it.title() },
+            catchUp = catchUp,
             onStart = { id ->
                 choosingSession = false
                 viewModel.start(id, onOpenSession)
@@ -297,6 +339,7 @@ fun HomeScreen(
 private fun NewSessionSheet(
     proposed: Pair<Long, String>?,
     others: List<Pair<Long, String>>,
+    catchUp: CatchUpUi?,
     onStart: (Long?) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -323,6 +366,9 @@ private fun NewSessionSheet(
                     }
                 }
             }
+            if (catchUp != null) {
+                item { CatchUpCard(catchUp, onStart = { onStart(catchUp.advice.suggested.templateId) }) }
+            }
             if (others.isNotEmpty()) {
                 item { SectionTitle("Autres séances") }
                 items(others, key = { it.first }) { (id, title) ->
@@ -342,5 +388,36 @@ private fun NewSessionSheet(
         }
     }
 }
+
+/** "Muscles en retard : Ischio-jambiers 4/10 · Mollets 0/10", then the template that catches up best and what it brings. */
+@Composable
+private fun CatchUpCard(catchUp: CatchUpUi, onStart: () -> Unit) {
+    val advice = catchUp.advice
+    val shown = advice.lagging.take(MAX_LAGGING_SHOWN)
+    val more = advice.lagging.size - shown.size
+    Card(
+        Modifier.fillMaxWidth().padding(top = 12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                "Muscles en retard : " + shown.joinToString(" · ") { "${LibraryLabels.muscle(it.muscle)} ${Fmt.number(it.done)}/${it.min}" } +
+                    (if (more > 0) " · +$more autre${if (more > 1) "s" else ""}" else ""),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text("Pour rattraper : ${catchUp.title}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+            Text(
+                advice.lagging.mapNotNull { l -> advice.suggested.gains[l.muscle]?.let { "+${Fmt.number(it)} ${LibraryLabels.muscle(l.muscle).lowercase()}" } }
+                    .joinToString(", "),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            FilledTonalButton(onClick = onStart, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Text("Démarrer ${catchUp.title}", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+private const val MAX_LAGGING_SHOWN = 5
 
 internal const val NEW_SESSION_SHEET_TAG = "new-session-sheet"

@@ -1,6 +1,7 @@
 package fr.olivier.forme.feature.ai.domain
 
 import fr.olivier.forme.feature.library.domain.LibraryLabels
+import fr.olivier.forme.feature.sport.domain.CatchUpAdvisor
 import fr.olivier.forme.feature.sport.domain.MuscleStats
 import fr.olivier.forme.feature.sport.domain.MuscleWeek
 import fr.olivier.forme.feature.nutrition.domain.DayTotals
@@ -276,6 +277,14 @@ object AnalysisMarkdown {
                             (if (v.indirect > 0) " (dont ${Fmt.number(v.indirect, 1)} en appui)" else "")
                     },
             )
+        }
+        if (w.muscles.byMuscle.isNotEmpty()) {
+            CatchUpAdvisor.lagging(w.muscles, w.muscleMinSets).takeIf { it.isNotEmpty() }?.let { lagging ->
+                appendLine(
+                    "- Muscles en retard (grands muscles sous ${w.muscleMinSets} séries) : " +
+                        lagging.joinToString(" · ") { "${LibraryLabels.muscle(it.muscle)} ${Fmt.number(it.done, 1)}/${it.min}" },
+                )
+            }
         }
         if (w.muscles.unlinkedSets > 0) {
             appendLine("- ${w.muscles.unlinkedSets} série(s) d'exercices sans fiche de bibliothèque : non réparties par muscle.")

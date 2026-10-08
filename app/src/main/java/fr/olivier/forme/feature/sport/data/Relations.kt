@@ -24,6 +24,15 @@ data class WorkingSetRow(
     val libraryId: String? = null,
 )
 
+/** A planned line of a template with what the catch-up advice needs from its exercise (V2.13). */
+data class PlannedLineRow(
+    val templateId: Long,
+    val targetSets: Int,
+    val optional: Boolean,
+    val type: fr.olivier.forme.feature.sport.domain.ExerciseType,
+    val libraryId: String?,
+)
+
 /** One working set of a loaded exercise (plateau detection across exercises). */
 data class WeightedSetRow(
     val exerciseId: Long,
