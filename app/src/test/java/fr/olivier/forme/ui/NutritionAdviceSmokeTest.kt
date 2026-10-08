@@ -114,6 +114,8 @@ class NutritionAdviceSmokeTest {
             shot("n6-after-whey")
 
             rule.onNode(hasText("Profil") and hasClickAction()).performClick()
+            // The profile opens once loaded: wait for its form before scrolling (raced the navigation on CI).
+            waitFor("Jour de repos (kcal)")
             rule.onNodeWithText("Objectif calories").performScrollTo()
             rule.onNodeWithText("Jour de repos (kcal)").performScrollTo()
             waitFor("Valeur conseillée")
