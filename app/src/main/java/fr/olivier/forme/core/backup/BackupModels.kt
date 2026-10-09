@@ -22,6 +22,7 @@ import fr.olivier.forme.feature.sport.data.WorkoutTemplateEntity
 import fr.olivier.forme.feature.sport.domain.ExerciseType
 import fr.olivier.forme.feature.sport.domain.MuscleGroup
 import fr.olivier.forme.feature.sport.domain.SessionExerciseStatus
+import fr.olivier.forme.feature.badges.data.BadgeEntity
 import kotlinx.serialization.Serializable
 import java.time.Instant
 import java.time.LocalDate
@@ -31,7 +32,8 @@ import java.time.LocalDate
  * v1 = sport + body weight, v2 adds the `nutrition` section (absent in v1 files → empty),
  * v3 adds supersets, replacements and exercise notes (optional fields, absent → null),
  * v4 adds session heart rate and age / sex / maximum heart rate, v5 adds height, nutrition goal and calorie target,
- * v6 adds the exercise library link (`libraryId`, absent → null).
+ * v6 adds the exercise library link (`libraryId`, absent → null), v7 the badges earned (absent → recomputed from
+ * the history, silently).
  * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual and exercise library reference tables
  * (embedded in the APK) are not exported.
  */
@@ -43,7 +45,12 @@ data class BackupFile(
     val sport: SportBackup,
     val bodyWeight: List<BodyWeightDto>,
     val nutrition: NutritionBackup = NutritionBackup(),
+    /** V2.17 (backup v7): badges earned; absent in older files. */
+    val badges: List<BadgeDto> = emptyList(),
 )
+
+@Serializable
+data class BadgeDto(val id: String, val earnedAt: String, val seen: Boolean)
 
 @Serializable
 data class NutritionBackup(
@@ -313,6 +320,9 @@ fun MealEntryEntity.toDto() = MealEntryDto(
 fun MealEntryDto.toEntity() = MealEntryEntity(
     id, LocalDate.parse(date), mealType, foodId, name, quantityG, proteinG, kcal, carbsG, fatG, isWhey, Instant.ofEpochMilli(eatenAt),
 )
+
+fun BadgeEntity.toDto() = BadgeDto(id, earnedAt.toString(), seen)
+fun BadgeDto.toEntity() = BadgeEntity(id, LocalDate.parse(earnedAt), seen)
 
 fun CreatineEntryEntity.toDto() = CreatineDto(id, date.toString(), doseG, takenAt.toEpochMilli())
 fun CreatineDto.toEntity() = CreatineEntryEntity(id, LocalDate.parse(date), doseG, Instant.ofEpochMilli(takenAt))

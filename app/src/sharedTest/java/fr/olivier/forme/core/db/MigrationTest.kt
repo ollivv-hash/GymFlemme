@@ -135,9 +135,22 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate1To6() {
+    fun migrate6To7CreatesAnEmptyBadgeTable() {
+        helper.createDatabase(dbName, 6).apply {
+            execSQL("INSERT INTO body_weight_entry (id, date, weightKg) VALUES (1, 20000, 81.5)")
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 7, true, Migrations.MIGRATION_6_7).apply {
+            query("SELECT COUNT(*) FROM badge").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+            query("SELECT COUNT(*) FROM body_weight_entry").use { it.moveToFirst(); assertEquals(1, it.getInt(0)) }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To7() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, 6, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 7, true, *Migrations.ALL).close()
     }
 
     @Test

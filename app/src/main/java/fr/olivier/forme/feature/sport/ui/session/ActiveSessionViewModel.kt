@@ -1,5 +1,6 @@
 package fr.olivier.forme.feature.sport.ui.session
 
+import fr.olivier.forme.feature.badges.data.BadgeRepository
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -87,6 +88,7 @@ class ActiveSessionViewModel @Inject constructor(
     private val autoBackup: AutoBackupScheduler,
     private val heartRecorder: HeartSessionRecorder,
     private val heartSync: HeartSyncScheduler,
+    private val badges: BadgeRepository,
 ) : ViewModel() {
 
     private val hints = MutableStateFlow<Map<Long, ExerciseHistoryHint>>(emptyMap())
@@ -369,6 +371,8 @@ class ActiveSessionViewModel @Inject constructor(
         val id = session.value?.id ?: return@launch
         restTimer.cancel()
         sessions.finish(id, feeling, notes)
+        // V2.17: badges earned by this session, announced on the recap.
+        runCatching { badges.evaluate() }.onFailure { android.util.Log.e("Forme", "Badge evaluation failed", it) }
         heartRecorder.stop(id, save = true)
         heartSync.schedule(id)
         autoBackup.requestNow()
