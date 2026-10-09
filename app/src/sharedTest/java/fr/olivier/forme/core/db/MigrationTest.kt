@@ -148,9 +148,37 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate1To7() {
+    fun migrate7To8ConvertsTheV1BadgesIntoTiersWithoutLoss() {
+        helper.createDatabase(dbName, 7).apply {
+            listOf("NOT_DEAD" to 0, "REPEAT_OFFENDER" to 1, "PILLAR" to 0, "BEATS_THE_COUCH" to 1, "EARLY_BIRD" to 1, "ALL_ROUNDER" to 1, "CREATINE_LOYAL" to 0)
+                .forEachIndexed { i, (id, seen) -> execSQL("INSERT INTO badge (id, earnedAt, seen) VALUES ('$id', ${20_000 + i}, $seen)") }
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 8, true, Migrations.MIGRATION_7_8).apply {
+            val rows = mutableListOf<String>()
+            query("SELECT id, tier, earnedAt, seen FROM badge ORDER BY earnedAt").use { c ->
+                while (c.moveToNext()) rows += "${c.getString(0)}/${c.getInt(1)}/${c.getLong(2)}/${c.getInt(3)}"
+            }
+            assertEquals(
+                listOf(
+                    "NOT_DEAD/0/20000/0",
+                    "REPEAT_OFFENDER/1/20001/1",
+                    "REPEAT_OFFENDER/2/20002/0", // Pilier de la salle → Récidiviste Argent
+                    "BEATS_THE_COUCH/1/20003/1",
+                    "EARLY_BIRD/0/20004/1",
+                    "ALL_ROUNDER/1/20005/1",
+                    "CREATINE_LOYAL/2/20006/0", // 30 days → Argent
+                ),
+                rows,
+            )
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To8() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, 7, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 8, true, *Migrations.ALL).close()
     }
 
     @Test

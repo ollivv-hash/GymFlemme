@@ -1,5 +1,7 @@
 package fr.olivier.forme.ui.navigation
 
+import fr.olivier.forme.feature.badges.ui.BadgeAnnouncer
+import fr.olivier.forme.feature.badges.ui.BadgesScreen
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -134,8 +136,10 @@ fun FormeNavHost(
                     onOpenSessionDetail = { nav.navigate(SessionDetailRoute(it)) },
                     onOpenWeight = { nav.switchTab(NutritionRoute(tab = 1)) },
                     onOpenNutrition = { nav.switchTab(NutritionRoute(tab = 0)) },
+                    onOpenBadges = { nav.navigate(BadgesRoute) },
                 )
             }
+            composable<BadgesRoute> { BadgesScreen(onBack = { nav.popBackStack() }) }
             composable<HistoryRoute> {
                 HistoryScreen(
                     onOpenSession = { nav.navigate(SessionDetailRoute(it)) },
@@ -261,6 +265,8 @@ fun FormeNavHost(
             composable<WatchTestRoute> { WatchTestScreen(onBack = { nav.popBackStack() }) }
             composable<AiSettingsRoute> { AiSettingsScreen(onBack = { nav.popBackStack() }) }
         }
+        // V2.18: new badges, announced once over any screen but the session in progress.
+        BadgeAnnouncer(enabled = destination != null && destination.hasRoute(ActiveSessionRoute::class).not())
     }
 }
 

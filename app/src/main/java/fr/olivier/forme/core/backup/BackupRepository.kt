@@ -47,7 +47,7 @@ class BackupRepository @Inject constructor(
                     meals = db.mealDao().getAll().sortedBy { it.id }.map { it.toDto() },
                     creatine = db.creatineDao().getAll().sortedBy { it.id }.map { it.toDto() },
                 ),
-                badges = db.badgeDao().getAll().sortedBy { it.id }.map { it.toDto() },
+                badges = db.badgeDao().getAll().sortedWith(compareBy({ it.id }, { it.tier })).map { it.toDto() },
             )
         }
     }
@@ -80,7 +80,7 @@ class BackupRepository @Inject constructor(
             db.foodDao().insertAll(nutrition.foods.map { it.toEntity() })
             db.mealDao().insertAll(nutrition.meals.map { it.toEntity() })
             db.creatineDao().insertAll(nutrition.creatine.map { it.toEntity() })
-            db.badgeDao().insertAll(file.badges.map { it.toEntity() })
+            db.badgeDao().insertAll(file.badges.map { it.toEntity(file.schemaVersion) })
         }
     }
 

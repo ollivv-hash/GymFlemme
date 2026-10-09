@@ -1,73 +1,184 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    GymFlemme badges (V2.17): name, condition and message of each. Names keep their wording in serious mode and agree
-    with the profile's gender ("*_f"); messages are humour entries (fr.olivier.forme.core.humor.Quip.BADGE_*) whose
-    neutral version is shared: "Badge obtenu : {nom}".
+    GymFlemme badges, levels (V2.18, "Badges, défis et niveaux"). Names keep their wording in serious mode and agree
+    with the profile's gender ("*_f"). Messages are shown in humour mode; serious mode shows the neutral versions
+    (badge_neutral*). Thresholds, points and levels live in BadgeConfig.kt.
 -->
 <resources>
+    <!-- Tiered badges -->
+    <string name="badge_name_repeat_offender">Récidiviste</string>
+    <string name="badge_name_beats_the_couch">Plus fort que le canapé</string>
+    <string name="badge_name_beats_the_couch_f">Plus forte que le canapé</string>
+    <string name="badge_name_mover">Déménageur</string>
+    <string name="badge_name_mover_f">Déménageuse</string>
+    <string name="badge_name_galley_slave">Galérien</string>
+    <string name="badge_name_galley_slave_f">Galérienne</string>
+    <string name="badge_name_record_collector">Collectionneur de records</string>
+    <string name="badge_name_record_collector_f">Collectionneuse de records</string>
+    <string name="badge_name_creatine_loyal">Créatine fidèle</string>
+    <string name="badge_name_golden_shaker">Shaker d\'or</string>
+    <string name="badge_name_all_rounder">Touche-à-tout</string>
+
+    <!-- What each tiered badge measures, after "37 / 50" -->
+    <string name="badge_unit_repeat_offender">séances</string>
+    <string name="badge_unit_beats_the_couch">semaines d\'affilée</string>
+    <string name="badge_unit_mover">t</string>
+    <string name="badge_unit_galley_slave">km</string>
+    <string name="badge_unit_record_collector">records</string>
+    <string name="badge_unit_creatine_loyal">jours d\'affilée</string>
+    <string name="badge_unit_golden_shaker">jours d\'objectif protéines</string>
+    <string name="badge_unit_all_rounder">exercices</string>
+
+    <!-- Bronze, Argent, Or, Platine -->
+    <string-array name="badge_msg_repeat_offender">
+        <item>Dix séances. Tu reviens toujours sur les lieux du crime.</item>
+        <item>Cinquante séances. Tu fais partie des meubles.</item>
+        <item>150 séances. La salle devrait te verser un loyer.</item>
+        <item>300 séances. On grave ton nom sur un banc ?</item>
+    </string-array>
+    <string-array name="badge_msg_beats_the_couch">
+        <item>Un mois sans laisser gagner le canapé. Respect.</item>
+        <item>Trois mois. Le canapé a déposé plainte.</item>
+        <item>Six mois. Le canapé s\'est trouvé quelqu\'un d\'autre.</item>
+        <item>Un an. Le canapé ne te reconnaît plus.</item>
+    </string-array>
+    <string-array name="badge_msg_mover">
+        <item>10 tonnes soulevées. Un camion, mais en morceaux.</item>
+        <item>50 tonnes. Tu pourrais faire un déménagement.</item>
+        <item>200 tonnes. Un avion de ligne, à peu près.</item>
+        <item>500 tonnes. On arrête de compter, ça devient gênant.</item>
+    </string-array>
+    <string-array name="badge_msg_galley_slave">
+        <item>10 km de rameur. Sans quitter la salle.</item>
+        <item>50 km. La Manche, c\'est pour bientôt.</item>
+        <item>200 km. Tu as presque traversé la Manche, aller-retour.</item>
+        <item>500 km. Capitaine, on rentre au port ?</item>
+    </string-array>
+    <string-array name="badge_msg_record_collector">
+        <item>Cinq records. Tu prends goût au progrès.</item>
+        <item>25 records. La flemme ne sait plus où se cacher.</item>
+        <item>75 records. Tu progresses plus vite que tes excuses.</item>
+        <item>150 records. Toi contre toi, et tu gagnes.</item>
+    </string-array>
+    <string-array name="badge_msg_creatine_loyal">
+        <item>Une semaine sans oubli. Bien joué.</item>
+        <item>Trente jours sans oubli. Constance exemplaire.</item>
+        <item>Trois mois. Ta cuillère te connaît par cœur.</item>
+        <item>Un an sans oubli. On n\'a jamais vu ça.</item>
+    </string-array>
+    <string-array name="badge_msg_golden_shaker">
+        <item>7 jours d\'objectif protéines. Ton shaker reprend du service.</item>
+        <item>30 jours. Ton shaker est fier de toi.</item>
+        <item>100 jours. Ton shaker mérite une médaille aussi.</item>
+        <item>250 jours. Le shaker d\'or est à toi.</item>
+    </string-array>
+    <string-array name="badge_msg_all_rounder">
+        <item>Dix exercices différents. Tu explores !</item>
+        <item>Vingt exercices. Plus aucune machine ne te fait peur.</item>
+        <item>35 exercices. Tu connais la salle mieux que le coach.</item>
+        <item>50 exercices. Il reste des machines que tu n\'as pas essayées ?</item>
+    </string-array>
+
+    <string-array name="badge_tiers">
+        <item>Bronze</item>
+        <item>Argent</item>
+        <item>Or</item>
+        <item>Platine</item>
+    </string-array>
+
+    <!-- One-off badges -->
     <string name="badge_name_not_dead">Pas mort</string>
     <string name="badge_name_not_dead_f">Pas morte</string>
     <string name="badge_name_well_started">Bien parti</string>
     <string name="badge_name_well_started_f">Bien partie</string>
-    <string name="badge_name_repeat_offender">Récidiviste</string>
-    <string name="badge_name_pillar">Pilier de la salle</string>
-    <string name="badge_name_beats_the_couch">Plus fort que le canapé</string>
-    <string name="badge_name_beats_the_couch_f">Plus forte que le canapé</string>
-    <string name="badge_name_early_bird">Lève-tôt malgré lui</string>
-    <string name="badge_name_early_bird_f">Lève-tôt malgré elle</string>
     <string name="badge_name_regular">Régulier</string>
     <string name="badge_name_regular_f">Régulière</string>
     <string name="badge_name_first_record">Record en vue</string>
-    <string name="badge_name_all_rounder">Touche-à-tout</string>
-    <string name="badge_name_creatine_loyal">Créatine fidèle</string>
+    <string name="badge_name_early_bird">Lève-tôt malgré lui</string>
+    <string name="badge_name_early_bird_f">Lève-tôt malgré elle</string>
+    <string name="badge_name_night_owl">Oiseau de nuit</string>
+    <string name="badge_name_triple_a">Triple A</string>
+    <string name="badge_name_no_jealousy">Pas de jaloux</string>
 
-    <string name="badge_condition_not_dead">1re séance</string>
-    <string name="badge_condition_well_started">5 séances</string>
-    <string name="badge_condition_repeat_offender">10 séances</string>
-    <string name="badge_condition_pillar">50 séances</string>
-    <string name="badge_condition_beats_the_couch">4 semaines d\'affilée avec au moins une séance</string>
-    <string name="badge_condition_early_bird">1 séance commencée avant 8 h</string>
+    <string name="badge_condition_not_dead">1re séance terminée</string>
+    <string name="badge_condition_well_started">5 séances terminées</string>
     <string name="badge_condition_regular">3 séances dans la même semaine</string>
     <string name="badge_condition_first_record">1er record battu</string>
-    <string name="badge_condition_all_rounder">10 exercices différents réalisés</string>
-    <string name="badge_condition_creatine_loyal">30 jours de créatine d\'affilée</string>
+    <string name="badge_condition_early_bird">Séance commencée avant 8 h</string>
+    <string name="badge_condition_night_owl">Séance commencée après 21 h</string>
+    <string name="badge_condition_triple_a">Séances A, B et C terminées dans la même semaine</string>
+    <string name="badge_condition_no_jealousy">Tous les groupes musculaires (hors Cardio) travaillés dans la même semaine</string>
 
-    <string-array name="humor_badge_not_dead">
-        <item>Première séance. Tu es vivant, et tu l\'as fait !</item>
+    <string name="badge_msg_not_dead">Première séance. Tu es vivant, et tu l\'as fait !</string>
+    <string name="badge_msg_not_dead_f">Première séance. Tu es vivante, et tu l\'as fait !</string>
+    <string name="badge_msg_well_started">Cinq séances. Ça ressemble dangereusement à une habitude.</string>
+    <string name="badge_msg_regular">Trois séances cette semaine. On ne te reconnaît plus.</string>
+    <string name="badge_msg_first_record">Ton tout premier record. Et sûrement pas le dernier.</string>
+    <string name="badge_msg_early_bird">Une séance avant 8 h. Qui t\'a forcé ?</string>
+    <string name="badge_msg_early_bird_f">Une séance avant 8 h. Qui t\'a forcée ?</string>
+    <string name="badge_msg_night_owl">La salle ferme bientôt, mais pas toi.</string>
+    <string name="badge_msg_triple_a">La rotation complète. Chef-d\'œuvre.</string>
+    <string name="badge_msg_no_jealousy">Aucun muscle oublié. Ils sont tous contents.</string>
+
+    <!-- Secret badges: "???" until earned -->
+    <string name="badge_name_monday_fearless">Lundi, même pas peur</string>
+    <string name="badge_name_sporty_sunday">Dimanche sportif</string>
+    <string name="badge_name_marathon">Le marathon</string>
+    <string name="badge_name_return_of_the_king">Le retour du roi</string>
+    <string name="badge_name_return_of_the_king_f">Le retour de la reine</string>
+    <string name="badge_name_anniversary">Anniversaire</string>
+    <string name="badge_name_new_year">Nouvel An</string>
+
+    <string name="badge_condition_monday_fearless">4 séances terminées un lundi (au total)</string>
+    <string name="badge_condition_sporty_sunday">Séance terminée un dimanche</string>
+    <string name="badge_condition_marathon">Séance de plus de 75 minutes</string>
+    <string name="badge_condition_return_of_the_king">Séance terminée après au moins 30 jours sans séance</string>
+    <string name="badge_condition_anniversary">365 jours après la première séance, avec au moins une séance dans les 30 derniers jours</string>
+    <string name="badge_condition_new_year">Séance terminée un 1er janvier</string>
+
+    <string name="badge_msg_monday_fearless">Le lundi ne te fait plus peur.</string>
+    <string name="badge_msg_sporty_sunday">Même le dimanche. Respect.</string>
+    <string name="badge_msg_marathon">Tu as dormi à la salle ?</string>
+    <string name="badge_msg_return_of_the_king">Il est revenu ! On t\'avait gardé ta place.</string>
+    <string name="badge_msg_return_of_the_king_f">Elle est revenue ! On t\'avait gardé ta place.</string>
+    <string name="badge_msg_anniversary">Un an déjà. Tu te souviens de tes débuts ?</string>
+    <string name="badge_msg_new_year">Tu tiens déjà ta bonne résolution.</string>
+
+    <string name="badge_secret">\???</string>
+
+    <!-- Serious mode; %1$s = the badge's name, %2$s = the tier -->
+    <string name="badge_neutral_tier">Badge %1$s : palier %2$s obtenu</string>
+    <string name="badge_neutral">Badge obtenu : %1$s</string>
+
+    <!-- Global level -->
+    <string-array name="badge_level_titles">
+        <item>Flemmard débutant</item>
+        <item>Flemmard repenti</item>
+        <item>Habitué</item>
+        <item>Sportif du dimanche</item>
+        <item>Pilier de salle</item>
+        <item>Machine de guerre</item>
+        <item>Légende de la fonte</item>
     </string-array>
-    <string-array name="humor_badge_not_dead_f">
-        <item>Première séance. Tu es vivante, et tu l\'as fait !</item>
+    <string-array name="badge_level_titles_f">
+        <item>Flemmarde débutante</item>
+        <item>Flemmarde repentie</item>
+        <item>Habituée</item>
+        <item>Sportive du dimanche</item>
+        <item>Pilier de salle</item>
+        <item>Machine de guerre</item>
+        <item>Légende de la fonte</item>
     </string-array>
-    <string-array name="humor_badge_well_started">
-        <item>Cinq séances. Ça ressemble dangereusement à une habitude.</item>
+    <!-- Serious mode: the titles are replaced by the level number -->
+    <string name="badge_level_serious">Niveau %1$d</string>
+
+    <!-- Level-up; %1$d = level, %2$s = title -->
+    <string-array name="humor_level_up">
+        <item>Niveau %1$d : %2$s ! La flemme perd du terrain.</item>
+        <item>Te voilà %2$s. On ne t\'arrête plus.</item>
+        <item>%2$s ! Ton canapé n\'en revient pas.</item>
     </string-array>
-    <string-array name="humor_badge_repeat_offender">
-        <item>Dix séances. Tu reviens toujours sur les lieux du crime.</item>
-    </string-array>
-    <string-array name="humor_badge_pillar">
-        <item>Cinquante séances. Tu fais partie des meubles.</item>
-    </string-array>
-    <string-array name="humor_badge_beats_the_couch">
-        <item>Un mois sans laisser gagner le canapé. Respect.</item>
-    </string-array>
-    <string-array name="humor_badge_early_bird">
-        <item>Une séance avant 8 h. Qui t\'a forcé ?</item>
-    </string-array>
-    <string-array name="humor_badge_early_bird_f">
-        <item>Une séance avant 8 h. Qui t\'a forcée ?</item>
-    </string-array>
-    <string-array name="humor_badge_regular">
-        <item>Trois séances cette semaine. On ne te reconnaît plus.</item>
-    </string-array>
-    <string-array name="humor_badge_first_record">
-        <item>Ton tout premier record. Et sûrement pas le dernier.</item>
-    </string-array>
-    <string-array name="humor_badge_all_rounder">
-        <item>Dix exercices différents. Tu explores !</item>
-    </string-array>
-    <string-array name="humor_badge_creatine_loyal">
-        <item>Trente jours sans oubli. Une constance exemplaire.</item>
-    </string-array>
-    <!-- Serious mode, for every badge; %1$s = the badge's name -->
-    <string name="neutral_badge">Badge obtenu : %1$s</string>
+    <string name="neutral_level_up">Niveau %1$d atteint : %2$s</string>
+
+    <string name="badge_recap_retro">Tes badges déjà gagnés</string>
 </resources>

@@ -4,19 +4,27 @@ import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
-import androidx.room.PrimaryKey
 import androidx.room.Query
+import fr.olivier.forme.feature.sport.domain.ExerciseType
+import fr.olivier.forme.feature.sport.domain.MuscleGroup
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import java.time.LocalDate
 
-/** A badge earned (V2.17): [id] is a Badge name, [earnedAt] the day its condition was met, [seen] once announced. */
-@Entity(tableName = "badge")
+/**
+ * A badge earned (V2.17; tiers V2.18): [id] is a Badge name, [tier] its tier number (0 for a badge without tiers),
+ * [earnedAt] the day its condition was met, [seen] once announced. Never deleted, except by a restore.
+ */
+@Entity(tableName = "badge", primaryKeys = ["id", "tier"])
 data class BadgeEntity(
-    @PrimaryKey val id: String,
+    val id: String,
+    val tier: Int,
     val earnedAt: LocalDate,
     val seen: Boolean,
 )
+
+/** A finished real session holding at least one set or cardio entry. */
+data class BadgeSessionRow(val id: Long, val startedAt: Instant, val endedAt: Instant, val templateId: Long?)
 
 /** A working set of a finished session, with what the records need (seed sessions included: they are the baseline). */
 data class BadgeSetRow(
@@ -24,16 +32,23 @@ data class BadgeSetRow(
     val startedAt: Instant,
     val isSeed: Boolean,
     val exerciseId: Long,
+    val type: ExerciseType,
+    val muscleGroup: MuscleGroup,
     val loadKg: Double?,
     val reps: Int?,
     val targetRepsMin: Int?,
 )
 
-data class ExerciseDoneRow(val exerciseId: Long, val startedAt: Instant)
+/** A cardio entry of a finished real session, and whether its exercise is the rower. */
+data class BadgeCardioRow(val exerciseId: Long, val startedAt: Instant, val distanceM: Int?, val name: String, val libraryId: String?)
+
+data class DayProteinRow(val date: LocalDate, val proteinG: Double)
+
+data class DayWeightRow(val date: LocalDate, val weightKg: Double)
 
 @Dao
 interface BadgeDao {
-    @Query("SELECT * FROM badge ORDER BY earnedAt, id")
+    @Query("SELECT * FROM badge ORDER BY earnedAt, id, tier")
     fun observeAll(): Flow<List<BadgeEntity>>
 
     @Query("SELECT * FROM badge")
@@ -42,33 +57,51 @@ interface BadgeDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(badges: List<BadgeEntity>)
 
-    @Query("UPDATE badge SET seen = 1 WHERE id IN (:ids)")
-    suspend fun markSeen(ids: List<String>)
+    @Query("UPDATE badge SET seen = 1 WHERE seen = 0")
+    suspend fun markAllSeen()
 
     @Query("DELETE FROM badge")
     suspend fun deleteAll()
 
-    @Query("SELECT startedAt FROM session WHERE endedAt IS NOT NULL AND isSeed = 0")
-    suspend fun sessionStarts(): List<Instant>
+    @Query(
+        """SELECT s.id AS id, s.startedAt AS startedAt, s.endedAt AS endedAt, s.templateId AS templateId FROM session s
+           WHERE s.endedAt IS NOT NULL AND s.isSeed = 0
+             AND (EXISTS (SELECT 1 FROM set_entry e WHERE e.sessionId = s.id)
+                  OR EXISTS (SELECT 1 FROM cardio_entry c WHERE c.sessionId = s.id))""",
+    )
+    suspend fun sessions(): List<BadgeSessionRow>
 
     @Query(
         """SELECT s.id AS sessionId, s.startedAt AS startedAt, s.isSeed AS isSeed, e.exerciseId AS exerciseId,
-                  e.loadKg AS loadKg, e.reps AS reps,
+                  x.type AS type, x.muscleGroup AS muscleGroup, e.loadKg AS loadKg, e.reps AS reps,
                   (SELECT MIN(l.targetRepsMin) FROM session_exercise l
                    WHERE l.sessionId = e.sessionId AND l.exerciseId = e.exerciseId) AS targetRepsMin
-           FROM set_entry e JOIN session s ON s.id = e.sessionId
+           FROM set_entry e JOIN session s ON s.id = e.sessionId JOIN exercise x ON x.id = e.exerciseId
            WHERE e.isWarmup = 0 AND s.endedAt IS NOT NULL
            ORDER BY s.startedAt""",
     )
     suspend fun workingSets(): List<BadgeSetRow>
 
     @Query(
-        """SELECT c.exerciseId AS exerciseId, s.startedAt AS startedAt
-           FROM cardio_entry c JOIN session s ON s.id = c.sessionId
+        """SELECT c.exerciseId AS exerciseId, s.startedAt AS startedAt, c.distanceM AS distanceM, x.name AS name,
+                  x.libraryId AS libraryId
+           FROM cardio_entry c JOIN session s ON s.id = c.sessionId JOIN exercise x ON x.id = c.exerciseId
            WHERE s.endedAt IS NOT NULL AND s.isSeed = 0""",
     )
-    suspend fun cardioDone(): List<ExerciseDoneRow>
+    suspend fun cardio(): List<BadgeCardioRow>
 
     @Query("SELECT date FROM creatine_entry")
     suspend fun creatineDays(): List<LocalDate>
+
+    @Query("SELECT date, SUM(proteinG) AS proteinG FROM meal_entry GROUP BY date")
+    suspend fun proteinByDay(): List<DayProteinRow>
+
+    @Query("SELECT date, weightKg FROM body_weight_entry ORDER BY date")
+    suspend fun weights(): List<DayWeightRow>
+
+    @Query("SELECT proteinTargetGPerKg FROM profile WHERE id = 1")
+    suspend fun proteinGPerKg(): Double?
+
+    @Query("SELECT id FROM workout_template WHERE orderInRotation IS NOT NULL AND archived = 0")
+    suspend fun rotation(): List<Long>
 }
