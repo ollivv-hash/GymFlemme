@@ -1,5 +1,8 @@
 package fr.olivier.forme.feature.nutrition.ui
 
+import fr.olivier.forme.ui.components.ConfirmDialog
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import fr.olivier.forme.feature.badges.data.BadgeRepository
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -92,6 +95,13 @@ class AddFoodViewModel @Inject constructor(
         _selected.value = null
     }
 
+    /** Same as Config → Mes aliments: meals already entered keep their values. */
+    fun delete(food: FoodEntity) = viewModelScope.launch {
+        repository.deleteFood(food.id)
+        _selected.value = null
+        _messages.send("« ${food.name} » supprimé")
+    }
+
     fun toggleFavorite() = viewModelScope.launch {
         val food = _selected.value ?: return@launch
         val updated = food.copy(favorite = !food.favorite)
@@ -113,6 +123,7 @@ fun AddFoodScreen(
     onBack: () -> Unit,
     onScan: (LocalDate, MealType) -> Unit,
     onCreateFood: () -> Unit,
+    onEditFood: (Long) -> Unit = {},
     viewModel: AddFoodViewModel = hiltViewModel(),
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -120,6 +131,7 @@ fun AddFoodScreen(
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
     val recents by viewModel.recents.collectAsStateWithLifecycle()
     val selected by viewModel.selected.collectAsStateWithLifecycle()
+    var deleting by remember { mutableStateOf<FoodEntity?>(null) }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
 
@@ -180,10 +192,35 @@ fun AddFoodScreen(
             onConfirm = viewModel::add,
             onDismiss = viewModel::dismiss,
             extraAction = {
-                TextButton(onClick = viewModel::toggleFavorite) {
-                    Text(if (food.favorite) "★ Retirer des favoris" else "☆ Ajouter aux favoris")
+                Column {
+                    TextButton(onClick = viewModel::toggleFavorite) {
+                        Text(if (food.favorite) "★ Retirer des favoris" else "☆ Ajouter aux favoris")
+                    }
+                    // V2.19.2: the same actions as Config → Mes aliments.
+                    Row {
+                        TextButton(onClick = {
+                            viewModel.dismiss()
+                            onEditFood(food.id)
+                        }) { Text("Modifier") }
+                        TextButton(onClick = {
+                            viewModel.dismiss()
+                            deleting = food
+                        }) { Text("Supprimer") }
+                    }
                 }
             },
+        )
+    }
+    deleting?.let { food ->
+        ConfirmDialog(
+            title = "Supprimer « ${food.name} » ?",
+            text = "Les repas déjà saisis gardent leurs valeurs.",
+            confirmLabel = "Supprimer",
+            onConfirm = {
+                viewModel.delete(food)
+                deleting = null
+            },
+            onDismiss = { deleting = null },
         )
     }
 }

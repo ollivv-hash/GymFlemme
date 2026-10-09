@@ -159,6 +159,7 @@ fun FormeNavHost(
                     onBack = { nav.popBackStack() },
                     onScan = { date, meal -> nav.navigate(ScanRoute(date.toEpochDay(), meal.name)) },
                     onCreateFood = { nav.navigate(FoodEditRoute()) },
+                    onEditFood = { nav.navigate(FoodEditRoute(foodId = it)) },
                 )
             }
             composable<ScanRoute> {
