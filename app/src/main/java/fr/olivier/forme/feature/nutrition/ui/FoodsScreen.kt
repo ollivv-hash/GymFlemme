@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -64,6 +65,8 @@ class FoodsViewModel @Inject constructor(private val repository: NutritionReposi
     fun delete(food: FoodEntity) = viewModelScope.launch { repository.deleteFood(food.id) }
 }
 
+const val NEW_FOOD_TAG = "new_food"
+
 /** "Mes aliments": custom foods, scanned products and Ciqual foods already used. */
 @Composable
 fun FoodsScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: FoodsViewModel = hiltViewModel()) {
@@ -72,7 +75,7 @@ fun FoodsScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: FoodsView
     Scaffold(
         topBar = { FormeTopBar("Mes aliments", onBack) },
         floatingActionButton = {
-            ExtendedFloatingActionButton(containerColor = MaterialTheme.colorScheme.tertiary, contentColor = MaterialTheme.colorScheme.onTertiary, onClick = { onEdit(0) }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Aliment") })
+            ExtendedFloatingActionButton(containerColor = MaterialTheme.colorScheme.tertiary, contentColor = MaterialTheme.colorScheme.onTertiary, onClick = { onEdit(0) }, modifier = Modifier.testTag(NEW_FOOD_TAG), icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Aliment") })
         },
     ) { padding ->
         LazyColumn(Modifier.padding(padding)) {
@@ -150,7 +153,8 @@ class FoodEditViewModel @Inject constructor(
     }
 
     fun update(transform: (FoodForm) -> FoodForm) = _form.update(transform)
-    val canSave get() = _form.value.name.isNotBlank() && parseDecimal(_form.value.protein) != null
+    /** A name and the protein value are required. */
+    fun canSave(form: FoodForm) = form.name.isNotBlank() && parseDecimal(form.protein) != null
 
     fun save(onDone: () -> Unit) = viewModelScope.launch {
         val f = _form.value
@@ -184,7 +188,8 @@ fun FoodEditScreen(onDone: () -> Unit, viewModel: FoodEditViewModel = hiltViewMo
     Scaffold(
         topBar = {
             FormeTopBar(if (viewModel.isNew) "Nouvel aliment" else "Modifier l'aliment", onDone) {
-                TextButton(onClick = { viewModel.save(onDone) }, enabled = viewModel.canSave) { Text("Enregistrer") }
+                // Reads the observed form: the button follows the typing (it stayed disabled when read from the ViewModel).
+                TextButton(onClick = { viewModel.save(onDone) }, enabled = viewModel.canSave(f)) { Text("Enregistrer") }
             }
         },
     ) { padding ->

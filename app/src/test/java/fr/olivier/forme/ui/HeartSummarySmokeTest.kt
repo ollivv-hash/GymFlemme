@@ -106,8 +106,8 @@ class HeartSummarySmokeTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             waitFor("Dernières séances")
             rule.acknowledgeBadges()
-            waitFor(" min")
-            rule.onNode(hasText(" min", substring = true)).performScrollTo().performClick()
+            rule.waitUntilAtLeastOneExists(hasTextEndingWith(" min"), 10_000)
+            rule.onNode(hasTextEndingWith(" min")).performScrollTo().performClick()
             waitFor("Fréquence cardiaque")
             rule.onNodeWithText("Fréquence cardiaque").performScrollTo()
             shot("h3-summary-heart")

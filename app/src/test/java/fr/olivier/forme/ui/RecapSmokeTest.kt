@@ -77,9 +77,9 @@ class RecapSmokeTest {
             waitFor("Dernières séances")
             rule.acknowledgeBadges()
             // The session row can arrive a frame after the section title: wait for the row itself.
-            waitFor(" min")
+            rule.waitUntilAtLeastOneExists(hasTextEndingWith(" min"), 10_000)
             shot("6-home-after")
-            rule.onNode(hasText(" min", substring = true)).performScrollTo().performClick()
+            rule.onNode(hasTextEndingWith(" min")).performScrollTo().performClick()
             waitFor("Copier le bilan texte")
             shot("7-recap")
             rule.onNodeWithText("Chest press").performClick()
