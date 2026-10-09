@@ -9,8 +9,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object ActiveSessionRoute
 @Serializable data class SessionDetailRoute(val sessionId: Long, val justFinished: Boolean = false)
 @Serializable data class ExerciseHistoryRoute(val exerciseId: Long)
-/** Écran Badges (V2.18), from the level card of the home screen. */
-@Serializable data object BadgesRoute
+/** Écran Badges (V2.18), from the level and challenge cards of the home screen; [tab]: 0 Paliers, 1 Ponctuels, 2 Défis. */
+@Serializable data class BadgesRoute(val tab: Int = 0)
 
 @Serializable data object CatalogRoute
 @Serializable data class ExerciseEditRoute(val exerciseId: Long = 0)

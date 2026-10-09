@@ -9,13 +9,17 @@ import fr.olivier.forme.feature.badges.domain.Badge
 import fr.olivier.forme.feature.badges.domain.BadgeConfig
 import fr.olivier.forme.feature.badges.domain.BadgeKind
 import fr.olivier.forme.feature.badges.domain.Tier
+import fr.olivier.forme.feature.badges.domain.Challenge
 import fr.olivier.forme.feature.badges.ui.BadgeTexts
+import fr.olivier.forme.feature.badges.ui.ChallengeTexts
+import fr.olivier.forme.feature.badges.ui.ChallengeWording
 import fr.olivier.forme.feature.badges.ui.BadgeWording
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.YearMonth
 
 /** V2.18: every badge, tier and level has its texts, in humour and serious mode, agreed with the profile. */
 @RunWith(AndroidJUnit4::class)
@@ -61,5 +65,27 @@ class BadgeTextsTest {
         assertEquals(BadgeConfig.LEVELS.size, resources.getStringArray(R.array.badge_level_titles_f).size)
         assertEquals("Flemmarde repentie", BadgeWording.levelDisplay(resources, 2, QuipStyle(feminine = true)))
         assertEquals("Niveau 2", BadgeWording.levelDisplay(resources, 2, QuipStyle(serious = true)))
+    }
+
+    @Test
+    fun everyChallengeHasItsTexts() {
+        Challenge.entries.forEach { challenge ->
+            styles.forEach { style ->
+                assertTrue(ChallengeWording.announce(resources, challenge, style).isNotBlank())
+                assertTrue(ChallengeWording.success(resources, challenge, style).isNotBlank())
+            }
+            assertTrue(resources.getString(ChallengeTexts.of(challenge).unit).isNotBlank())
+        }
+        assertEquals("Défi du mois : 12 séances dans le mois", ChallengeWording.announce(resources, Challenge.TWELVE_STRIKES, QuipStyle(serious = true)))
+        assertEquals("Défi du mois réussi", ChallengeWording.success(resources, Challenge.CURIOUS, QuipStyle(serious = true)))
+        assertEquals("Ce mois-ci : 30 km de rameur. Hissez haut !", ChallengeWording.announce(resources, Challenge.ROWER_OF_THE_MONTH, QuipStyle()))
+    }
+
+    @Test
+    fun challengeBadgeNamesElideBeforeAVowel() {
+        assertEquals("Défi d'octobre 2026", ChallengeWording.badge(resources, YearMonth.of(2026, 10)))
+        assertEquals("Défi d'août 2027", ChallengeWording.badge(resources, YearMonth.of(2027, 8)))
+        assertEquals("Défi de mars 2027", ChallengeWording.badge(resources, YearMonth.of(2027, 3)))
+        assertEquals("Défi de janvier", ChallengeWording.ofMonth(resources, YearMonth.of(2027, 1)))
     }
 }

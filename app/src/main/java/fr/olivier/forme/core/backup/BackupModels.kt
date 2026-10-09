@@ -23,6 +23,7 @@ import fr.olivier.forme.feature.sport.domain.ExerciseType
 import fr.olivier.forme.feature.sport.domain.MuscleGroup
 import fr.olivier.forme.feature.sport.domain.SessionExerciseStatus
 import fr.olivier.forme.feature.badges.data.BadgeEntity
+import fr.olivier.forme.feature.badges.data.ChallengeEntity
 import fr.olivier.forme.feature.badges.domain.BadgeMigration
 import kotlinx.serialization.Serializable
 import java.time.Instant
@@ -34,7 +35,8 @@ import java.time.LocalDate
  * v3 adds supersets, replacements and exercise notes (optional fields, absent → null),
  * v4 adds session heart rate and age / sex / maximum heart rate, v5 adds height, nutrition goal and calorie target,
  * v6 adds the exercise library link (`libraryId`, absent → null), v7 the badges earned (absent → recomputed from
- * the history, silently), v8 their tier (V2.18; v7 badges are converted on restore).
+ * the history, silently), v8 their tier (V2.18; v7 badges are converted on restore), v9 the monthly challenges
+ * (absent → none; the current month's is drawn again, identically).
  * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual and exercise library reference tables
  * (embedded in the APK) are not exported.
  */
@@ -48,10 +50,15 @@ data class BackupFile(
     val nutrition: NutritionBackup = NutritionBackup(),
     /** V2.17 (backup v7): badges earned; absent in older files. */
     val badges: List<BadgeDto> = emptyList(),
+    /** V2.19 (backup v9): the challenge of each month; absent in older files. */
+    val challenges: List<ChallengeDto> = emptyList(),
 )
 
 @Serializable
+data class ChallengeDto(val month: String, val challenge: String, val completedAt: String? = null, val seen: Boolean)
+
 /** [tier]: V2.18 (backup v8), 0 = no tier; files of format 7 hold the V2.17 badges, converted on restore. */
+@Serializable
 data class BadgeDto(val id: String, val earnedAt: String, val seen: Boolean, val tier: Int = 0)
 
 @Serializable
@@ -324,6 +331,8 @@ fun MealEntryDto.toEntity() = MealEntryEntity(
 )
 
 fun BadgeEntity.toDto() = BadgeDto(id, earnedAt.toString(), seen, tier)
+fun ChallengeEntity.toDto() = ChallengeDto(month, challenge, completedAt?.toString(), seen)
+fun ChallengeDto.toEntity() = ChallengeEntity(month, challenge, completedAt?.let(LocalDate::parse), seen)
 
 /** Format 7 badges (V2.17, without tier) are converted like the database (migration 7 → 8). */
 fun BadgeDto.toEntity(schemaVersion: Int): BadgeEntity {

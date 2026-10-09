@@ -90,6 +90,7 @@ class ComebackSmokeTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             waitFor("Nutrition du jour")
             waitForAny(resources.getStringArray(R.array.humor_welcome_back).toList())
+            rule.acknowledgeBadges()
             shot("cb1-welcome-back")
 
             rule.onNode(hasText("Nouvelle séance") and hasClickAction()).performClick()

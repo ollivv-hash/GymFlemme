@@ -89,6 +89,7 @@ class FeaturesSmokeTest {
 
         ActivityScenario.launch(MainActivity::class.java).use {
             waitFor("Cette semaine :")
+            rule.acknowledgeBadges()
             shot("f1-home")
 
             rule.onNode(hasText("Historique") and hasClickAction()).performClick()

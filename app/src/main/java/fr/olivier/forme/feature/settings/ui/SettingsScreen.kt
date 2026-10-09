@@ -1,5 +1,7 @@
 package fr.olivier.forme.feature.settings.ui
 
+import fr.olivier.forme.feature.badges.data.BadgeRepository
+import fr.olivier.forme.feature.badges.reminder.ChallengeReminder
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -76,8 +78,16 @@ class SettingsViewModel @Inject constructor(
     private val autoBackupManager: AutoBackupManager,
     private val clock: Clock,
     private val quips: QuipRepository,
+    private val badges: BadgeRepository,
+    private val challengeReminder: ChallengeReminder,
 ) : ViewModel() {
     val seriousMode = quips.seriousMode.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val challengeNotification = badges.challengeNotification.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    fun setChallengeNotification(enabled: Boolean) = viewModelScope.launch {
+        badges.setChallengeNotification(enabled)
+        challengeReminder.reschedule()
+    }
     val restSec = settings.defaultRestSec.stateIn(viewModelScope, SharingStarted.Eagerly, SettingsRepository.DEFAULT_REST_SEC)
     val theme = settings.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.DARK)
     val autoBackup = settings.autoBackup
@@ -146,6 +156,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMo
     val rest by viewModel.restSec.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
     val seriousMode by viewModel.seriousMode.collectAsStateWithLifecycle()
+    val challengeNotification by viewModel.challengeNotification.collectAsStateWithLifecycle()
     val autoBackup by viewModel.autoBackup.collectAsStateWithLifecycle()
     val autoBackupRunning by viewModel.autoBackupRunning.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -194,6 +205,14 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMo
                 trailingContent = { Switch(checked = seriousMode, onCheckedChange = viewModel::setSeriousMode) },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 modifier = Modifier.toggleable(value = seriousMode, onValueChange = viewModel::setSeriousMode),
+            )
+            // V2.19: the only notification of the badges.
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.challenge_notification_setting)) },
+                supportingContent = { Text(stringResource(R.string.challenge_notification_setting_description)) },
+                trailingContent = { Switch(checked = challengeNotification, onCheckedChange = { viewModel.setChallengeNotification(it) }) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.toggleable(value = challengeNotification, onValueChange = { viewModel.setChallengeNotification(it) }),
             )
 
             SectionTitle("Unités")

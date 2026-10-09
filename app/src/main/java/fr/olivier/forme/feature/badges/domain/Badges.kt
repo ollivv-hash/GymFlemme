@@ -131,6 +131,9 @@ object Badges {
 
     fun points(awards: Collection<Award>): Int = awards.sumOf(BadgeConfig::points)
 
+    /** Badges, tiers and monthly challenges met (V2.19). */
+    fun points(awards: Collection<Award>, challengesMet: Int): Int = points(awards) + challengesMet * BadgeConfig.CHALLENGE_POINTS
+
     fun level(points: Int): Level {
         val number = BadgeConfig.LEVELS.count { points >= it }.coerceAtLeast(1)
         return Level(number, points, BadgeConfig.LEVELS[number - 1], BadgeConfig.LEVELS.getOrNull(number))

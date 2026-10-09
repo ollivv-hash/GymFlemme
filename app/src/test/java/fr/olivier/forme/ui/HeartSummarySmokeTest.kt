@@ -105,6 +105,7 @@ class HeartSummarySmokeTest {
 
         ActivityScenario.launch(MainActivity::class.java).use {
             waitFor("Dernières séances")
+            rule.acknowledgeBadges()
             waitFor(" min")
             rule.onNode(hasText(" min", substring = true)).performScrollTo().performClick()
             waitFor("Fréquence cardiaque")

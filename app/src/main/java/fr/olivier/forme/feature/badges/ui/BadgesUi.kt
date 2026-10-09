@@ -47,12 +47,16 @@ import fr.olivier.forme.core.humor.QuipText
 import fr.olivier.forme.core.humor.rememberQuipStyle
 import fr.olivier.forme.feature.badges.data.BadgeEntity
 import fr.olivier.forme.feature.badges.data.BadgeRepository
+import fr.olivier.forme.feature.badges.data.ChallengeEntity
 import fr.olivier.forme.feature.badges.data.award
 import fr.olivier.forme.feature.badges.domain.Award
 import fr.olivier.forme.feature.badges.domain.Badge
 import fr.olivier.forme.feature.badges.domain.BadgeConfig
 import fr.olivier.forme.feature.badges.domain.BadgeKind
 import fr.olivier.forme.feature.badges.domain.Badges
+import fr.olivier.forme.feature.badges.domain.Challenge
+import fr.olivier.forme.feature.badges.domain.ChallengeProgress
+import fr.olivier.forme.feature.badges.domain.Challenges
 import fr.olivier.forme.feature.badges.domain.Level
 import fr.olivier.forme.feature.badges.domain.Tier
 import fr.olivier.forme.feature.sport.domain.Fmt
@@ -65,6 +69,7 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlin.math.floor
@@ -73,33 +78,105 @@ import kotlin.math.floor
 private fun BadgeRepository.observeEarned(): Flow<Map<Award, BadgeEntity>> =
     observeAll().map { list -> list.mapNotNull { entity -> entity.award()?.let { it to entity } }.toMap() }
 
-data class BadgeBoard(val earned: Map<Award, BadgeEntity> = emptyMap(), val progress: Map<Badge, Double> = emptyMap()) {
-    val level: Level get() = Badges.level(Badges.points(earned.keys))
+/** A stored monthly challenge, readable (unknown ids of a newer backup left out). */
+data class MonthChallenge(val month: YearMonth, val challenge: Challenge, val entity: ChallengeEntity)
+
+private fun BadgeRepository.observeMonthChallenges(): Flow<List<MonthChallenge>> = observeChallenges().map { list ->
+    list.mapNotNull { e -> Challenge.byId(e.challenge)?.let { MonthChallenge(YearMonth.parse(e.month), it, e) } }
 }
 
+/** The challenge of the current month and its progress. */
+data class CurrentChallenge(val month: YearMonth, val challenge: Challenge, val progress: ChallengeProgress)
+
+data class BadgeBoard(
+    val earned: Map<Award, BadgeEntity> = emptyMap(),
+    val progress: Map<Badge, Double> = emptyMap(),
+    val challenges: List<MonthChallenge> = emptyList(),
+    val current: CurrentChallenge? = null,
+) {
+    val level: Level get() = Badges.level(Badges.points(earned.keys, challenges.count { it.entity.completedAt != null }))
+}
+
+/** Badges, challenges and the progress of both, recomputed whenever the history or the awards change. */
 @OptIn(ExperimentalCoroutinesApi::class)
+private fun BadgeRepository.observeBoard(): Flow<BadgeBoard> =
+    combine(observeEarned(), observeMonthChallenges(), observeHistoryChanges()) { earned, challenges, _ -> earned to challenges }
+        .mapLatest { (earned, challenges) ->
+            val history = runCatching { history() }.getOrNull()
+            val month = currentMonth()
+            val current = challenges.firstOrNull { it.month == month }?.let { c ->
+                history?.let { CurrentChallenge(month, c.challenge, Challenges.progress(c.challenge, month, it)) }
+            }
+            BadgeBoard(earned, history?.let(Badges::progress).orEmpty(), challenges, current)
+        }
+
 @HiltViewModel
 class BadgesViewModel @Inject constructor(repository: BadgeRepository) : ViewModel() {
-    val board = repository.observeEarned()
-        .mapLatest { earned -> BadgeBoard(earned, runCatching { Badges.progress(repository.history()) }.getOrDefault(emptyMap())) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BadgeBoard())
+    val board = repository.observeBoard().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BadgeBoard())
 }
 
+/** Home: the level and the challenge of the month. */
 @HiltViewModel
 class LevelViewModel @Inject constructor(repository: BadgeRepository) : ViewModel() {
-    val level = repository.observeEarned().map { Badges.level(Badges.points(it.keys)) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val board = repository.observeBoard().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
 private val dayFormat = DateTimeFormatter.ofPattern("d MMM yyyy", Fmt.locale)
 
 private fun points(value: Int) = "%,d".format(Fmt.locale, value).replace(' ', ' ').replace(' ', ' ')
 
-/** Level, title and progress towards the next level (home: opens the Badges screen). */
+/**
+ * Home (V2.18 – V2.19): level, title and progress towards the next level, then the challenge of the month; each opens
+ * the Badges screen ([onClick] with its tab).
+ */
 @Composable
-fun LevelCard(onClick: (() -> Unit)? = null, modifier: Modifier = Modifier, viewModel: LevelViewModel = hiltViewModel()) {
-    val level by viewModel.level.collectAsStateWithLifecycle()
-    LevelSummary(level ?: return, onClick, modifier)
+fun LevelCard(onClick: ((tab: Int) -> Unit)? = null, modifier: Modifier = Modifier, viewModel: LevelViewModel = hiltViewModel()) {
+    val board by viewModel.board.collectAsStateWithLifecycle()
+    val current = board ?: return
+    Column(modifier) {
+        LevelSummary(current.level, onClick?.let { { it(0) } })
+        current.current?.let { ChallengeSummary(it, onClick?.let { { it(2) } }, Modifier.padding(top = 12.dp)) }
+    }
+}
+
+private fun challengeMeasure(challenge: Challenge, value: Double): String =
+    if (challenge == Challenge.ROWER_OF_THE_MONTH) Fmt.number(floor(value / 100) / 10, 1) else Fmt.number(floor(value), 0)
+
+@Composable
+private fun ChallengeSummary(current: CurrentChallenge, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+    val resources = LocalContext.current.resources
+    val style = rememberQuipStyle()
+    val (month, challenge, progress) = current
+    Card(
+        modifier = modifier.fillMaxWidth().let { m -> onClick?.let { m.clickable(onClick = it) } ?: m },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                "🎯 ${ChallengeWording.ofMonth(resources, month)} · ${ChallengeWording.name(resources, challenge)}",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            val done = progress.completedOn
+            if (done != null) {
+                Text("✓ " + ChallengeWording.success(resources, challenge, style), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
+                Text(
+                    "Réussi le ${done.format(dayFormat)} · +${BadgeConfig.CHALLENGE_POINTS} points",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            } else {
+                Text(ChallengeWording.announce(resources, challenge, style), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
+                LinearProgressIndicator(
+                    progress = { if (progress.goal > 0) (progress.value / progress.goal).toFloat().coerceIn(0f, 1f) else 0f },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                )
+                Text(
+                    "${challengeMeasure(challenge, progress.value)} / ${challengeMeasure(challenge, progress.goal)} ${stringResource(ChallengeTexts.of(challenge).unit)}",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -132,9 +209,9 @@ private fun LevelSummary(level: Level, onClick: (() -> Unit)?, modifier: Modifie
 
 /** Écran Badges (V2.18): the level, then the tiered badges and the one-off ones (secret ones hidden until earned). */
 @Composable
-fun BadgesScreen(onBack: () -> Unit, viewModel: BadgesViewModel = hiltViewModel()) {
+fun BadgesScreen(onBack: () -> Unit, initialTab: Int = 0, viewModel: BadgesViewModel = hiltViewModel()) {
     val board by viewModel.board.collectAsStateWithLifecycle()
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var tab by rememberSaveable { mutableIntStateOf(initialTab) }
     val style = rememberQuipStyle()
     Scaffold(topBar = { FormeTopBar("Badges", onBack = onBack) }) { padding ->
         Column(Modifier.padding(padding)) {
@@ -142,15 +219,20 @@ fun BadgesScreen(onBack: () -> Unit, viewModel: BadgesViewModel = hiltViewModel(
             PrimaryTabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Paliers") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Ponctuels") })
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Défis") })
             }
             LazyColumn {
                 if (tab == 0) {
                     items(Badge.entries.filter { it.kind == BadgeKind.TIERED }, key = { it.name }) { badge ->
                         TieredRow(badge, board, style)
                     }
-                } else {
+                } else if (tab == 1) {
                     val (oneOff, secret) = Badge.entries.filter { it.kind != BadgeKind.TIERED }.partition { it.kind == BadgeKind.ONE_OFF }
                     items(oneOff + secret, key = { it.name }) { badge -> OneOffRow(badge, board.earned[Award(badge)], style) }
+                } else {
+                    item { board.current?.let { ChallengeSummary(it, onClick = null, modifier = Modifier.padding(16.dp)) } }
+                    val met = board.challenges.filter { it.entity.completedAt != null && it.month != board.current?.month }.sortedByDescending { it.month }
+                    items(met, key = { it.month.toString() }) { ChallengeRow(it, style) }
                 }
             }
         }
@@ -251,6 +333,25 @@ private fun OneOffRow(badge: Badge, earned: BadgeEntity?, style: QuipStyle) {
 }
 
 @Composable
+private fun ChallengeRow(met: MonthChallenge, style: QuipStyle) {
+    val resources = LocalContext.current.resources
+    ListItem(
+        leadingContent = { Text("🎯", style = MaterialTheme.typography.titleLarge) },
+        headlineContent = { Text("${ChallengeWording.badge(resources, met.month)} — ${ChallengeWording.name(resources, met.challenge)}") },
+        supportingContent = {
+            Column {
+                Text(ChallengeWording.success(resources, met.challenge, style))
+                Text(
+                    "Réussi le ${met.entity.completedAt!!.format(dayFormat)} · +${BadgeConfig.CHALLENGE_POINTS} points",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+    )
+}
+
+@Composable
 private fun EarnedOn(entity: BadgeEntity) {
     Text(
         "Obtenu le ${entity.earnedAt.format(dayFormat)}",
@@ -262,18 +363,30 @@ private fun EarnedOn(entity: BadgeEntity) {
 // --- Announcement ---
 
 /** What the single announcement shows: the new awards, the level reached if it went up, the retroactive title. */
-data class BadgeNews(val awards: List<Award> = emptyList(), val retro: Boolean = false, val level: Level? = null, val levelUp: Boolean = false) {
-    val visible get() = awards.isNotEmpty() || levelUp
+data class BadgeNews(
+    val awards: List<Award> = emptyList(),
+    val retro: Boolean = false,
+    val level: Level? = null,
+    val levelUp: Boolean = false,
+    val challenges: List<MonthChallenge> = emptyList(),
+) {
+    val visible get() = awards.isNotEmpty() || levelUp || challenges.isNotEmpty()
 }
 
 @HiltViewModel
 class BadgeAnnouncerViewModel @Inject constructor(private val repository: BadgeRepository) : ViewModel() {
-    val news = combine(repository.observeEarned(), repository.retroPending, repository.announcedLevel) { earned, retro, announced ->
-        val level = Badges.level(Badges.points(earned.keys))
+    val news = combine(
+        repository.observeEarned(),
+        repository.observeMonthChallenges(),
+        repository.retroPending,
+        repository.announcedLevel,
+    ) { earned, challenges, retro, announced ->
+        val met = challenges.filter { it.entity.completedAt != null }
+        val level = Badges.level(Badges.points(earned.keys, met.size))
         val unseen = earned.filterValues { !it.seen }.entries
             .sortedWith(compareBy({ it.value.earnedAt }, { it.key.badge.ordinal }, { it.key.tier?.number ?: 0 }))
             .map { it.key }
-        BadgeNews(unseen, retro, level, levelUp = level.number > announced)
+        BadgeNews(unseen, retro, level, levelUp = level.number > announced, challenges = met.filterNot { it.entity.seen })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BadgeNews())
 
     fun acknowledge() = viewModelScope.launch {
@@ -305,8 +418,9 @@ fun BadgeAnnouncer(enabled: Boolean, viewModel: BadgeAnnouncerViewModel = hiltVi
             Text(
                 when {
                     news.retro -> stringResource(R.string.badge_recap_retro)
-                    news.awards.size > 1 -> "Nouveaux badges"
-                    news.awards.size == 1 -> "Nouveau badge"
+                    news.awards.size + news.challenges.size > 1 -> "Nouveaux badges"
+                    news.awards.isNotEmpty() -> "Nouveau badge"
+                    news.challenges.isNotEmpty() -> "Défi réussi"
                     else -> "Nouveau niveau"
                 },
                 style = MaterialTheme.typography.titleLarge,
@@ -330,6 +444,19 @@ fun BadgeAnnouncer(enabled: Boolean, viewModel: BadgeAnnouncerViewModel = hiltVi
                     Column {
                         Text(BadgeWording.title(resources, award, style.feminine), style = MaterialTheme.typography.titleSmall)
                         Text(BadgeWording.message(resources, award, style), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+            news.challenges.forEach { met ->
+                Row(Modifier.padding(top = 12.dp)) {
+                    Text("🎯", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "${ChallengeWording.badge(resources, met.month)} — ${ChallengeWording.name(resources, met.challenge)}",
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(ChallengeWording.success(resources, met.challenge, style), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }

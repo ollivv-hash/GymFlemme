@@ -222,7 +222,7 @@ fun HomeScreen(
     onOpenSessionDetail: (Long) -> Unit,
     onOpenWeight: () -> Unit,
     onOpenNutrition: () -> Unit,
-    onOpenBadges: () -> Unit = {},
+    onOpenBadges: (tab: Int) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     journal: JournalViewModel = hiltViewModel(),
 ) {

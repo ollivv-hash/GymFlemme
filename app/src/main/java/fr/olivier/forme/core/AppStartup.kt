@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import fr.olivier.forme.core.backup.AutoBackupScheduler
 import fr.olivier.forme.core.di.ApplicationScope
 import fr.olivier.forme.core.launch.QuickAction
+import fr.olivier.forme.feature.badges.reminder.ChallengeReminder
 import fr.olivier.forme.feature.library.data.ExerciseLibraryLoader
 import fr.olivier.forme.feature.nutrition.data.CiqualLoader
 import fr.olivier.forme.feature.nutrition.reminder.CreatineReminder
@@ -22,6 +23,7 @@ class AppStartup @Inject constructor(
     @ApplicationScope private val scope: CoroutineScope,
     private val ciqual: CiqualLoader,
     private val creatineReminder: CreatineReminder,
+    private val challengeReminder: ChallengeReminder,
     private val autoBackup: AutoBackupScheduler,
     private val widget: WidgetRefresher,
     private val library: ExerciseLibraryLoader,
@@ -32,6 +34,7 @@ class AppStartup @Inject constructor(
         runCatching { QuickAction.publishShortcuts(context) }.onFailure { Log.e("Forme", "Shortcuts publishing failed", it) }
         scope.launch {
             runCatching { creatineReminder.reschedule() }.onFailure { Log.e("Forme", "Reminder scheduling failed", it) }
+            runCatching { challengeReminder.reschedule() }.onFailure { Log.e("Forme", "Challenge reminder scheduling failed", it) }
             runCatching { ciqual.ensureLoaded() }.onFailure { Log.e("Forme", "Ciqual load failed", it) }
         }
         // Not queued behind the (longer) Ciqual load: the exercise sheets need it on the first launch.

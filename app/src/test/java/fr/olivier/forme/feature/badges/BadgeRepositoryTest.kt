@@ -6,9 +6,14 @@ import fr.olivier.forme.core.db.SeedData
 import fr.olivier.forme.core.db.TestClock
 import fr.olivier.forme.core.db.testDatabase
 import fr.olivier.forme.feature.badges.data.BadgeRepository
+import fr.olivier.forme.feature.badges.data.ChallengeEntity
 import fr.olivier.forme.feature.badges.data.award
 import fr.olivier.forme.feature.badges.domain.Award
 import fr.olivier.forme.feature.badges.domain.Badge
+import fr.olivier.forme.feature.badges.domain.Badges
+import fr.olivier.forme.feature.badges.domain.Challenge
+import fr.olivier.forme.feature.badges.domain.ChallengeEligibility
+import fr.olivier.forme.feature.badges.domain.Challenges
 import fr.olivier.forme.feature.badges.domain.Tier
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightEntity
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
@@ -31,6 +36,7 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.time.Duration
 import java.time.LocalDate
+import java.time.YearMonth
 
 /**
  * V2.18: the history already there is shown once in "Tes badges déjà gagnés", new badges are announced once, the
@@ -160,5 +166,48 @@ class BadgeRepositoryTest {
         repository.evaluate()
         assertTrue(Award(Badge.REPEAT_OFFENDER, Tier.BRONZE) in stored())
         assertEquals(1, db.badgeDao().getAll().count { it.id == Badge.REPEAT_OFFENDER.name })
+    }
+
+    @Test
+    fun theChallengeOfTheMonthIsDrawnOnceFromTheData() = runTest {
+        val repository = badges(backgroundScope)
+        val october = YearMonth.of(2026, 10)
+        // The seed has the rower and the A → B → C rotation; no meal in September.
+        val eligibility = repository.eligibility(october)
+        assertEquals(ChallengeEligibility(hasRower = true, mealsLastMonth = false, rotationSize = 3), eligibility)
+
+        repository.evaluate()
+        val eligible = Challenges.eligible(eligibility)
+        val expected = Challenges.draw(october, eligible, Challenges.draw(october.minusMonths(1), eligible, null))
+        assertEquals(listOf(ChallengeEntity("2026-10", expected!!.name)), db.badgeDao().getChallenges())
+        // Kept as drawn, even when the data changes.
+        db.exerciseDao().getAll().filter { it.name == "Rameur" }.forEach { db.exerciseDao().update(it.copy(archived = true)) }
+        repository.evaluate()
+        assertEquals(expected, repository.drawChallenge(october))
+        assertEquals(1, db.badgeDao().getChallenges().size)
+    }
+
+    @Test
+    fun aChallengeMetIsStoredAnnouncedAndWorthPoints() = runTest {
+        val repository = badges(backgroundScope)
+        db.badgeDao().insertChallenges(listOf(ChallengeEntity("2026-10", Challenge.TWELVE_STRIKES.name)))
+        repeat(11) {
+            chestPressSession(15.0)
+            clock.advance(Duration.ofDays(1))
+        }
+        repository.evaluate()
+        assertEquals(null, db.badgeDao().getChallenge("2026-10")!!.completedAt)
+
+        chestPressSession(15.0)
+        repository.evaluate()
+        val met = db.badgeDao().getChallenge("2026-10")!!
+        assertEquals(LocalDate.of(2026, 10, 12), met.completedAt)
+        assertFalse(met.seen)
+        repository.evaluate() // idempotent
+        assertEquals(met, db.badgeDao().getChallenge("2026-10"))
+
+        repository.acknowledge(level = 1)
+        assertTrue(db.badgeDao().getChallenge("2026-10")!!.seen)
+        assertEquals(20, Badges.points(emptyList(), challengesMet = 1))
     }
 }

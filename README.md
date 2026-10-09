@@ -3,7 +3,7 @@
 Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé depuis les releases GitHub (ou `adb install`), sans Play Store.
 
-> **Statut : V2.18.0 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
+> **Statut : V2.19.0 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
 > release en CI ; chaque version fusionnée sur `main` publie une release GitHub « GymFlemme x.y.z » avec l'APK signé.
 
 - Nom : **GymFlemme** (2.14 ; « Forme » jusqu'à 2.6, puis « GymBro », nom trop répandu).
@@ -42,6 +42,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.16** ✅ | Retour après une pause (accueil, charges à 80 % sur demande), ligne quand l'objectif de la semaine passée n'est pas tenu |
 | **V2.17** ✅ | Badges de régularité (onglet Historique → Badges, annonce au récap et à l'accueil), base v7, sauvegarde v7 |
 | **V2.18** ✅ | Badges à paliers, ponctuels et secrets, points et niveau global, écran Badges depuis l'accueil, annonce unique, récap « Tes badges déjà gagnés », base v8 (badges v1 convertis), sauvegarde v8 |
+| **V2.19** ✅ | Défis mensuels (tirage déterministe, éligibilité, carte sur l'accueil, onglet Défis, 20 points, annonce du 1er du mois désactivable), base v9, sauvegarde v9 |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -125,7 +126,7 @@ Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv`
 
 ---
 
-## Modèle de données (Room, version 8)
+## Modèle de données (Room, version 9)
 
 Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distances en mètres. `Instant` ↔ epoch millis, `LocalDate` ↔ epochDay. Les enums sont stockées en texte.
 
@@ -152,6 +153,7 @@ Tables Nutrition (V1.1, migration explicite 1 → 2) :
 | `meal_entry` | id, date, mealType, foodId?, nom, quantité (g), protéines, kcal, glucides, lipides, isWhey, heure | **Copie des valeurs** : modifier ou supprimer un aliment ne change jamais l'historique. |
 | `creatine_entry` | id, date (unique), dose, heure | Une prise par jour. |
 | `badge` (v7, palier v8) | id (nom du badge, ex. `REPEAT_OFFENDER`), tier (1 à 4 = Bronze à Platine, 0 = sans palier), earnedAt (jour), seen ; clé (id, tier) | Badges et paliers obtenus ; recalculés depuis l'historique, jamais retirés. Migration 7 → 8 : Pilier de la salle → Récidiviste Argent, Créatine fidèle → Argent, Récidiviste / Plus fort que le canapé / Touche-à-tout → Bronze. Exportés depuis la sauvegarde v7 (palier depuis la v8). |
+| `monthly_challenge` (v9) | month (`2026-10`, clé), challenge (nom du défi), completedAt (jour, null tant que non réussi), seen | Défi de chaque mois, tiré une fois. Exporté depuis la sauvegarde v9. |
 | `library_exercise` | id (ex. `leg-press`), nom, alias, variante (`imageOf`, `difference`), matériel, type de machine, muscles principaux / secondaires / `alsoTargets`, mouvement, catégorie, niveau, impact, unilatéral, échauffement, lieux, vue, images (`frames`, dossier, largeur, hauteur) | Bibliothèque **Open Exercise Illustrations** (CC0) en lecture seule : 415 exercices + 44 variantes, rechargée depuis l'APK quand sa version change (`ExerciseLibraryLoader.DATASET_VERSION`). Une variante montre les images de l'exercice d'origine mais garde son matériel, ses muscles et sa différence. **Non exportée.** |
 
 Migration explicite **2 → 3** (V1.1.1) : 4 colonnes nullables ajoutées (`exercise.nextNote`, `template_exercise.supersetGroup`,
@@ -375,7 +377,16 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
     « Tes badges déjà gagnés ». Badges d'une sauvegarde restaurée : enregistrés sans annonce.
   - Accord au sexe du profil (Pas morte, Déménageuse, Flemmarde repentie, Le retour de la reine…) ; en mode sérieux,
     « Badge {nom} : palier {palier} obtenu » / « Badge obtenu : {nom} », titres de niveau remplacés par « Niveau {n} ».
-  - Défis mensuels : prévus en 2.19.
+  - **Défis mensuels** (V2.19, 20 points) : Douze coups (12 séances), Rameur du mois (30 km), Chasseur de records
+    (3), Zéro semaine blanche (une séance chaque semaine dont le lundi est dans le mois), Curieux (3 exercices jamais
+    faits), Protéines au rendez-vous (20 jours), Triple séance (chaque modèle de la rotation 3 fois). Un défi par mois,
+    tiré une fois et conservé : hash fixe de l'année et du mois (même tirage après réinstallation ou restauration),
+    jamais celui du mois précédent, parmi les défis éligibles (Rameur seulement avec un rameur au catalogue, protéines
+    seulement avec des repas le mois précédent, Triple séance avec au moins 3 modèles dans la rotation). Carte sur
+    l'accueil sous le niveau (annonce, progression « 5 / 12 séances »), onglet **Défis** de l'écran Badges (défi en
+    cours, puis défis réussis « Défi d'octobre 2026 »). Réussi : annoncé dans la feuille unique ; raté : rien, aucun
+    message. Pas de défi pour les mois d'avant la 2.19. Notification le 1er du mois vers 9 h (réglage « Annonce du
+    défi du mois », activé par défaut) : la seule notification liée aux badges.
 - Restent neutres : poids, repas, mentions santé, Sources et licences, erreurs, confirmations, autorisations.
 - Test garde-fou : chaque tableau a des variantes, sa version neutre et une entrée `Quip` ; les versions féminines
   ont autant de phrases ; toutes se formatent avec leurs paramètres.
@@ -503,8 +514,8 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 ### Export / import manuel
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
-- Format versionné : `{ "schemaVersion": 8, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" }, "badges": [ … ] }`.
-  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8. Les fichiers **v1** à **v7** restent importables (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
+- Format versionné : `{ "schemaVersion": 9, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" }, "badges": [ … ], "challenges": [ … ] }`.
+  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9. Les fichiers **v1** à **v8** restent importables (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 

@@ -176,9 +176,22 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate1To8() {
+    fun migrate8To9CreatesAnEmptyChallengeTableAndKeepsTheBadges() {
+        helper.createDatabase(dbName, 8).apply {
+            execSQL("INSERT INTO badge (id, tier, earnedAt, seen) VALUES ('REPEAT_OFFENDER', 1, 20000, 1)")
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 9, true, Migrations.MIGRATION_8_9).apply {
+            query("SELECT COUNT(*) FROM monthly_challenge").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+            query("SELECT COUNT(*) FROM badge").use { it.moveToFirst(); assertEquals(1, it.getInt(0)) }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To9() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, 8, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 9, true, *Migrations.ALL).close()
     }
 
     @Test

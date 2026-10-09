@@ -89,6 +89,7 @@ class BadgesSmokeTest {
 
             waitFor("Niveau 1 · Flemmarde débutante")
             waitFor("10 / 30 points")
+            waitFor("🎯 Défi d") // V2.19: the challenge of the month under the level
             shot("bg2-home-level")
             rule.onNode(hasText("Niveau 1", substring = true) and hasClickAction()).performClick()
 
@@ -102,6 +103,12 @@ class BadgesSmokeTest {
             waitFor("Lève-tôt malgré elle")
             waitFor("Séance commencée avant 8 h")
             shot("bg4-badges-one-off")
+
+            // V2.19: the challenge of the month, with its progress, in the Défis tab (drawn from the real date).
+            rule.onNode(hasText("Défis") and hasClickAction()).performClick()
+            waitFor("🎯 Défi d")
+            waitFor("Ce mois-ci")
+            shot("bg5-badges-challenges")
         }
     }
 }
