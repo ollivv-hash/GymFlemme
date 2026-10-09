@@ -3,7 +3,7 @@
 Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé depuis les releases GitHub (ou `adb install`), sans Play Store.
 
-> **Statut : V2.19.1 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
+> **Statut : V2.19.2 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
 > release en CI ; chaque version fusionnée sur `main` publie une release GitHub « GymFlemme x.y.z » avec l'APK signé.
 
 - Nom : **GymFlemme** (2.14 ; « Forme » jusqu'à 2.6, puis « GymBro », nom trop répandu).
@@ -44,6 +44,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.18** ✅ | Badges à paliers, ponctuels et secrets, points et niveau global, écran Badges depuis l'accueil, annonce unique, récap « Tes badges déjà gagnés », base v8 (badges v1 convertis), sauvegarde v8 |
 | **V2.19** ✅ | Défis mensuels (tirage déterministe, éligibilité, carte sur l'accueil, onglet Défis, 20 points, annonce du 1er du mois désactivable), base v9, sauvegarde v9 |
 | **V2.19.1** ✅ | Correctif : le bouton « Enregistrer » de « Nouvel aliment » restait grisé |
+| **V2.19.2** ✅ | Modifier ou supprimer un aliment aussi depuis Nutrition → Ajouter (fiche de l'aliment), comme dans Config → Mes aliments |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 

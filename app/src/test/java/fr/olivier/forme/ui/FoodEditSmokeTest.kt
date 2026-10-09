@@ -4,6 +4,10 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -53,5 +57,42 @@ class FoodEditSmokeTest {
         save().performClick()
         waitFor("Arancini Gorgonzola")
         rule.waitUntil(15_000) { rule.onAllNodes(hasText("Nouvel aliment")).fetchSemanticsNodes().isEmpty() }
+    }
+
+    /** V2.19.2: from Nutrition → Ajouter too, the sheet of a food opens its form and deletes it. */
+    @Test
+    fun editAndDeleteFromTheAddFoodSheet() {
+        waitFor("Nouvelle séance")
+        rule.onNode(hasText("Config") and hasClickAction()).performClick()
+        rule.onNode(hasText("Mes aliments") and hasClickAction()).performClick()
+        rule.waitUntilAtLeastOneExists(hasTestTag(NEW_FOOD_TAG), 15_000)
+        rule.onNodeWithTag(NEW_FOOD_TAG).performClick()
+        waitFor("Nouvel aliment")
+        field("Nom").performTextInput("Arancini Gorgonzola")
+        field("Protéines").performTextInput("11")
+        save().performClick()
+        waitFor("Arancini Gorgonzola")
+
+        // A new food is among the recent ones of Nutrition → Ajouter.
+        rule.onNode(hasContentDescription("Retour")).performClick()
+        rule.onNode(hasText("Nutrition") and hasClickAction()).performClick()
+        rule.waitUntilAtLeastOneExists(hasContentDescription("Ajouter à Déjeuner"), 15_000)
+        rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasContentDescription("Ajouter à Déjeuner"))
+        rule.onNode(hasContentDescription("Ajouter à Déjeuner")).performClick()
+        waitFor("Récents")
+        rule.onNode(hasText("Arancini Gorgonzola") and hasClickAction()).performClick()
+
+        rule.onNode(hasText("Modifier") and hasClickAction()).performClick()
+        waitFor("Modifier l'aliment")
+        field("Protéines").performTextReplacement("12")
+        save().performClick()
+        waitFor("Récents")
+        waitFor("12 g prot.")
+
+        rule.onNode(hasText("Arancini Gorgonzola") and hasClickAction()).performClick()
+        rule.onNode(hasText("Supprimer") and hasClickAction()).performClick()
+        waitFor("Supprimer « Arancini Gorgonzola » ?")
+        rule.onNode(hasText("Supprimer") and hasClickAction()).performClick()
+        rule.waitUntil(15_000) { rule.onAllNodes(hasText("Arancini Gorgonzola")).fetchSemanticsNodes().isEmpty() }
     }
 }
