@@ -48,6 +48,7 @@ class BackupRepository @Inject constructor(
                     creatine = db.creatineDao().getAll().sortedBy { it.id }.map { it.toDto() },
                 ),
                 badges = db.badgeDao().getAll().sortedWith(compareBy({ it.id }, { it.tier })).map { it.toDto() },
+                challenges = db.badgeDao().getChallenges().map { it.toDto() },
             )
         }
     }
@@ -64,6 +65,7 @@ class BackupRepository @Inject constructor(
             db.foodDao().deleteAll()
             db.profileDao().deleteAll()
             db.badgeDao().deleteAll()
+            db.badgeDao().deleteAllChallenges()
 
             val sport = file.sport
             db.exerciseDao().insertAll(sport.exercises.map { it.toEntity() })
@@ -81,6 +83,7 @@ class BackupRepository @Inject constructor(
             db.mealDao().insertAll(nutrition.meals.map { it.toEntity() })
             db.creatineDao().insertAll(nutrition.creatine.map { it.toEntity() })
             db.badgeDao().insertAll(file.badges.map { it.toEntity(file.schemaVersion) })
+            db.badgeDao().insertChallenges(file.challenges.map { it.toEntity() })
         }
     }
 

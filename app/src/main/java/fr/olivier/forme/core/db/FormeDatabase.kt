@@ -29,6 +29,7 @@ import fr.olivier.forme.feature.sport.data.SessionExerciseEntity
 import fr.olivier.forme.feature.sport.data.SetEntryEntity
 import fr.olivier.forme.feature.badges.data.BadgeDao
 import fr.olivier.forme.feature.badges.data.BadgeEntity
+import fr.olivier.forme.feature.badges.data.ChallengeEntity
 import fr.olivier.forme.feature.sport.data.TemplateDao
 import fr.olivier.forme.feature.sport.data.TemplateExerciseEntity
 import fr.olivier.forme.feature.sport.data.WorkoutTemplateEntity
@@ -52,6 +53,7 @@ import fr.olivier.forme.feature.sport.data.WorkoutTemplateEntity
         SessionHeartEntity::class,
         LibraryExerciseEntity::class,
         BadgeEntity::class,
+        ChallengeEntity::class,
     ],
     version = FormeDatabase.VERSION,
     exportSchema = true,
@@ -72,7 +74,7 @@ abstract class FormeDatabase : RoomDatabase() {
     abstract fun badgeDao(): BadgeDao
 
     companion object {
-        const val VERSION = 8
+        const val VERSION = 9
         const val NAME = "forme.db"
     }
 }

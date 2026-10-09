@@ -9,6 +9,9 @@ import fr.olivier.forme.feature.badges.domain.Award
 import fr.olivier.forme.feature.badges.domain.Badge
 import fr.olivier.forme.feature.badges.domain.BadgeHistory
 import fr.olivier.forme.feature.badges.domain.Badges
+import fr.olivier.forme.feature.badges.domain.Challenge
+import fr.olivier.forme.feature.badges.domain.ChallengeEligibility
+import fr.olivier.forme.feature.badges.domain.Challenges
 import fr.olivier.forme.feature.badges.domain.SessionFact
 import fr.olivier.forme.feature.badges.domain.Tier
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
@@ -24,6 +27,7 @@ import kotlinx.coroutines.sync.withLock
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -55,10 +59,28 @@ class BadgeRepository @Inject constructor(
     /** Last level announced (1 until a level-up was shown). */
     val announcedLevel: Flow<Int> = dataStore.data.map { it[LEVEL_ANNOUNCED] ?: 1 }
 
-    /** Stores the awards newly earned; returns those to announce. */
+    fun observeChallenges(): Flow<List<ChallengeEntity>> = dao.observeChallenges()
+
+    /** Emits when the history may have changed (the progress shown is recomputed). */
+    fun observeHistoryChanges(): Flow<Long> = dao.observeHistorySize()
+
+    fun currentMonth(): YearMonth = YearMonth.now(clock)
+
+    /** Notification of the monthly challenge (V2.19), on by default. */
+    val challengeNotification: Flow<Boolean> = dataStore.data.map { it[CHALLENGE_NOTIFICATION] ?: true }
+
+    suspend fun setChallengeNotification(enabled: Boolean) {
+        dataStore.edit { it[CHALLENGE_NOTIFICATION] = enabled }
+    }
+
+    /**
+     * Stores the awards newly earned and the challenges newly met; returns the awards to announce. The challenge of
+     * the current month is drawn first if needed; a challenge met is always announced.
+     */
     suspend fun evaluate(): List<Award> = mutex.withLock {
+        val history = history()
         val known = dao.getAll().map { it.id to it.tier }.toSet()
-        val earned = Badges.earned(history()).filterKeys { it.key() !in known }
+        val earned = Badges.earned(history).filterKeys { it.key() !in known }
         val firstRun = dataStore.data.first()[BACKFILLED] != true
         val today = LocalDate.now(clock)
         val announced = if (firstRun) earned.keys else earned.filterValues { !it.isBefore(today.minusDays(ANNOUNCE_DAYS)) }.keys
@@ -71,12 +93,44 @@ class BadgeRepository @Inject constructor(
                 if (earned.isNotEmpty()) it[RETRO_PENDING] = true
             }
         }
+        drawChallenge(YearMonth.from(today))
+        dao.getChallenges().filter { it.completedAt == null }.forEach { entity ->
+            val challenge = Challenge.byId(entity.challenge) ?: return@forEach
+            Challenges.progress(challenge, YearMonth.parse(entity.month), history).completedOn?.let { day ->
+                dao.completeChallenge(entity.month, day, seen = false)
+            }
+        }
         announced.sortedWith(compareBy({ it.badge.ordinal }, { it.tier?.number ?: 0 }))
     }
 
-    /** The announcement was read: every award is seen, the level reached is announced. */
+    /**
+     * The challenge of [month], drawn and stored the first time: never last month's (the stored one, else the one its
+     * draw would give), among the challenges the data allows.
+     */
+    suspend fun drawChallenge(month: YearMonth): Challenge? {
+        dao.getChallenge(month.toString())?.let { return Challenge.byId(it.challenge) }
+        val eligible = Challenges.eligible(eligibility(month))
+        val previousMonth = month.minusMonths(1)
+        val previous = dao.getChallenge(previousMonth.toString())?.let { Challenge.byId(it.challenge) }
+            ?: Challenges.draw(previousMonth, eligible, null)
+        val challenge = Challenges.draw(month, eligible, previous) ?: return null
+        dao.insertChallenges(listOf(ChallengeEntity(month.toString(), challenge.name)))
+        return dao.getChallenge(month.toString())?.let { Challenge.byId(it.challenge) }
+    }
+
+    suspend fun eligibility(month: YearMonth): ChallengeEligibility {
+        val previous = month.minusMonths(1)
+        return ChallengeEligibility(
+            hasRower = dao.activeExercises().any { Badges.isRower(it.name, it.libraryId) },
+            mealsLastMonth = dao.mealCount(previous.atDay(1), previous.atEndOfMonth()) > 0,
+            rotationSize = dao.rotation().size,
+        )
+    }
+
+    /** The announcement was read: every award and challenge is seen, the level reached is announced. */
     suspend fun acknowledge(level: Int) {
         dao.markAllSeen()
+        dao.markAllChallengesSeen()
         dataStore.edit {
             it[LEVEL_ANNOUNCED] = level
             it[RETRO_PENDING] = false
@@ -141,5 +195,6 @@ class BadgeRepository @Inject constructor(
         val BACKFILLED = booleanPreferencesKey("badges_v2_backfilled")
         val RETRO_PENDING = booleanPreferencesKey("badges_retro_pending")
         val LEVEL_ANNOUNCED = intPreferencesKey("badges_level_announced")
+        val CHALLENGE_NOTIFICATION = booleanPreferencesKey("challenge_notification")
     }
 }

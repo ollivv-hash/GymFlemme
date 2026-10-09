@@ -136,10 +136,10 @@ fun FormeNavHost(
                     onOpenSessionDetail = { nav.navigate(SessionDetailRoute(it)) },
                     onOpenWeight = { nav.switchTab(NutritionRoute(tab = 1)) },
                     onOpenNutrition = { nav.switchTab(NutritionRoute(tab = 0)) },
-                    onOpenBadges = { nav.navigate(BadgesRoute) },
+                    onOpenBadges = { tab -> nav.navigate(BadgesRoute(tab)) },
                 )
             }
-            composable<BadgesRoute> { BadgesScreen(onBack = { nav.popBackStack() }) }
+            composable<BadgesRoute> { BadgesScreen(onBack = { nav.popBackStack() }, initialTab = it.toRoute<BadgesRoute>().tab) }
             composable<HistoryRoute> {
                 HistoryScreen(
                     onOpenSession = { nav.navigate(SessionDetailRoute(it)) },

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
+import androidx.room.PrimaryKey
 import androidx.room.Query
 import fr.olivier.forme.feature.sport.domain.ExerciseType
 import fr.olivier.forme.feature.sport.domain.MuscleGroup
@@ -22,6 +23,20 @@ data class BadgeEntity(
     val earnedAt: LocalDate,
     val seen: Boolean,
 )
+
+/**
+ * The challenge of a month (V2.19): [month] as "2026-10", [challenge] a Challenge name, drawn once and kept (the draw
+ * depends on the data of the moment); [completedAt] the day it was met, [seen] once announced.
+ */
+@Entity(tableName = "monthly_challenge")
+data class ChallengeEntity(
+    @PrimaryKey val month: String,
+    val challenge: String,
+    val completedAt: LocalDate? = null,
+    val seen: Boolean = false,
+)
+
+data class RowerCandidateRow(val name: String, val libraryId: String?)
 
 /** A finished real session holding at least one set or cardio entry. */
 data class BadgeSessionRow(val id: Long, val startedAt: Instant, val endedAt: Instant, val templateId: Long?)
@@ -104,4 +119,42 @@ interface BadgeDao {
 
     @Query("SELECT id FROM workout_template WHERE orderInRotation IS NOT NULL AND archived = 0")
     suspend fun rotation(): List<Long>
+
+    // --- Monthly challenges (V2.19) ---
+
+    @Query("SELECT * FROM monthly_challenge ORDER BY month")
+    fun observeChallenges(): Flow<List<ChallengeEntity>>
+
+    @Query("SELECT * FROM monthly_challenge ORDER BY month")
+    suspend fun getChallenges(): List<ChallengeEntity>
+
+    @Query("SELECT * FROM monthly_challenge WHERE month = :month")
+    suspend fun getChallenge(month: String): ChallengeEntity?
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertChallenges(challenges: List<ChallengeEntity>)
+
+    @Query("UPDATE monthly_challenge SET completedAt = :day, seen = :seen WHERE month = :month AND completedAt IS NULL")
+    suspend fun completeChallenge(month: String, day: LocalDate, seen: Boolean)
+
+    @Query("UPDATE monthly_challenge SET seen = 1 WHERE seen = 0")
+    suspend fun markAllChallengesSeen()
+
+    @Query("DELETE FROM monthly_challenge")
+    suspend fun deleteAllChallenges()
+
+    @Query("SELECT name, libraryId FROM exercise WHERE archived = 0")
+    suspend fun activeExercises(): List<RowerCandidateRow>
+
+    /** Changes with every table the badges and challenges are computed from (progress refresh). */
+    @Query(
+        """SELECT (SELECT COUNT(*) FROM session WHERE endedAt IS NOT NULL) + (SELECT COUNT(*) FROM set_entry)
+                  + (SELECT COUNT(*) FROM cardio_entry) + (SELECT COUNT(*) FROM meal_entry)
+                  + (SELECT COUNT(*) FROM creatine_entry) + (SELECT COUNT(*) FROM body_weight_entry)
+                  + (SELECT COUNT(*) FROM workout_template)""",
+    )
+    fun observeHistorySize(): Flow<Long>
+
+    @Query("SELECT COUNT(*) FROM meal_entry WHERE date BETWEEN :from AND :to")
+    suspend fun mealCount(from: LocalDate, to: LocalDate): Int
 }

@@ -52,6 +52,21 @@ object BadgeConfig {
     const val ROWER_LIBRARY_ID = "rowing-machine"
     const val ROWER_NAME = "Rameur"
 
+    // --- Monthly challenges (V2.19) ---
+    const val CHALLENGE_POINTS = 20
+    /** Goal of each challenge in its unit (Zéro semaine blanche: every week of the month, Triple séance: per template). */
+    val CHALLENGE_GOALS: Map<Challenge, Double> = mapOf(
+        Challenge.TWELVE_STRIKES to 12.0, // sessions
+        Challenge.ROWER_OF_THE_MONTH to 30_000.0, // metres rowed
+        Challenge.RECORD_HUNTER to 3.0, // records beaten
+        Challenge.NO_BLANK_WEEK to 1.0, // session(s) each week whose Monday is in the month
+        Challenge.CURIOUS to 3.0, // exercises never done before
+        Challenge.PROTEIN_DATE to 20.0, // days with the protein target reached
+        Challenge.TRIPLE_SESSION to 3.0, // sessions of each template of the rotation
+    )
+    /** Triple séance is drawn only with at least this many templates in the rotation. */
+    const val TRIPLE_SESSION_MIN_TEMPLATES = 3
+
     // --- Levels: points needed for level 1, 2, … ---
     val LEVELS: List<Int> = listOf(0, 30, 100, 250, 500, 900, 1400)
 

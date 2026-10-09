@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Monthly challenges (V2.19, "Badges, défis et niveaux" §4): name, goal (neutral wording, also shown with the
+    progress), announcement and success messages in humour mode; serious mode: challenge_neutral_*. Goals and points
+    live in BadgeConfig.kt.
+-->
+<resources>
+    <string name="challenge_name_twelve_strikes">Douze coups</string>
+    <string name="challenge_name_rower_of_the_month">Rameur du mois</string>
+    <string name="challenge_name_record_hunter">Chasseur de records</string>
+    <string name="challenge_name_no_blank_week">Zéro semaine blanche</string>
+    <string name="challenge_name_curious">Curieux</string>
+    <string name="challenge_name_protein_date">Protéines au rendez-vous</string>
+    <string name="challenge_name_triple_session">Triple séance</string>
+
+    <string name="challenge_goal_twelve_strikes">12 séances dans le mois</string>
+    <string name="challenge_goal_rower_of_the_month">30 km de rameur dans le mois</string>
+    <string name="challenge_goal_record_hunter">3 records battus dans le mois</string>
+    <string name="challenge_goal_no_blank_week">Au moins 1 séance chaque semaine du mois</string>
+    <string name="challenge_goal_curious">3 exercices jamais réalisés</string>
+    <string name="challenge_goal_protein_date">Objectif protéines atteint 20 jours</string>
+    <string name="challenge_goal_triple_session">Chaque modèle de la rotation fait au moins 3 fois</string>
+
+    <string name="challenge_announce_twelve_strikes">Ce mois-ci : 12 séances. Une tous les deux-trois jours, c\'est jouable.</string>
+    <string name="challenge_announce_rower_of_the_month">Ce mois-ci : 30 km de rameur. Hissez haut !</string>
+    <string name="challenge_announce_record_hunter">Ce mois-ci : 3 records à faire tomber.</string>
+    <string name="challenge_announce_no_blank_week">Ce mois-ci : pas une semaine sans séance.</string>
+    <string name="challenge_announce_curious">Ce mois-ci : 3 exercices que tu n\'as jamais faits.</string>
+    <string name="challenge_announce_protein_date">Ce mois-ci : 20 jours avec ton objectif protéines.</string>
+    <string name="challenge_announce_triple_session">Ce mois-ci : chaque séance de ta rotation, 3 fois minimum.</string>
+
+    <string name="challenge_success_twelve_strikes">Douze séances ! Le mois est plié.</string>
+    <string name="challenge_success_rower_of_the_month">30 km ramés. Tu peux ranger les rames.</string>
+    <string name="challenge_success_record_hunter">Trois records ! La chasse a été bonne.</string>
+    <string name="challenge_success_no_blank_week">Aucune semaine blanche. Le canapé est vexé.</string>
+    <string name="challenge_success_curious">Trois nouveautés testées. L\'aventure, la vraie.</string>
+    <string name="challenge_success_protein_date">20 jours au top. Ton shaker a fait des heures sup\'.</string>
+    <string name="challenge_success_triple_session">Rotation complète, trois fois. Impeccable.</string>
+
+    <!-- After "5 / 12" -->
+    <string name="challenge_unit_twelve_strikes">séances</string>
+    <string name="challenge_unit_rower_of_the_month">km</string>
+    <string name="challenge_unit_record_hunter">records</string>
+    <string name="challenge_unit_no_blank_week">semaines avec séance</string>
+    <string name="challenge_unit_curious">nouveaux exercices</string>
+    <string name="challenge_unit_protein_date">jours d\'objectif protéines</string>
+    <string name="challenge_unit_triple_session">séances de la rotation</string>
+
+    <!-- Serious mode; %1$s = the goal -->
+    <string name="challenge_neutral_announce">Défi du mois : %1$s</string>
+    <string name="challenge_neutral_success">Défi du mois réussi</string>
+
+    <!-- "Défi de {mois} {année}", elided before a vowel (Défi d'octobre 2026) -->
+    <string name="challenge_badge">Défi de %1$s %2$d</string>
+    <string name="challenge_badge_elided">Défi d\'%1$s %2$d</string>
+    <string name="challenge_notification_channel">Défi du mois</string>
+    <string name="challenge_notification_setting">Annonce du défi du mois</string>
+    <string name="challenge_notification_setting_description">Une notification le 1er du mois, vers 9 h</string>
+</resources>
