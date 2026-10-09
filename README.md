@@ -3,7 +3,7 @@
 Application Android native de suivi des séances en salle (module **Sport**) et de la nutrition (module **Nutrition**).
 Usage strictement personnel : un utilisateur, un téléphone, APK signé installé depuis les releases GitHub (ou `adb install`), sans Play Store.
 
-> **Statut : V2.17.0 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
+> **Statut : V2.18.0 publiée, utilisée au quotidien sur le téléphone.** Chaque PR passe tests JVM, Lint et build
 > release en CI ; chaque version fusionnée sur `main` publie une release GitHub « GymFlemme x.y.z » avec l'APK signé.
 
 - Nom : **GymFlemme** (2.14 ; « Forme » jusqu'à 2.6, puis « GymBro », nom trop répandu).
@@ -41,6 +41,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.15** ✅ | Petites touches d'humour sur les écrans existants, « Mode sérieux », accord selon le sexe du profil |
 | **V2.16** ✅ | Retour après une pause (accueil, charges à 80 % sur demande), ligne quand l'objectif de la semaine passée n'est pas tenu |
 | **V2.17** ✅ | Badges de régularité (onglet Historique → Badges, annonce au récap et à l'accueil), base v7, sauvegarde v7 |
+| **V2.18** ✅ | Badges à paliers, ponctuels et secrets, points et niveau global, écran Badges depuis l'accueil, annonce unique, récap « Tes badges déjà gagnés », base v8 (badges v1 convertis), sauvegarde v8 |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -124,7 +125,7 @@ Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv`
 
 ---
 
-## Modèle de données (Room, version 7)
+## Modèle de données (Room, version 8)
 
 Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distances en mètres. `Instant` ↔ epoch millis, `LocalDate` ↔ epochDay. Les enums sont stockées en texte.
 
@@ -150,7 +151,7 @@ Tables Nutrition (V1.1, migration explicite 1 → 2) :
 | `food` | id, source (CIQUAL / OFF / CUSTOM), sourceCode (code Ciqual ou code-barres), nom, marque, valeurs /100 g, portion, favori, dernière utilisation | « Mes aliments » : perso, cache Open Food Facts, aliments Ciqual déjà utilisés (récents / favoris). |
 | `meal_entry` | id, date, mealType, foodId?, nom, quantité (g), protéines, kcal, glucides, lipides, isWhey, heure | **Copie des valeurs** : modifier ou supprimer un aliment ne change jamais l'historique. |
 | `creatine_entry` | id, date (unique), dose, heure | Une prise par jour. |
-| `badge` (v7) | id (nom du badge, ex. `NOT_DEAD`), earnedAt (jour), seen | Badges obtenus ; recalculés depuis l'historique, jamais retirés. Exportés depuis la sauvegarde v7. |
+| `badge` (v7, palier v8) | id (nom du badge, ex. `REPEAT_OFFENDER`), tier (1 à 4 = Bronze à Platine, 0 = sans palier), earnedAt (jour), seen ; clé (id, tier) | Badges et paliers obtenus ; recalculés depuis l'historique, jamais retirés. Migration 7 → 8 : Pilier de la salle → Récidiviste Argent, Créatine fidèle → Argent, Récidiviste / Plus fort que le canapé / Touche-à-tout → Bronze. Exportés depuis la sauvegarde v7 (palier depuis la v8). |
 | `library_exercise` | id (ex. `leg-press`), nom, alias, variante (`imageOf`, `difference`), matériel, type de machine, muscles principaux / secondaires / `alsoTargets`, mouvement, catégorie, niveau, impact, unilatéral, échauffement, lieux, vue, images (`frames`, dossier, largeur, hauteur) | Bibliothèque **Open Exercise Illustrations** (CC0) en lecture seule : 415 exercices + 44 variantes, rechargée depuis l'APK quand sa version change (`ExerciseLibraryLoader.DATASET_VERSION`). Une variante montre les images de l'exercice d'origine mais garde son matériel, ses muscles et sa différence. **Non exportée.** |
 
 Migration explicite **2 → 3** (V1.1.1) : 4 colonnes nullables ajoutées (`exercise.nextNote`, `template_exercise.supersetGroup`,
@@ -349,16 +350,32 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 - **Objectif non tenu** (V2.16) : si la semaine passée compte moins de séances que l'objectif, une ligne sous la
   salutation nomme la prochaine séance de la rotation, jusqu'à la première séance de la semaine (pas pour un
   premier entraînement ; le « bon retour » passe avant).
-- **Badges** (V2.17), fondés sur la régularité, jamais sur le poids : Pas mort (1re séance), Bien parti (5),
-  Récidiviste (10), Pilier de la salle (50), Plus fort que le canapé (4 semaines d'affilée avec au moins une séance),
-  Lève-tôt malgré lui (séance commencée avant 8 h), Régulier (3 séances dans une semaine), Record en vue (1er record
-  battu, la séance d'amorce servant de référence), Touche-à-tout (10 exercices différents), Créatine fidèle (30 jours
-  d'affilée). Recalculés depuis l'historique à la fin d'une séance, à la prise de créatine et à l'ouverture de
-  l'accueil ; la date retenue est celle où la condition a été remplie. Un badge du jour ou de la veille est annoncé
-  (carte au récap de séance, sinon à l'accueil, jusqu'à « Compris ») ; les plus anciens (historique déjà là à la mise
-  à jour, sauvegarde restaurée) sont enregistrés sans annonce. Onglet **Historique → Badges** : obtenus (message,
-  date) puis à obtenir (condition). Noms et messages s'accordent au sexe du profil (« Pas morte », « malgré elle »,
-  « Régulière »…) ; en mode sérieux, le message devient « Badge obtenu : {nom} ».
+- **Badges, points et niveaux** (V2.18, remplace les badges V2.17) — effort et régularité uniquement, jamais le
+  poids ; rien ne se perd (un badge ou un palier obtenu reste acquis). Seuils, points et niveaux dans une
+  configuration centrale : `feature/badges/domain/BadgeConfig.kt`.
+  - **Paliers** Bronze 10 · Argent 25 · Or 50 · Platine 100 points : Récidiviste (séances 10/50/150/300), Plus fort
+    que le canapé (semaines d'affilée 4/12/26/52, la semaine en cours ne casse jamais la série), Déménageur (tonnage
+    10/50/200/500 t, séries `WEIGHTED` hors échauffement), Galérien (rameur 10/50/200/500 km : `distanceM` des
+    entrées cardio liées à `rowing-machine`, ou nommées « Rameur » sans lien), Collectionneur de records
+    (5/25/75/150, un par exercice et par séance, record égalé exclu), Créatine fidèle (jours d'affilée 7/30/90/365),
+    Shaker d'or (jours d'objectif protéines 7/30/100/250, cible calculée avec la dernière pesée du jour ou d'avant,
+    à défaut la première), Touche-à-tout (exercices différents 10/20/35/50).
+  - **Ponctuels** (10 points) : Pas mort, Bien parti, Régulier, Record en vue, Lève-tôt malgré lui (avant 8 h),
+    Oiseau de nuit (dès 21 h), Triple A (chaque modèle de la rotation active dans la même semaine), Pas de jaloux
+    (Pectoraux, Épaules, Dos, Bras, Abdos et Jambes dans la même semaine).
+  - **Secrets** (15 points, « ??? » jusqu'à l'obtention) : Lundi, même pas peur ; Dimanche sportif ; Le marathon
+    (> 75 min) ; Le retour du roi (après 30 jours entiers sans séance) ; Anniversaire (1 an après la 1re séance,
+    avec une séance dans les 30 jours d'avant, sinon à la séance suivante) ; Nouvel An.
+  - **Niveau global** (7 niveaux, 0 à 1 400 points : Flemmard débutant → Légende de la fonte) : carte sur l'accueil,
+    qui ouvre l'**écran Badges** (onglets Paliers et Ponctuels, progression « 37 / 50 séances »).
+  - Séance comptée : terminée, avec au moins une série ou une entrée cardio ; la séance d'amorce ne compte jamais.
+  - Recalcul idempotent (fin de séance, créatine, repas, ouverture de l'accueil) ; date = jour où la condition a été
+    remplie. **Une seule annonce** (feuille du bas, jamais pendant la séance en cours) liste tous les badges obtenus
+    ensemble et le passage de niveau ; au premier lancement de la 2.18, l'historique est récapitulé une fois dans
+    « Tes badges déjà gagnés ». Badges d'une sauvegarde restaurée : enregistrés sans annonce.
+  - Accord au sexe du profil (Pas morte, Déménageuse, Flemmarde repentie, Le retour de la reine…) ; en mode sérieux,
+    « Badge {nom} : palier {palier} obtenu » / « Badge obtenu : {nom} », titres de niveau remplacés par « Niveau {n} ».
+  - Défis mensuels : prévus en 2.19.
 - Restent neutres : poids, repas, mentions santé, Sources et licences, erreurs, confirmations, autorisations.
 - Test garde-fou : chaque tableau a des variantes, sa version neutre et une entrée `Quip` ; les versions féminines
   ont autant de phrases ; toutes se formatent avec leurs paramètres.
@@ -486,8 +503,8 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 ### Export / import manuel
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
-- Format versionné : `{ "schemaVersion": 7, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" }, "badges": [ … ] }`.
-  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7. Les fichiers **v1** à **v6** restent importables (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
+- Format versionné : `{ "schemaVersion": 8, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" }, "badges": [ … ] }`.
+  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8. Les fichiers **v1** à **v7** restent importables (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 
