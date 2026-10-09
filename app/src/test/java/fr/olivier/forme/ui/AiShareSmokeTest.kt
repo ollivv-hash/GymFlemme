@@ -122,6 +122,7 @@ class AiShareSmokeTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             // Choose Claude, sending the file (default method).
             waitFor("Nouvelle séance")
+            rule.acknowledgeBadges()
             rule.onNode(hasText("Config") and hasClickAction()).performClick()
             rule.onNodeWithText("Analyse IA").performClick()
             waitFor("App IA par défaut")
