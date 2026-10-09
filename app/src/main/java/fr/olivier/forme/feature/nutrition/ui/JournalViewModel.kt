@@ -123,7 +123,7 @@ class JournalViewModel @Inject constructor(
     fun setCreatine(taken: Boolean) = viewModelScope.launch {
         repository.setCreatineTaken(date.value, taken)
         if (taken && date.value == repository.today()) reminder.dismissNotification()
-        if (taken) runCatching { badges.evaluate() } // V2.17: 30 days of creatine in a row
+        if (taken) evaluateBadges() // Créatine fidèle
     }
 
     /** Whey goes after the session on training days, otherwise with breakfast (morning) or as a snack. */
@@ -134,8 +134,17 @@ class JournalViewModel @Inject constructor(
             else -> MealType.SNACK
         }
         repository.addWheyDose(date.value, meal)
+        evaluateBadges()
     }
 
-    fun updateQuantity(entry: MealEntryEntity, grams: Double) = viewModelScope.launch { repository.updateQuantity(entry, grams) }
+    fun updateQuantity(entry: MealEntryEntity, grams: Double) = viewModelScope.launch {
+        repository.updateQuantity(entry, grams)
+        evaluateBadges()
+    }
+
+    /** V2.18: a badge unlocked by an entry (creatine, protein target) is announced at once. */
+    private suspend fun evaluateBadges() {
+        runCatching { badges.evaluate() }.onFailure { android.util.Log.e("Forme", "Badge evaluation failed", it) }
+    }
     fun delete(entry: MealEntryEntity) = viewModelScope.launch { repository.deleteEntry(entry.id) }
 }

@@ -1,5 +1,8 @@
 package fr.olivier.forme.core.db
 
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import fr.olivier.forme.core.backup.BadgeDto
+import fr.olivier.forme.feature.badges.data.BadgeEntity
 import fr.olivier.forme.feature.badges.data.BadgeRepository
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.olivier.forme.core.backup.BackupCodec
@@ -20,14 +23,20 @@ import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.SetEntryEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import java.io.File
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 
 @RunWith(AndroidJUnit4::class)
 class BackupRoundTripTest {
+    @get:Rule
+    val tmp = TemporaryFolder()
+
     @Test
     fun exportThenImportIntoAnotherDatabaseIsLossless() = runTest {
         val clock = TestClock()
@@ -53,7 +62,8 @@ class BackupRoundTripTest {
         nutrition.addWheyDose(LocalDate.of(2026, 10, 2), MealType.SNACK)
         nutrition.setCreatineTaken(LocalDate.of(2026, 10, 2), true)
         // V2.17: the first session earned "Pas mort".
-        BadgeRepository(source.badgeDao(), clock).evaluate()
+        val store = PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "badges.preferences_pb") }
+        BadgeRepository(source.badgeDao(), store, clock).evaluate()
 
         val exported = BackupRepository(source, context(), clock).snapshot()
         val text = BackupCodec.encode(exported)
@@ -69,9 +79,31 @@ class BackupRoundTripTest {
         assertEquals(NutritionGoal.BULK, exported.nutrition.profile!!.nutritionGoal)
         assertEquals(2700, exported.nutrition.profile!!.kcalTargetOverride)
         assertEquals(1980, exported.nutrition.profile!!.birthYear)
-        assertEquals(listOf("NOT_DEAD"), exported.badges.map { it.id })
+        assertEquals(listOf("NOT_DEAD" to 0), exported.badges.map { it.id to it.tier })
         assertEquals(exported, reimported)
         assertEquals(text, BackupCodec.encode(reimported))
+        source.close()
+        target.close()
+    }
+
+    @Test
+    fun badgesOfAFormat7BackupAreConvertedIntoTiers() = runTest {
+        val clock = TestClock()
+        val source = testDatabase(clock)
+        val v7 = BackupRepository(source, context(), clock).snapshot().copy(
+            schemaVersion = 7,
+            badges = listOf(BadgeDto("PILLAR", "2026-05-01", true), BadgeDto("CREATINE_LOYAL", "2026-06-01", false), BadgeDto("NOT_DEAD", "2026-01-01", true)),
+        )
+        val target = testDatabase(clock)
+        BackupRepository(target, context(), clock).restore(BackupCodec.decode(BackupCodec.encode(v7)))
+        assertEquals(
+            listOf(
+                BadgeEntity("CREATINE_LOYAL", 2, LocalDate.of(2026, 6, 1), false),
+                BadgeEntity("NOT_DEAD", 0, LocalDate.of(2026, 1, 1), true),
+                BadgeEntity("REPEAT_OFFENDER", 2, LocalDate.of(2026, 5, 1), true),
+            ),
+            target.badgeDao().getAll().sortedBy { it.id },
+        )
         source.close()
         target.close()
     }

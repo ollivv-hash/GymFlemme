@@ -72,7 +72,7 @@ abstract class FormeDatabase : RoomDatabase() {
     abstract fun badgeDao(): BadgeDao
 
     companion object {
-        const val VERSION = 7
+        const val VERSION = 8
         const val NAME = "forme.db"
     }
 }

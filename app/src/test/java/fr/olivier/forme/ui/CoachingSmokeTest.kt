@@ -10,12 +10,14 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.room.Room
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import fr.olivier.forme.feature.badges.ui.BADGES_ACK_TAG
 import fr.olivier.forme.MainActivity
 import fr.olivier.forme.core.db.FormeDatabase
 import fr.olivier.forme.core.db.Migrations
@@ -97,6 +99,10 @@ class CoachingSmokeTest {
             shot("c2-session-plateau")
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
             waitFor("Semaine de décharge conseillée")
+            // V2.18: the badges of the history are recapped once, over the home screen.
+            waitFor("Tes badges déjà gagnés")
+            rule.onNodeWithTag(BADGES_ACK_TAG).performClick()
+            rule.waitUntil(15_000) { rule.onAllNodes(hasText("Tes badges déjà gagnés")).fetchSemanticsNodes().isEmpty() }
             shot("c1-home-deload")
 
             rule.onNode(hasText("Historique") and hasClickAction()).performClick()

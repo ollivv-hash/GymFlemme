@@ -38,7 +38,8 @@ class QuipCatalogueTest {
         Quip.PROGRESSION, Quip.CREATINE -> arrayOf("2,5")
         Quip.MISSED_GOAL -> arrayOf("A · Poussée")
         Quip.PROTEIN_MISSING, Quip.PROTEIN_ALMOST, Quip.CREATINE_STREAK -> arrayOf(25)
-        else -> if (quip.name.startsWith("BADGE_")) arrayOf("Pas mort") else emptyArray()
+        Quip.LEVEL_UP -> arrayOf(3, "Habitué")
+        else -> emptyArray()
     }
 
     @Test
@@ -46,8 +47,7 @@ class QuipCatalogueTest {
         val arrays = R.array::class.java.fields.map { it.name }.filter { it.startsWith("humor_") && !it.endsWith("_f") }
         val strings = R.string::class.java.fields.map { it.name }.toSet()
         arrays.forEach { name ->
-            // Badge messages share one neutral version: "Badge obtenu : {nom}".
-            val neutral = if (name.startsWith("humor_badge_")) "neutral_badge" else "neutral_" + name.removePrefix("humor_")
+            val neutral = "neutral_" + name.removePrefix("humor_")
             assertTrue("$name has no neutral version", neutral in strings)
         }
         assertEquals("every array is a Quip", arrays.toSet(), Quip.entries.map { resources.getResourceEntryName(it.humor) }.toSet())

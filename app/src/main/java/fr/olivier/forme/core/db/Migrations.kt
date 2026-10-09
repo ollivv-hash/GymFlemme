@@ -2,6 +2,7 @@ package fr.olivier.forme.core.db
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import fr.olivier.forme.feature.badges.domain.BadgeMigration
 import fr.olivier.forme.feature.library.data.ExerciseLibraryLinks
 
 /**
@@ -135,5 +136,24 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+    /**
+     * V2.18: badges with tiers. One row per badge and tier (0 = none); the V2.17 badges are converted, with their day
+     * and their "seen" state (Pilier de la salle → Récidiviste Argent, Créatine fidèle → Argent, …).
+     */
+    val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `badge_new` (`id` TEXT NOT NULL, `tier` INTEGER NOT NULL, " +
+                    "`earnedAt` INTEGER NOT NULL, `seen` INTEGER NOT NULL, PRIMARY KEY(`id`, `tier`))",
+            )
+            db.execSQL(
+                "INSERT OR IGNORE INTO `badge_new` (`id`, `tier`, `earnedAt`, `seen`) " +
+                    "SELECT ${BadgeMigration.sqlId}, ${BadgeMigration.sqlTier}, `earnedAt`, `seen` FROM `badge`",
+            )
+            db.execSQL("DROP TABLE `badge`")
+            db.execSQL("ALTER TABLE `badge_new` RENAME TO `badge`")
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
 }

@@ -41,16 +41,8 @@ enum class Quip(
     WELCOME_BACK(R.array.humor_welcome_back, R.string.neutral_welcome_back, humorFeminine = R.array.humor_welcome_back_f),
     LIGHTER_LOADS(R.array.humor_lighter_loads, R.string.neutral_lighter_loads),
     MISSED_GOAL(R.array.humor_missed_goal, R.string.neutral_missed_goal),
-    BADGE_NOT_DEAD(R.array.humor_badge_not_dead, R.string.neutral_badge, humorFeminine = R.array.humor_badge_not_dead_f),
-    BADGE_WELL_STARTED(R.array.humor_badge_well_started, R.string.neutral_badge),
-    BADGE_REPEAT_OFFENDER(R.array.humor_badge_repeat_offender, R.string.neutral_badge),
-    BADGE_PILLAR(R.array.humor_badge_pillar, R.string.neutral_badge),
-    BADGE_BEATS_THE_COUCH(R.array.humor_badge_beats_the_couch, R.string.neutral_badge),
-    BADGE_EARLY_BIRD(R.array.humor_badge_early_bird, R.string.neutral_badge, humorFeminine = R.array.humor_badge_early_bird_f),
-    BADGE_REGULAR(R.array.humor_badge_regular, R.string.neutral_badge),
-    BADGE_FIRST_RECORD(R.array.humor_badge_first_record, R.string.neutral_badge),
-    BADGE_ALL_ROUNDER(R.array.humor_badge_all_rounder, R.string.neutral_badge),
-    BADGE_CREATINE_LOYAL(R.array.humor_badge_creatine_loyal, R.string.neutral_badge),
+    /** V2.18: %1$d = level, %2$s = its title (feminine agreement already applied). */
+    LEVEL_UP(R.array.humor_level_up, R.string.neutral_level_up),
     ;
 
     companion object {

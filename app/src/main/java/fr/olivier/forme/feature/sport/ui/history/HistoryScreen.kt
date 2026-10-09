@@ -1,6 +1,5 @@
 package fr.olivier.forme.feature.sport.ui.history
 
-import fr.olivier.forme.feature.badges.ui.BadgesContent
 import fr.olivier.forme.core.humor.Quip
 import fr.olivier.forme.core.humor.QuipText
 import androidx.compose.foundation.clickable
@@ -62,14 +61,9 @@ fun HistoryScreen(onOpenSession: (Long) -> Unit, onOpenExercise: (Long) -> Unit,
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Séances") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Exercices") })
                 Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Semaine") })
-                Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Badges") })
             }
             if (tab == 2) {
                 WeekContent()
-                return@Column
-            }
-            if (tab == 3) {
-                BadgesContent()
                 return@Column
             }
             LazyColumn {

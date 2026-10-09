@@ -1,5 +1,6 @@
 package fr.olivier.forme.feature.nutrition.ui
 
+import fr.olivier.forme.feature.badges.data.BadgeRepository
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -61,6 +62,7 @@ import javax.inject.Inject
 class AddFoodViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: NutritionRepository,
+    private val badges: BadgeRepository,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<AddFoodRoute>()
     val date: LocalDate = LocalDate.ofEpochDay(route.epochDay)
@@ -100,6 +102,7 @@ class AddFoodViewModel @Inject constructor(
     fun add(grams: Double) = viewModelScope.launch {
         val food = _selected.value ?: return@launch
         repository.addFood(food, date, meal, grams)
+        runCatching { badges.evaluate() } // V2.18: Shaker d'or, announced at once
         _selected.value = null
         _messages.send("${food.name} ajouté à ${meal.label.lowercase()}")
     }

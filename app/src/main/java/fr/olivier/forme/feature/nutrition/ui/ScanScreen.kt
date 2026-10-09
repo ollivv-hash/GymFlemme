@@ -1,5 +1,6 @@
 package fr.olivier.forme.feature.nutrition.ui
 
+import fr.olivier.forme.feature.badges.data.BadgeRepository
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -72,6 +73,7 @@ sealed interface ScanState {
 class ScanViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: NutritionRepository,
+    private val badges: BadgeRepository,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<ScanRoute>()
     val date: LocalDate = LocalDate.ofEpochDay(route.epochDay)
@@ -99,6 +101,7 @@ class ScanViewModel @Inject constructor(
 
     fun add(food: FoodEntity, grams: Double, then: () -> Unit) = viewModelScope.launch {
         repository.addFood(food, date, meal, grams)
+        runCatching { badges.evaluate() } // V2.18: Shaker d'or, announced at once
         then()
     }
 }

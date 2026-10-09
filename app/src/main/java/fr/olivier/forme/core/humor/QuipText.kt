@@ -51,11 +51,11 @@ fun QuipText(
     rememberQuip(quip, *args, key = key)?.let { Text(it, modifier, color = color, style = style) }
 }
 
-/** Feminine agreement from the profile (V2.17: badge names), false until known. */
+/** Serious mode and feminine agreement (V2.18: badge texts), humour and masculine until known. */
 @Composable
-fun rememberFeminine(): Boolean {
+fun rememberQuipStyle(): QuipStyle {
     val repository = LocalQuips.current
     val styleFlow = remember(repository) { repository?.style ?: flowOf(null) }
     val style by styleFlow.collectAsStateWithLifecycle(initialValue = null)
-    return style?.feminine == true
+    return style ?: QuipStyle()
 }
