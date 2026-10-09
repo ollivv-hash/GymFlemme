@@ -1,6 +1,9 @@
 package fr.olivier.forme.ui
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.ComposeTestRule
@@ -20,4 +23,12 @@ fun ComposeTestRule.acknowledgeBadges() {
     waitUntil(15_000) { onAllNodes(hasTestTag(BADGES_ACK_TAG)).fetchSemanticsNodes().isEmpty() }
     waitUntilAtLeastOneExists(hasText("🎯 Défi d", substring = true), 15_000)
     waitForIdle()
+}
+
+/**
+ * A text ending with [suffix]: a session line of the home screen ("mar. 6 oct. · 31 min"), and not the announcement
+ * of a challenge that merely contains it ("3 fois minimum").
+ */
+fun hasTextEndingWith(suffix: String) = SemanticsMatcher("text ending with '$suffix'") { node ->
+    node.config.getOrNull(SemanticsProperties.Text)?.any { it.text.endsWith(suffix) } == true
 }
