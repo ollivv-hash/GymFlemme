@@ -45,6 +45,8 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.19** ✅ | Défis mensuels (tirage déterministe, éligibilité, carte sur l'accueil, onglet Défis, 20 points, annonce du 1er du mois désactivable), base v9, sauvegarde v9 |
 | **V2.19.1** ✅ | Correctif : le bouton « Enregistrer » de « Nouvel aliment » restait grisé |
 | **V2.19.2** ✅ | Modifier ou supprimer un aliment aussi depuis Nutrition → Ajouter (fiche de l'aliment), comme dans Config → Mes aliments |
+| **V2.19.3** ✅ | La FC de la notification n'est plus mise à jour écran éteint (chaque mise à jour rallumait l'écran sur certains téléphones) ; rafraîchie dès que l'écran se rallume |
+| **V2.19.4** ✅ | Badges et défis calculés hors du fil de l'interface, une seule fois pour l'accueil et l'écran Badges, détection des records en un passage (3 ans d'historique : ~280 → ~95 ms) |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -52,6 +54,8 @@ Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets
 
 - Photos des machines : import manuel exercice par exercice (déjà possible), pas d'import en masse.
 - Intégration Drive complète (API Drive v3, copies datées, bilans Markdown) — en réflexion.
+- Nutrition : **plats personnalisés** composés d'aliments scannés ou enregistrés (ex. « mon bol de riz poulet »),
+  ajoutés en un geste à un repas.
 
 ---
 
@@ -269,6 +273,8 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   s'y connecte dès que la diffusion est active, puis se reconnecte après chaque coupure. Un **service au premier plan**
   (type *connected device*) garde la liaison écran éteint ; chaque mesure est écrite au fil de l'eau dans un fichier par
   séance (rien n'est perdu si l'app est tuée). Notification « Séance en cours » avec la FC, *Live Update* Android 16 ; retirée explicitement à l'arrêt (2.9.1 : elle pouvait être republiée juste après l'abandon de la séance et rester affichée).
+  Mise à jour au plus toutes les 5 s, et **jamais écran éteint** (2.19.3 : sur certains téléphones, chaque mise à jour
+  rallumait l'écran comme une nouvelle notification) ; la dernière valeur s'affiche dès que l'écran se rallume.
 - **En séance** : bandeau FC + zone sous le titre ; barre de repos : « récupéré » sous 60 % de la FC max (indication seule).
 - **Complément Health Connect** (après séance) : la FC écrite par Mi Fitness comble les trous de la courbe en direct (le
   direct est prioritaire), et ses calories actives remplacent l'estimation. **Une seule source** est retenue (l'app qui a
@@ -389,6 +395,11 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
     cours, puis défis réussis « Défi d'octobre 2026 »). Réussi : annoncé dans la feuille unique ; raté : rien, aucun
     message. Pas de défi pour les mois d'avant la 2.19. Notification le 1er du mois vers 9 h (réglage « Annonce du
     défi du mois », activé par défaut) : la seule notification liée aux badges.
+  - **Calcul** (2.19.4) : badges, défis et progression sont recalculés depuis tout l'historique, hors du fil de
+    l'interface (`Dispatchers.Default`), une seule fois pour l'accueil et l'écran Badges (`BadgeBoardSource`) ; une
+    rafale de changements (séries d'une séance, restauration) ne donne qu'un calcul, 300 ms après le dernier. Records
+    détectés en un passage par exercice (meilleure charge et meilleur volume cumulés). Mesuré sur 3 ans
+    (624 séances, 20 000 séries) : ~95 ms, dont ~60 ms de requête SQL ; un calcul incrémental n'est pas nécessaire.
 - Restent neutres : poids, repas, mentions santé, Sources et licences, erreurs, confirmations, autorisations.
 - Test garde-fou : chaque tableau a des variantes, sa version neutre et une entrée `Quip` ; les versions féminines
   ont autant de phrases ; toutes se formatent avec leurs paramètres.
@@ -596,7 +607,7 @@ Runner **épinglé sur `ubuntu-24.04`** (`ubuntu-latest` passe à Ubuntu 26 à p
 versions **Node 24** (`checkout`/`setup-java`/`setup-gradle` v5, `upload-artifact` v7, `download-artifact` v8) : à
 monter volontairement, ensemble, quand GitHub l'annonce.
 
-- **APK de la PR** : onglet *Actions* → le run → artefact `gymflemme-<version>-apk` (`gymbro-…` de 2.11.0 à 2.13.0, `forme-…` avant) (conservé 30 jours).
+- **APK de la PR** : onglet *Actions* → le run → artefact `gymflemme-<version>-apk` (`gymbro-…` de 2.11.0 à 2.13.0, `forme-…` avant) (conservé 7 jours, pour rester dans le quota de stockage GitHub Actions).
 - **Release** : quand une nouvelle `versionName` arrive sur `main`, une release GitHub `v<version>` est publiée
   avec l'APK signé (une seule fois par version : penser à monter `versionCode`/`versionName`).
   Sur le téléphone : page *Releases* du dépôt → télécharger l'APK → installer (mise à jour sans perte de données,

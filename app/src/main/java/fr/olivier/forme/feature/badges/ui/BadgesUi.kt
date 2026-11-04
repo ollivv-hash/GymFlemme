@@ -61,11 +61,9 @@ import fr.olivier.forme.feature.badges.domain.Level
 import fr.olivier.forme.feature.badges.domain.Tier
 import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.ui.components.FormeTopBar
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -75,13 +73,13 @@ import javax.inject.Inject
 import kotlin.math.floor
 
 /** Awards as stored, keyed by award (unknown ids of a newer backup left out). */
-private fun BadgeRepository.observeEarned(): Flow<Map<Award, BadgeEntity>> =
+internal fun BadgeRepository.observeEarned(): Flow<Map<Award, BadgeEntity>> =
     observeAll().map { list -> list.mapNotNull { entity -> entity.award()?.let { it to entity } }.toMap() }
 
 /** A stored monthly challenge, readable (unknown ids of a newer backup left out). */
 data class MonthChallenge(val month: YearMonth, val challenge: Challenge, val entity: ChallengeEntity)
 
-private fun BadgeRepository.observeMonthChallenges(): Flow<List<MonthChallenge>> = observeChallenges().map { list ->
+internal fun BadgeRepository.observeMonthChallenges(): Flow<List<MonthChallenge>> = observeChallenges().map { list ->
     list.mapNotNull { e -> Challenge.byId(e.challenge)?.let { MonthChallenge(YearMonth.parse(e.month), it, e) } }
 }
 
@@ -97,28 +95,15 @@ data class BadgeBoard(
     val level: Level get() = Badges.level(Badges.points(earned.keys, challenges.count { it.entity.completedAt != null }))
 }
 
-/** Badges, challenges and the progress of both, recomputed whenever the history or the awards change. */
-@OptIn(ExperimentalCoroutinesApi::class)
-private fun BadgeRepository.observeBoard(): Flow<BadgeBoard> =
-    combine(observeEarned(), observeMonthChallenges(), observeHistoryChanges()) { earned, challenges, _ -> earned to challenges }
-        .mapLatest { (earned, challenges) ->
-            val history = runCatching { history() }.getOrNull()
-            val month = currentMonth()
-            val current = challenges.firstOrNull { it.month == month }?.let { c ->
-                history?.let { CurrentChallenge(month, c.challenge, Challenges.progress(c.challenge, month, it)) }
-            }
-            BadgeBoard(earned, history?.let(Badges::progress).orEmpty(), challenges, current)
-        }
-
 @HiltViewModel
-class BadgesViewModel @Inject constructor(repository: BadgeRepository) : ViewModel() {
-    val board = repository.observeBoard().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BadgeBoard())
+class BadgesViewModel @Inject constructor(source: BadgeBoardSource) : ViewModel() {
+    val board = source.board.map { it ?: BadgeBoard() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BadgeBoard())
 }
 
 /** Home: the level and the challenge of the month. */
 @HiltViewModel
-class LevelViewModel @Inject constructor(repository: BadgeRepository) : ViewModel() {
-    val board = repository.observeBoard().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+class LevelViewModel @Inject constructor(source: BadgeBoardSource) : ViewModel() {
+    val board = source.board.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
 private val dayFormat = DateTimeFormatter.ofPattern("d MMM yyyy", Fmt.locale)
