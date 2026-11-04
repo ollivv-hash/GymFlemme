@@ -258,10 +258,25 @@ class MigrationTest {
         }
     }
 
+    /** V2.22: the profile gets a first name, empty; its other values are kept. */
     @Test
-    fun migrate1To11() {
+    fun migrate11To12AddsTheFirstName() {
+        helper.createDatabase(dbName, 11).apply {
+            execSQL("INSERT INTO profile (id, proteinTargetGPerKg, wheyScoopG, birthYear) VALUES (1, 2.0, 30, 1980)")
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 12, true, Migrations.MIGRATION_11_12).apply {
+            query("SELECT birthYear, firstName FROM profile").use {
+                it.moveToFirst(); assertEquals(1980, it.getInt(0)); assertTrue(it.isNull(1))
+            }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To12() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, 11, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 12, true, *Migrations.ALL).close()
     }
 
     @Test

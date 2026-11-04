@@ -137,6 +137,7 @@ class ProfileViewModel @Inject constructor(
                 wheyKcalPer100g = parseDecimal(w.kcal),
                 wheyCarbsPer100g = parseDecimal(w.carbs),
                 wheyFatPer100g = parseDecimal(w.fat),
+                firstName = _profile.value.firstName?.trim()?.takeIf { it.isNotEmpty() },
                 birthYear = parsedBirthYear(),
                 heightCm = parsedHeight(),
             ),
@@ -169,6 +170,14 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
+            // V2.22: "Salut {prénom}" on the home screen.
+            OutlinedTextField(
+                value = p.firstName.orEmpty(),
+                onValueChange = { v -> viewModel.update { it.copy(firstName = v.take(30)) } },
+                label = { Text("Prénom (accueil)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
             SectionTitle("Toi (fréquence cardiaque)")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(

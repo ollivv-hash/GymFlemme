@@ -34,6 +34,8 @@ data class ProfileEntity(
     val nutritionGoal: NutritionGoal? = null,
     /** Rest-day target entered by the user; null = advised from the goal. */
     val kcalTargetOverride: Int? = null,
+    /** V2.22: first name, for the home screen's "Salut …"; null = not given. */
+    val firstName: String? = null,
 ) {
     companion object {
         const val DEFAULT_PROTEIN_G_PER_KG = 1.8
