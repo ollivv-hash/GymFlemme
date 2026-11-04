@@ -22,6 +22,7 @@ enum class Quip(
     GREETING_EVENING(R.array.humor_greeting_evening, R.string.neutral_greeting_evening),
     GREETING_NIGHT(R.array.humor_greeting_night, R.string.neutral_greeting_night),
     START(R.array.humor_start, R.string.neutral_start, neutralFeminine = R.string.neutral_start_f),
+    START_BUTTON(R.array.humor_start_button, R.string.neutral_start_button),
     REST_DONE(R.array.humor_rest_done, R.string.neutral_rest_done),
     SET_DONE(R.array.humor_set_done, R.string.neutral_set_done),
     EXERCISE_DONE(R.array.humor_exercise_done, R.string.neutral_exercise_done),

@@ -71,6 +71,14 @@
     <string name="neutral_start">Prêt pour ta séance ?</string>
     <string name="neutral_start_f">Prête pour ta séance ?</string>
 
+    <!-- V2.22: the start button of the home screen's session tile (short: a pill) -->
+    <string-array name="humor_start_button">
+        <item>C\'est parti</item>
+        <item>On y va</item>
+        <item>Allez hop</item>
+    </string-array>
+    <string name="neutral_start_button">Démarrer</string>
+
     <!-- End of the rest -->
     <string-array name="humor_rest_done">
         <item>Pause terminée. Tes muscles font semblant de dormir.</item>
