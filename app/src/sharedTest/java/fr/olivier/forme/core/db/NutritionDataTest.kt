@@ -32,7 +32,7 @@ class NutritionDataTest {
         clock = TestClock()
         db = testDatabase(clock)
         repo = NutritionRepository(
-            db, db.profileDao(), db.ciqualDao(), db.foodDao(), db.mealDao(), db.creatineDao(), db.sessionDao(),
+            db, db.profileDao(), db.ciqualDao(), db.foodDao(), db.mealDao(), db.supplementDao(), db.sessionDao(),
             OpenFoodFactsClient(), clock,
         )
     }

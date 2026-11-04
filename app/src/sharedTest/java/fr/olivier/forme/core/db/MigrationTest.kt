@@ -188,10 +188,65 @@ class MigrationTest {
         }
     }
 
+    /** V2.20: creatine becomes the first supplement, with its dose, reminder and days; the others start off. */
     @Test
-    fun migrate1To9() {
+    fun migrate9To10MovesCreatineIntoTheSupplements() {
+        helper.createDatabase(dbName, 9).apply {
+            execSQL(
+                "INSERT INTO profile (id, proteinTargetGPerKg, wheyScoopG, creatineDoseG, creatineReminderEnabled, creatineReminderMinutes, birthYear) " +
+                    "VALUES (1, 2.0, 30, 3.5, 0, 450, 1980)",
+            )
+            execSQL("INSERT INTO creatine_entry (date, doseG, takenAt) VALUES (20000, 5, 1728000000000), (20001, 3.5, 1728086400000)")
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 10, true, Migrations.MIGRATION_9_10).apply {
+            query("SELECT name, amount, unit, active, reminderEnabled, reminderMinutes FROM supplement WHERE code = 'creatine'").use {
+                it.moveToFirst()
+                assertEquals("Créatine", it.getString(0))
+                assertEquals(3.5, it.getDouble(1), 0.0)
+                assertEquals("G", it.getString(2))
+                assertEquals(1, it.getInt(3))
+                assertEquals(0, it.getInt(4))
+                assertEquals(450, it.getInt(5))
+            }
+            query("SELECT COUNT(*), SUM(active) FROM supplement").use {
+                it.moveToFirst()
+                assertEquals(7, it.getInt(0))
+                assertEquals(1, it.getInt(1))
+            }
+            query(
+                "SELECT i.date, i.amount FROM supplement_intake i JOIN supplement s ON s.id = i.supplementId " +
+                    "WHERE s.code = 'creatine' ORDER BY i.date",
+            ).use {
+                assertEquals(2, it.count)
+                it.moveToFirst(); assertEquals(20000, it.getInt(0)); assertEquals(5.0, it.getDouble(1), 0.0)
+                it.moveToNext(); assertEquals(20001, it.getInt(0)); assertEquals(3.5, it.getDouble(1), 0.0)
+            }
+            query("SELECT proteinTargetGPerKg, birthYear FROM profile WHERE id = 1").use {
+                it.moveToFirst(); assertEquals(2.0, it.getDouble(0), 0.0); assertEquals(1980, it.getInt(1))
+            }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate9To10WithoutProfileUsesTheDefaults() {
+        helper.createDatabase(dbName, 9).close()
+        helper.runMigrationsAndValidate(dbName, 10, true, Migrations.MIGRATION_9_10).apply {
+            query("SELECT amount, reminderEnabled, reminderMinutes FROM supplement WHERE code = 'creatine'").use {
+                it.moveToFirst()
+                assertEquals(5.0, it.getDouble(0), 0.0)
+                assertEquals(1, it.getInt(1))
+                assertEquals(1200, it.getInt(2))
+            }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To10() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, 9, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 10, true, *Migrations.ALL).close()
     }
 
     @Test

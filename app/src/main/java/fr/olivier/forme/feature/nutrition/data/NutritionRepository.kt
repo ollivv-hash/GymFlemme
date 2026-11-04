@@ -77,7 +77,7 @@ class NutritionRepository @Inject constructor(
     private val ciqualDao: CiqualDao,
     private val foodDao: FoodDao,
     private val mealDao: MealDao,
-    private val creatineDao: CreatineDao,
+    private val supplementDao: SupplementDao,
     private val sessionDao: SessionDao,
     private val off: OpenFoodFactsClient,
     private val clock: Clock,
@@ -249,17 +249,46 @@ class NutritionRepository @Inject constructor(
         }
     }
 
-    // --- Creatine --------------------------------------------------------------------------
+    // --- Supplements (V2.20; creatine alone until 2.19) -------------------------------------
 
-    fun creatineDates(): Flow<List<LocalDate>> = creatineDao.observeDates()
-    suspend fun isCreatineTaken(date: LocalDate): Boolean = creatineDao.getDay(date) != null
+    val supplements: Flow<List<SupplementEntity>> = supplementDao.observeAll()
+    suspend fun supplementList(): List<SupplementEntity> = supplementDao.getAll()
+    suspend fun supplement(id: Long): SupplementEntity? = supplementDao.get(id)
+
+    /** Ids of the supplements taken on [date]. */
+    fun supplementsTaken(date: LocalDate): Flow<Set<Long>> = supplementDao.observeDay(date).map { day -> day.map { it.supplementId }.toSet() }
+    suspend fun isSupplementTaken(id: Long, date: LocalDate): Boolean = supplementDao.getIntake(id, date) != null
+
+    suspend fun setSupplementTaken(id: Long, date: LocalDate, taken: Boolean) {
+        if (taken) {
+            val supplement = supplementDao.get(id) ?: return
+            supplementDao.upsertIntake(SupplementIntakeEntity(supplementId = id, date = date, amount = supplement.amount, takenAt = clock.instant()))
+        } else {
+            supplementDao.deleteIntake(id, date)
+        }
+    }
+
+    suspend fun updateSupplement(supplement: SupplementEntity) = supplementDao.update(supplement)
+
+    /** A supplement of the user's own, switched on, at the end of the list; returns its id. */
+    suspend fun addSupplement(name: String, amount: Double, unit: SupplementUnit): Long = supplementDao.insert(
+        SupplementEntity(name = name.trim(), amount = amount, unit = unit, active = true, sortOrder = supplementDao.nextSortOrder()),
+    )
+
+    /** Only the user's own supplements can be deleted (with the days they were taken). */
+    suspend fun deleteSupplement(id: Long) {
+        if (supplementDao.get(id)?.code == null) supplementDao.delete(id)
+    }
+
+    suspend fun creatine(): SupplementEntity? = supplementDao.getByCode(SupplementEntity.CREATINE)
+
+    /** Days creatine was taken, latest first (streak, badges). */
+    fun creatineDates(): Flow<List<LocalDate>> = supplementDao.observeCreatineDates()
+
+    suspend fun isCreatineTaken(date: LocalDate): Boolean = creatine()?.let { isSupplementTaken(it.id, date) } == true
 
     suspend fun setCreatineTaken(date: LocalDate, taken: Boolean) {
-        if (taken) {
-            creatineDao.upsert(CreatineEntryEntity(date = date, doseG = currentProfile().creatineDoseG, takenAt = clock.instant()))
-        } else {
-            creatineDao.deleteDay(date)
-        }
+        creatine()?.let { setSupplementTaken(it.id, date, taken) }
     }
 
     companion object {

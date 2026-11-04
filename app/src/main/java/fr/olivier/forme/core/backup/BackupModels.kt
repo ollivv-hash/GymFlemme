@@ -5,10 +5,13 @@ import fr.olivier.forme.feature.heart.data.SessionHeartEntity
 import fr.olivier.forme.feature.heart.domain.HeartSource
 import fr.olivier.forme.feature.heart.domain.KcalSource
 import fr.olivier.forme.feature.heart.domain.Sex
-import fr.olivier.forme.feature.nutrition.data.CreatineEntryEntity
 import fr.olivier.forme.feature.nutrition.data.FoodEntity
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
+import fr.olivier.forme.feature.nutrition.data.SupplementDefaults
+import fr.olivier.forme.feature.nutrition.data.SupplementEntity
+import fr.olivier.forme.feature.nutrition.data.SupplementIntakeEntity
+import fr.olivier.forme.feature.nutrition.data.SupplementUnit
 import fr.olivier.forme.feature.nutrition.domain.FoodSource
 import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.nutrition.domain.NutritionGoal
@@ -36,7 +39,8 @@ import java.time.LocalDate
  * v4 adds session heart rate and age / sex / maximum heart rate, v5 adds height, nutrition goal and calorie target,
  * v6 adds the exercise library link (`libraryId`, absent → null), v7 the badges earned (absent → recomputed from
  * the history, silently), v8 their tier (V2.18; v7 badges are converted on restore), v9 the monthly challenges
- * (absent → none; the current month's is drawn again, identically).
+ * (absent → none; the current month's is drawn again, identically), v10 the food supplements (V2.20; the creatine
+ * of older files, in the profile and `creatine`, becomes the first supplement, the others are added switched off).
  * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual and exercise library reference tables
  * (embedded in the APK) are not exported.
  */
@@ -66,8 +70,28 @@ data class NutritionBackup(
     val profile: ProfileDto? = null,
     val foods: List<FoodDto> = emptyList(),
     val meals: List<MealEntryDto> = emptyList(),
+    /** Until v9: the days creatine was taken (v10: [supplementIntakes]). */
     val creatine: List<CreatineDto> = emptyList(),
+    /** V2.20 (backup v10). */
+    val supplements: List<SupplementDto> = emptyList(),
+    val supplementIntakes: List<SupplementIntakeDto> = emptyList(),
 )
+
+@Serializable
+data class SupplementDto(
+    val id: Long,
+    val name: String,
+    val code: String? = null,
+    val amount: Double,
+    val unit: SupplementUnit,
+    val active: Boolean,
+    val sortOrder: Int,
+    val reminderEnabled: Boolean,
+    val reminderMinutes: Int,
+)
+
+@Serializable
+data class SupplementIntakeDto(val id: Long, val supplementId: Long, val date: String, val amount: Double, val takenAt: Long)
 
 @Serializable
 data class ProfileDto(
@@ -77,9 +101,10 @@ data class ProfileDto(
     val wheyCarbsPer100g: Double? = null,
     val wheyFatPer100g: Double? = null,
     val wheyScoopG: Double,
-    val creatineDoseG: Double,
-    val creatineReminderEnabled: Boolean,
-    val creatineReminderMinutes: Int,
+    /** Until v9 (v10: the creatine supplement). */
+    val creatineDoseG: Double? = null,
+    val creatineReminderEnabled: Boolean? = null,
+    val creatineReminderMinutes: Int? = null,
     val birthYear: Int? = null,
     val sex: Sex? = null,
     val hrMaxOverride: Int? = null,
@@ -305,13 +330,12 @@ fun BodyWeightDto.toEntity() = BodyWeightEntity(id, LocalDate.parse(date), weigh
 
 fun ProfileEntity.toDto() = ProfileDto(
     proteinTargetGPerKg, wheyProteinPer100g, wheyKcalPer100g, wheyCarbsPer100g, wheyFatPer100g, wheyScoopG,
-    creatineDoseG, creatineReminderEnabled, creatineReminderMinutes, birthYear, sex, hrMaxOverride,
-    heightCm, nutritionGoal, kcalTargetOverride,
+    birthYear = birthYear, sex = sex, hrMaxOverride = hrMaxOverride, heightCm = heightCm, nutritionGoal = nutritionGoal,
+    kcalTargetOverride = kcalTargetOverride,
 )
 fun ProfileDto.toEntity() = ProfileEntity(
     1, proteinTargetGPerKg, wheyProteinPer100g, wheyKcalPer100g, wheyCarbsPer100g, wheyFatPer100g, wheyScoopG,
-    creatineDoseG, creatineReminderEnabled, creatineReminderMinutes, birthYear, sex, hrMaxOverride,
-    heightCm, nutritionGoal, kcalTargetOverride,
+    birthYear, sex, hrMaxOverride, heightCm, nutritionGoal, kcalTargetOverride,
 )
 
 fun FoodEntity.toDto() = FoodDto(
@@ -340,8 +364,30 @@ fun BadgeDto.toEntity(schemaVersion: Int): BadgeEntity {
     return BadgeEntity(newId, newTier, LocalDate.parse(earnedAt), seen)
 }
 
-fun CreatineEntryEntity.toDto() = CreatineDto(id, date.toString(), doseG, takenAt.toEpochMilli())
-fun CreatineDto.toEntity() = CreatineEntryEntity(id, LocalDate.parse(date), doseG, Instant.ofEpochMilli(takenAt))
+fun SupplementEntity.toDto() = SupplementDto(id, name, code, amount, unit, active, sortOrder, reminderEnabled, reminderMinutes)
+fun SupplementDto.toEntity() = SupplementEntity(id, name, code, amount, unit, active, sortOrder, reminderEnabled, reminderMinutes)
+fun SupplementIntakeEntity.toDto() = SupplementIntakeDto(id, supplementId, date.toString(), amount, takenAt.toEpochMilli())
+fun SupplementIntakeDto.toEntity() = SupplementIntakeEntity(id, supplementId, LocalDate.parse(date), amount, Instant.ofEpochMilli(takenAt))
+
+/**
+ * The supplements to restore. Files before v10 hold only creatine (dose and reminder in the profile, its days in
+ * `creatine`): it becomes the first default supplement, like the database migration 9 → 10.
+ */
+fun NutritionBackup.supplementsToRestore(schemaVersion: Int): Pair<List<SupplementEntity>, List<SupplementIntakeEntity>> {
+    if (schemaVersion >= 10) return supplements.map { it.toEntity() } to supplementIntakes.map { it.toEntity() }
+    val defaults = SupplementDefaults.all.mapIndexed { index, it -> it.copy(id = index + 1L) }
+    val creatine = defaults.first { it.isCreatine }.let { c ->
+        c.copy(
+            amount = profile?.creatineDoseG ?: c.amount,
+            reminderEnabled = profile?.creatineReminderEnabled ?: c.reminderEnabled,
+            reminderMinutes = profile?.creatineReminderMinutes ?: c.reminderMinutes,
+        )
+    }
+    val intakes = this.creatine.map {
+        SupplementIntakeEntity(supplementId = creatine.id, date = LocalDate.parse(it.date), amount = it.doseG, takenAt = Instant.ofEpochMilli(it.takenAt))
+    }
+    return defaults.map { if (it.isCreatine) creatine else it } to intakes
+}
 
 fun SessionHeartEntity.toDto() = SessionHeartDto(
     sessionId, source, seriesStart.toEpochMilli(), intervalSec, bpmSeries, avgBpm, minBpm, maxBpm, hrMax, zoneSeconds, kcal, kcalSource,

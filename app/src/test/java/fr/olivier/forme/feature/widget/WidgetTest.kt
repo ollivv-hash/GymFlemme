@@ -54,7 +54,7 @@ class WidgetTest {
     fun dataFollowsSessionsAndMeals() = runTest {
         val sessions = SessionRepository(db, db.sessionDao(), db.templateDao(), db.exerciseDao(), clock)
         val nutrition = NutritionRepository(
-            db, db.profileDao(), db.ciqualDao(), db.foodDao(), db.mealDao(), db.creatineDao(), db.sessionDao(), OpenFoodFactsClient(), clock,
+            db, db.profileDao(), db.ciqualDao(), db.foodDao(), db.mealDao(), db.supplementDao(), db.sessionDao(), OpenFoodFactsClient(), clock,
         )
         val weights = BodyWeightRepository(db.bodyWeightDao())
         val settings = SettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "s.preferences_pb") })

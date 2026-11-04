@@ -118,26 +118,3 @@ interface MealDao {
     suspend fun deleteAll()
 }
 
-@Dao
-interface CreatineDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(entry: CreatineEntryEntity)
-
-    @Insert
-    suspend fun insertAll(entries: List<CreatineEntryEntity>)
-
-    @Query("DELETE FROM creatine_entry WHERE date = :date")
-    suspend fun deleteDay(date: LocalDate)
-
-    @Query("SELECT * FROM creatine_entry WHERE date = :date")
-    suspend fun getDay(date: LocalDate): CreatineEntryEntity?
-
-    @Query("SELECT date FROM creatine_entry ORDER BY date DESC")
-    fun observeDates(): Flow<List<LocalDate>>
-
-    @Query("SELECT * FROM creatine_entry")
-    suspend fun getAll(): List<CreatineEntryEntity>
-
-    @Query("DELETE FROM creatine_entry")
-    suspend fun deleteAll()
-}

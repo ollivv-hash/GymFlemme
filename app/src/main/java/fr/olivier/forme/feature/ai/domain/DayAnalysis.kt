@@ -58,7 +58,8 @@ data class AiNutrition(
     val kcalTarget: KcalTarget?,
     val meals: List<AiMeal>,
     val wheyDoses: Int,
-    val creatineTaken: Boolean,
+    /** Active supplements (V2.20; creatine alone until 2.19), "Créatine 5 g" → taken that day. */
+    val supplements: List<Pair<String, Boolean>> = emptyList(),
 )
 
 data class AiWeek(
@@ -247,7 +248,10 @@ object AnalysisMarkdown {
             },
         )
         appendLine("- Glucides ${n.totals.carbsG.roundToInt()} g · lipides ${n.totals.fatG.roundToInt()} g")
-        appendLine("- Whey : ${if (n.wheyDoses == 0) "aucune dose" else "${n.wheyDoses} dose${if (n.wheyDoses > 1) "s" else ""}"} · créatine : ${if (n.creatineTaken) "prise" else "non prise"}")
+        appendLine("- Whey : ${if (n.wheyDoses == 0) "aucune dose" else "${n.wheyDoses} dose${if (n.wheyDoses > 1) "s" else ""}"}")
+        if (n.supplements.isNotEmpty()) {
+            appendLine("- Compléments : " + n.supplements.joinToString(", ") { (name, taken) -> "$name ${if (taken) "pris" else "non pris"}" })
+        }
         if (n.meals.isEmpty()) {
             appendLine("- Aucun repas saisi.")
         } else {

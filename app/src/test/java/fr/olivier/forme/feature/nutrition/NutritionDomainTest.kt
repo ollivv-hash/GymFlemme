@@ -9,7 +9,7 @@ import fr.olivier.forme.feature.nutrition.domain.NutritionMath
 import fr.olivier.forme.feature.nutrition.domain.Per100
 import fr.olivier.forme.feature.nutrition.domain.WheyAdvice
 import fr.olivier.forme.feature.nutrition.domain.WheyMoment
-import fr.olivier.forme.feature.nutrition.reminder.CreatineReminder
+import fr.olivier.forme.feature.nutrition.reminder.SupplementReminder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -67,9 +67,9 @@ class NutritionDomainTest {
     fun `reminder fires today if the time is still ahead, otherwise tomorrow`() {
         val zone = ZoneId.of("Europe/Paris")
         val morning = ZonedDateTime.of(2026, 10, 2, 9, 0, 0, 0, zone)
-        assertEquals(ZonedDateTime.of(2026, 10, 2, 20, 0, 0, 0, zone), CreatineReminder.nextTrigger(morning, 20 * 60))
+        assertEquals(ZonedDateTime.of(2026, 10, 2, 20, 0, 0, 0, zone), SupplementReminder.nextTrigger(morning, 20 * 60))
         val evening = ZonedDateTime.of(2026, 10, 2, 20, 0, 0, 0, zone)
-        assertEquals(ZonedDateTime.of(2026, 10, 3, 20, 0, 0, 0, zone), CreatineReminder.nextTrigger(evening, 20 * 60))
+        assertEquals(ZonedDateTime.of(2026, 10, 3, 20, 0, 0, 0, zone), SupplementReminder.nextTrigger(evening, 20 * 60))
     }
 
     @Test

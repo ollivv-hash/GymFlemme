@@ -47,6 +47,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.19.2** ✅ | Modifier ou supprimer un aliment aussi depuis Nutrition → Ajouter (fiche de l'aliment), comme dans Config → Mes aliments |
 | **V2.19.3** ✅ | La FC de la notification n'est plus mise à jour écran éteint (chaque mise à jour rallumait l'écran sur certains téléphones) ; rafraîchie dès que l'écran se rallume |
 | **V2.19.4** ✅ | Badges et défis calculés hors du fil de l'interface, une seule fois pour l'accueil et l'écran Badges, détection des records en un passage (3 ans d'historique : ~280 → ~95 ms) |
+| **V2.20** ✅ | Compléments alimentaires : créatine, oméga-3, vitamine D, magnésium, zinc, multivitamines, vitamine C et compléments perso ; chacun activable, quantité et unité par jour, rappel à l'heure choisie (Config → Compléments) ; une case par complément actif dans Nutrition et sur l'accueil ; export IA ; base v10, sauvegarde v10 |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -132,7 +133,7 @@ Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv`
 
 ---
 
-## Modèle de données (Room, version 9)
+## Modèle de données (Room, version 10)
 
 Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distances en mètres. `Instant` ↔ epoch millis, `LocalDate` ↔ epochDay. Les enums sont stockées en texte.
 
@@ -153,11 +154,12 @@ Tables Nutrition (V1.1, migration explicite 1 → 2) :
 
 | Table | Colonnes principales | Remarques |
 |---|---|---|
-| `profile` | id = 1, proteinTargetGPerKg (1,8), whey (prot./kcal/glucides/lipides pour 100 g, dose 30 g), creatineDoseG (5), rappel (actif, heure), FC (année de naissance, sexe, FC max), calories (taille, objectif, objectif repos personnalisé) | Ligne absente = valeurs par défaut. |
+| `profile` | id = 1, proteinTargetGPerKg (1,8), whey (prot./kcal/glucides/lipides pour 100 g, dose 30 g), FC (année de naissance, sexe, FC max), calories (taille, objectif, objectif repos personnalisé) | Ligne absente = valeurs par défaut. Dose et rappel de la créatine dans `supplement` depuis la v10. |
 | `ciqual_food` + `ciqual_fts` | code, nom, groupe, kcal, protéines, glucides, lipides pour 100 g ; index plein texte | Référentiel ANSES en lecture seule, chargé depuis l'APK ; recherche insensible aux accents. **Non exporté.** |
 | `food` | id, source (CIQUAL / OFF / CUSTOM), sourceCode (code Ciqual ou code-barres), nom, marque, valeurs /100 g, portion, favori, dernière utilisation | « Mes aliments » : perso, cache Open Food Facts, aliments Ciqual déjà utilisés (récents / favoris). |
 | `meal_entry` | id, date, mealType, foodId?, nom, quantité (g), protéines, kcal, glucides, lipides, isWhey, heure | **Copie des valeurs** : modifier ou supprimer un aliment ne change jamais l'historique. |
-| `creatine_entry` | id, date (unique), dose, heure | Une prise par jour. |
+| `supplement` (v10) | id, name, code (`creatine`, `omega3`…, null = complément perso ; unique), amount, unit (`G`, `MG`, `UG`, `IU`, `CAPSULE`, `TABLET`, `ML`), active, sortOrder, reminderEnabled, reminderMinutes | Compléments proposés d'office (créatine active, les autres inactifs) et perso. Migration 9 → 10 : la créatine du profil devient la première ligne. |
+| `supplement_intake` (v10) | id, supplementId (→ supplement, suppression en cascade), date, amount, takenAt ; unique (supplementId, date) | Une prise par complément et par jour. Migration 9 → 10 : reprend `creatine_entry` (supprimée). |
 | `badge` (v7, palier v8) | id (nom du badge, ex. `REPEAT_OFFENDER`), tier (1 à 4 = Bronze à Platine, 0 = sans palier), earnedAt (jour), seen ; clé (id, tier) | Badges et paliers obtenus ; recalculés depuis l'historique, jamais retirés. Migration 7 → 8 : Pilier de la salle → Récidiviste Argent, Créatine fidèle → Argent, Récidiviste / Plus fort que le canapé / Touche-à-tout → Bronze. Exportés depuis la sauvegarde v7 (palier depuis la v8). |
 | `monthly_challenge` (v9) | month (`2026-10`, clé), challenge (nom du défi), completedAt (jour, null tant que non réussi), seen | Défi de chaque mois, tiré une fois. Exporté depuis la sauvegarde v9. |
 | `library_exercise` | id (ex. `leg-press`), nom, alias, variante (`imageOf`, `difference`), matériel, type de machine, muscles principaux / secondaires / `alsoTargets`, mouvement, catégorie, niveau, impact, unilatéral, échauffement, lieux, vue, images (`frames`, dossier, largeur, hauteur) | Bibliothèque **Open Exercise Illustrations** (CC0) en lecture seule : 415 exercices + 44 variantes, rechargée depuis l'APK quand sa version change (`ExerciseLibraryLoader.DATASET_VERSION`). Une variante montre les images de l'exercice d'origine mais garde son matériel, ses muscles et sa différence. **Non exportée.** |
@@ -238,7 +240,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   GymFlemme n'appelle aucune IA et n'envoie rien elle-même.
 - Contenu du fichier : **consignes** (prompt, modifiable), **profil** (âge, sexe, taille, poids et tendance 4 semaines, objectif,
   cibles protéines / calories, FC max), **séance(s) du jour** (séries avec RIR, dernière fois, 1RM estimé, stagnation, volume,
-  records, FC et zones, calories, notes), **nutrition du jour** (totaux / objectifs, repas détaillés, whey, créatine),
+  records, FC et zones, calories, notes), **nutrition du jour** (totaux / objectifs, repas détaillés, whey, compléments actifs pris ou non),
   **semaine** (séances / objectif, séries par muscle, bilan nutrition, FC).
 - **Historique pour graphiques** (2.4.1), en tableaux Markdown : pour chaque exercice de la séance, les 8 dernières séances
   (meilleure série, 1RM estimé) ; le poids sur 30 jours avec sa moyenne 7 jours ; les 7 derniers jours saisis de nutrition
@@ -437,7 +439,14 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   énergétique (4 / 4 / 9 kcal par g). L'accueil garde la jauge protéines.
 - **Repas** : petit-déjeuner, déjeuner, collation, dîner, plus des **collations supplémentaires** horodatées.
 - **Whey** : 1 dose par jour (2 si le conseil protéines le demande, V2.2) (valeurs de l'étiquette saisies dans le profil). Moment conseillé : **juste après la séance** les jours d'entraînement, au petit-déjeuner ou en collation les jours de repos.
-- **Créatine** : 5 g/jour par défaut, case « prise » avec série de jours consécutifs. **Rappel** quotidien à l'heure choisie (20:00 par défaut), **non envoyé si la prise est déjà notée**, avec bouton « C'est pris » dans la notification ; reprogrammé après redémarrage du téléphone.
+- **Compléments** (V2.20, créatine seule avant) : Config → Compléments liste la créatine (active, 5 g/jour) et, inactifs
+  au départ, oméga-3 (1 g), vitamine D (1 000 UI), magnésium (300 mg), zinc (15 mg), multivitamines (1 comprimé),
+  vitamine C (500 mg) ; bouton « Complément » pour en ajouter un (nom, quantité, unité ; supprimable avec ses prises).
+  Pour chacun : actif ou non, **quantité par jour** et unité (g, mg, µg, UI, gélule, comprimé, ml), **rappel** quotidien
+  à l'heure choisie (20:00 par défaut, actif pour la créatine). Une **seule case par jour** et par complément actif dans
+  le journal Nutrition et sur la carte « Nutrition du jour » de l'accueil. Rappel **non envoyé si la prise est déjà
+  notée**, bouton « C'est pris » dans la notification, reprogrammé après redémarrage du téléphone. La série de jours,
+  le badge « Créatine fidèle » et le bilan de la semaine restent propres à la créatine ; la whey reste à part.
 - **Code-barres** : scan caméra (CameraX + ML Kit embarqué, hors ligne) puis Open Food Facts ; chaque produit trouvé est mis en cache et reste disponible hors ligne. Produit inconnu, sans protéines, ou réseau absent : création depuis l'étiquette ou recherche Ciqual.
 - **Ciqual** : table ANSES 2025 (3 484 aliments) embarquée. Quand un aliment Ciqual est utilisé, il rejoint « Mes aliments » (récents, favoris).
 
@@ -527,8 +536,8 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 ### Export / import manuel
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
-- Format versionné : `{ "schemaVersion": 9, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "creatine" }, "badges": [ … ], "challenges": [ … ] }`.
-  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9. Les fichiers **v1** à **v8** restent importables (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
+- Format versionné : `{ "schemaVersion": 10, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "supplements", "supplementIntakes" }, "badges": [ … ], "challenges": [ … ] }`.
+  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9, les compléments depuis la v10. Les fichiers **v1** à **v9** restent importables (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8 ; créatine des fichiers v1 à v9 (profil + `creatine`) convertie en complément comme la migration 9 → 10). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 
@@ -669,7 +678,7 @@ adb pull /sdcard/Android/data/fr.olivier.forme/files/backups/
   sinon la même série de la dernière fois. Toucher une valeur permet de la saisir au clavier.
 - **Records** : un record doit battre strictement la meilleure valeur précédente ; une première fois n'est pas un record.
 - **Variante de build debug** : `fr.olivier.forme.debug`, installable à côté de la release sans conflit de données.
-- **Permissions demandées** : notifications (timer de repos, rappel créatine), caméra (uniquement à l'ouverture du scanner),
-  Internet (uniquement pour Open Food Facts), alarmes exactes (fin de repos), démarrage (reprogrammer le rappel créatine).
+- **Permissions demandées** : notifications (timer de repos, rappels des compléments), caméra (uniquement à l'ouverture du scanner),
+  Internet (uniquement pour Open Food Facts), alarmes exactes (fin de repos), démarrage (reprogrammer les rappels des compléments).
 - **APK release** limité à l'architecture `arm64-v8a` (tous les téléphones 64 bits récents) pour économiser ~15 Mo
   de code natif ML Kit ; le build debug garde toutes les architectures (émulateurs).

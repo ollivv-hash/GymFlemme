@@ -50,6 +50,7 @@ import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
 import fr.olivier.forme.feature.bodyweight.domain.MovingAverage
 import fr.olivier.forme.feature.bodyweight.domain.WeightPoint
 import fr.olivier.forme.feature.bodyweight.ui.WeightEntryDialog
+import fr.olivier.forme.feature.nutrition.data.dose
 import fr.olivier.forme.feature.nutrition.ui.JournalViewModel
 import fr.olivier.forme.feature.nutrition.ui.ProteinGauge
 import androidx.compose.material3.Checkbox
@@ -312,9 +313,11 @@ fun HomeScreen(
             Card(Modifier.fillMaxWidth().clickable(onClick = onOpenNutrition)) {
                 Column(Modifier.padding(16.dp)) {
                     ProteinGauge(nutrition.totals, nutrition.proteinTargetG)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = nutrition.creatineTaken, onCheckedChange = journal::setCreatine)
-                        Text("Créatine ${Fmt.number(nutrition.profile.creatineDoseG)} g prise")
+                    nutrition.supplements.forEach { (supplement, taken) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = taken, onCheckedChange = { journal.setSupplement(supplement, it) })
+                            Text("${supplement.name} ${supplement.dose()}")
+                        }
                     }
                 }
             }

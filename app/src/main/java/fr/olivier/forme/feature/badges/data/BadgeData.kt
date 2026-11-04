@@ -105,7 +105,10 @@ interface BadgeDao {
     )
     suspend fun cardio(): List<BadgeCardioRow>
 
-    @Query("SELECT date FROM creatine_entry")
+    @Query(
+        """SELECT i.date FROM supplement_intake i JOIN supplement s ON s.id = i.supplementId
+           WHERE s.code = 'creatine'""",
+    )
     suspend fun creatineDays(): List<LocalDate>
 
     @Query("SELECT date, SUM(proteinG) AS proteinG FROM meal_entry GROUP BY date")
@@ -150,7 +153,8 @@ interface BadgeDao {
     @Query(
         """SELECT (SELECT COUNT(*) FROM session WHERE endedAt IS NOT NULL) + (SELECT COUNT(*) FROM set_entry)
                   + (SELECT COUNT(*) FROM cardio_entry) + (SELECT COUNT(*) FROM meal_entry)
-                  + (SELECT COUNT(*) FROM creatine_entry) + (SELECT COUNT(*) FROM body_weight_entry)
+                  + (SELECT COUNT(*) FROM supplement_intake i JOIN supplement s ON s.id = i.supplementId
+                     WHERE s.code = 'creatine') + (SELECT COUNT(*) FROM body_weight_entry)
                   + (SELECT COUNT(*) FROM workout_template)""",
     )
     fun observeHistorySize(): Flow<Long>
