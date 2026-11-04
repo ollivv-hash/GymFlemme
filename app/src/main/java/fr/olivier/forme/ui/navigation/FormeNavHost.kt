@@ -35,6 +35,8 @@ import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.nutrition.ui.AddFoodScreen
 import fr.olivier.forme.feature.nutrition.ui.FoodEditScreen
 import fr.olivier.forme.feature.nutrition.ui.FoodsScreen
+import fr.olivier.forme.feature.nutrition.ui.DishEditScreen
+import fr.olivier.forme.feature.nutrition.domain.FoodSource
 import fr.olivier.forme.feature.nutrition.ui.SupplementsScreen
 import fr.olivier.forme.feature.nutrition.ui.NutritionScreen
 import fr.olivier.forme.feature.nutrition.ui.ProfileScreen
@@ -151,6 +153,7 @@ fun FormeNavHost(
                 NutritionScreen(
                     initialTab = it.toRoute<NutritionRoute>().tab,
                     onAddFood = { date, meal -> nav.navigate(AddFoodRoute(date.toEpochDay(), meal.name)) },
+                    onSaveAsDish = { date, meal -> nav.navigate(DishEditRoute(epochDay = date.toEpochDay(), meal = meal.name)) },
                     onScan = { date, meal -> nav.navigate(ScanRoute(date.toEpochDay(), meal.name)) },
                     onProfile = { nav.navigate(ProfileRoute) },
                 )
@@ -160,7 +163,8 @@ fun FormeNavHost(
                     onBack = { nav.popBackStack() },
                     onScan = { date, meal -> nav.navigate(ScanRoute(date.toEpochDay(), meal.name)) },
                     onCreateFood = { nav.navigate(FoodEditRoute()) },
-                    onEditFood = { nav.navigate(FoodEditRoute(foodId = it)) },
+                    onCreateDish = { nav.navigate(DishEditRoute()) },
+                    onEditFood = { food -> nav.navigate(if (food.source == FoodSource.DISH) DishEditRoute(food.id) else FoodEditRoute(foodId = food.id)) },
                 )
             }
             composable<ScanRoute> {
@@ -174,7 +178,14 @@ fun FormeNavHost(
                 )
             }
             composable<SupplementsRoute> { SupplementsScreen(onBack = { nav.popBackStack() }) }
-            composable<FoodsRoute> { FoodsScreen(onBack = { nav.popBackStack() }, onEdit = { nav.navigate(FoodEditRoute(foodId = it)) }) }
+            composable<FoodsRoute> {
+                FoodsScreen(
+                    onBack = { nav.popBackStack() },
+                    onEdit = { nav.navigate(FoodEditRoute(foodId = it)) },
+                    onEditDish = { nav.navigate(DishEditRoute(it)) },
+                )
+            }
+            composable<DishEditRoute> { DishEditScreen(onDone = { nav.popBackStack() }) }
             composable<FoodEditRoute> { FoodEditScreen(onDone = { nav.popBackStack() }) }
             composable<ProfileRoute> { ProfileScreen(onDone = { nav.popBackStack() }) }
             composable<ConfigRoute> {

@@ -243,10 +243,25 @@ class MigrationTest {
         }
     }
 
+    /** V2.21: empty dish tables; the foods are kept. */
     @Test
-    fun migrate1To10() {
+    fun migrate10To11CreatesTheDishTablesAndKeepsTheFoods() {
+        helper.createDatabase(dbName, 10).apply {
+            execSQL("INSERT INTO food (id, source, name, proteinPer100g, favorite) VALUES (1, 'CUSTOM', 'Skyr', 10.5, 0)")
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 11, true, Migrations.MIGRATION_10_11).apply {
+            query("SELECT COUNT(*) FROM dish").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+            query("SELECT COUNT(*) FROM dish_ingredient").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+            query("SELECT name FROM food").use { it.moveToFirst(); assertEquals("Skyr", it.getString(0)) }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To11() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, 10, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 11, true, *Migrations.ALL).close()
     }
 
     @Test

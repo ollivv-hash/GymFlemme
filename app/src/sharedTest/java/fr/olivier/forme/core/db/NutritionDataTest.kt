@@ -11,6 +11,10 @@ import fr.olivier.forme.feature.nutrition.domain.FoodSource
 import fr.olivier.forme.feature.nutrition.domain.MealType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import fr.olivier.forme.feature.nutrition.domain.DishIngredient
+import fr.olivier.forme.feature.nutrition.domain.Per100
+import fr.olivier.forme.feature.nutrition.data.DishEntity
+import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -102,5 +106,55 @@ class NutritionDataTest {
         assertEquals(listOf(day.plusDays(1), day), repo.creatineDates().first())
         repo.setCreatineTaken(day, false)
         assertEquals(listOf(day.plusDays(1)), repo.creatineDates().first())
+    }
+
+    /**
+     * V2.21: a dish is a food whose values per 100 g come from its ingredients (of the cooked dish when weighed),
+     * with one serving as its portion; it keeps them when an ingredient's food is deleted, and goes with its food.
+     */
+    @Test
+    fun aDishIsAFoodComputedFromItsIngredients() = runTest {
+        val rice = DishIngredient("Riz", 100.0, Per100(7.0, 350.0, 77.0, 1.0))
+        val chicken = DishIngredient("Poulet", 150.0, Per100(30.0, 140.0, 0.0, 2.0))
+        val id = repo.saveDish(0, " Bol riz poulet ", listOf(rice, chicken), cookedWeightG = 500.0, servings = 2)
+
+        val food = repo.food(id)!!
+        assertEquals(FoodSource.DISH, food.source)
+        assertEquals("Bol riz poulet", food.name)
+        assertEquals((7.0 + 45.0) / 5, food.proteinPer100g, 1e-9) // 52 g in 500 g cooked
+        assertEquals((350.0 + 210.0) / 5, food.kcalPer100g!!, 1e-9)
+        assertEquals(250.0, food.defaultPortionG!!, 1e-9)
+        val dish = repo.dish(id)!!
+        assertEquals(listOf(rice, chicken), dish.ingredients)
+        assertEquals(DishEntity(id, 500.0, 2), dish.dish)
+
+        // Edited: without cooked weight, the raw ingredients (250 g) are the reference.
+        repo.saveDish(id, "Bol riz poulet", listOf(rice, chicken), cookedWeightG = null, servings = 1)
+        assertEquals(52.0 / 2.5, repo.food(id)!!.proteinPer100g, 1e-9)
+        assertEquals(250.0, repo.food(id)!!.defaultPortionG!!, 1e-9)
+        assertEquals(1, db.foodDao().getAll().size)
+
+        repo.deleteFood(id)
+        assertNull(repo.dish(id))
+        assertEquals(0, db.dishDao().getAllIngredients().size)
+    }
+
+    /** V2.21: "Enregistrer comme plat": the meal's foods, whey left apart, with their values per 100 g. */
+    @Test
+    fun aMealBecomesTheIngredientsOfADish() = runTest {
+        val skyr = repo.food(repo.saveFood(FoodEntity(source = FoodSource.CUSTOM, name = "Skyr", proteinPer100g = 10.0, kcalPer100g = 60.0)))!!
+        repo.addFood(skyr, day, MealType.BREAKFAST, 150.0)
+        repo.addFood(skyr, day, MealType.LUNCH, 100.0)
+        db.mealDao().insert(
+            MealEntryEntity(
+                date = day, mealType = MealType.BREAKFAST, foodId = null, name = "Whey", quantityG = 30.0, proteinG = 24.0,
+                kcal = 114.0, carbsG = null, fatG = null, isWhey = true, eatenAt = clock.instant(),
+            ),
+        )
+        val ingredients = repo.mealAsIngredients(day, MealType.BREAKFAST)
+        assertEquals(listOf("Skyr"), ingredients.map { it.name })
+        assertEquals(150.0, ingredients.single().grams, 0.0)
+        assertEquals(10.0, ingredients.single().per100.proteinG, 1e-9)
+        assertEquals(60.0, ingredients.single().per100.kcal!!, 1e-9)
     }
 }

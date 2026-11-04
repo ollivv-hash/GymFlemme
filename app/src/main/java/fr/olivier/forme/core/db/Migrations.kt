@@ -220,6 +220,23 @@ object Migrations {
         }
     }
 
+    /** V2.21: dishes of one's own (a food of source DISH, its cooked weight, servings and ingredients). */
+    val MIGRATION_10_11 = object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `dish` (`foodId` INTEGER NOT NULL, `cookedWeightG` REAL, `servings` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`foodId`), FOREIGN KEY(`foodId`) REFERENCES `food`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `dish_ingredient` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `dishId` INTEGER NOT NULL, " +
+                    "`position` INTEGER NOT NULL, `name` TEXT NOT NULL, `grams` REAL NOT NULL, `kcalPer100g` REAL, `proteinPer100g` REAL NOT NULL, " +
+                    "`carbsPer100g` REAL, `fatPer100g` REAL, " +
+                    "FOREIGN KEY(`dishId`) REFERENCES `dish`(`foodId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_dish_ingredient_dishId` ON `dish_ingredient` (`dishId`)")
+        }
+    }
+
     internal fun SupplementEntity.toValues() = ContentValues().apply {
         put("name", name)
         put("code", code)
@@ -233,6 +250,6 @@ object Migrations {
 
     val ALL: Array<Migration> = arrayOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-        MIGRATION_9_10,
+        MIGRATION_9_10, MIGRATION_10_11,
     )
 }

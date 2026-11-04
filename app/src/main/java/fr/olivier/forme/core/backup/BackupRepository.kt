@@ -47,6 +47,8 @@ class BackupRepository @Inject constructor(
                     meals = db.mealDao().getAll().sortedBy { it.id }.map { it.toDto() },
                     supplements = db.supplementDao().getAll().sortedBy { it.id }.map { it.toDto() },
                     supplementIntakes = db.supplementDao().getAllIntakes().sortedBy { it.id }.map { it.toDto() },
+                    dishes = db.dishDao().getAll().sortedBy { it.foodId }.map { it.toDto() },
+                    dishIngredients = db.dishDao().getAllIngredients().sortedBy { it.id }.map { it.toDto() },
                 ),
                 badges = db.badgeDao().getAll().sortedWith(compareBy({ it.id }, { it.tier })).map { it.toDto() },
                 challenges = db.badgeDao().getChallenges().map { it.toDto() },
@@ -63,7 +65,7 @@ class BackupRepository @Inject constructor(
             db.bodyWeightDao().deleteAll()
             db.mealDao().deleteAll()
             db.supplementDao().deleteAll() // cascades to the days taken
-            db.foodDao().deleteAll()
+            db.foodDao().deleteAll() // cascades to dishes and their ingredients
             db.profileDao().deleteAll()
             db.badgeDao().deleteAll()
             db.badgeDao().deleteAllChallenges()
@@ -82,6 +84,8 @@ class BackupRepository @Inject constructor(
             nutrition.profile?.let { db.profileDao().upsert(it.toEntity()) }
             db.foodDao().insertAll(nutrition.foods.map { it.toEntity() })
             db.mealDao().insertAll(nutrition.meals.map { it.toEntity() })
+            db.dishDao().insertAll(nutrition.dishes.map { it.toEntity() })
+            db.dishDao().insertIngredients(nutrition.dishIngredients.map { it.toEntity() })
             val (supplements, intakes) = nutrition.supplementsToRestore(file.schemaVersion)
             db.supplementDao().insertAll(supplements)
             db.supplementDao().insertIntakes(intakes)

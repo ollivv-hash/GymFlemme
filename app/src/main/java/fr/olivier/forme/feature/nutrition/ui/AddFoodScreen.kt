@@ -123,7 +123,8 @@ fun AddFoodScreen(
     onBack: () -> Unit,
     onScan: (LocalDate, MealType) -> Unit,
     onCreateFood: () -> Unit,
-    onEditFood: (Long) -> Unit = {},
+    onCreateDish: () -> Unit = {},
+    onEditFood: (FoodEntity) -> Unit = {},
     viewModel: AddFoodViewModel = hiltViewModel(),
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -176,7 +177,10 @@ fun AddFoodScreen(
                     }
                 }
                 item {
-                    TextButton(onClick = onCreateFood, modifier = Modifier.padding(16.dp)) { Text("Créer un aliment perso") }
+                    Row(Modifier.padding(8.dp)) {
+                        TextButton(onClick = onCreateFood) { Text("Créer un aliment perso") }
+                        TextButton(onClick = onCreateDish) { Text("Créer un plat") }
+                    }
                 }
             }
         }
@@ -200,7 +204,7 @@ fun AddFoodScreen(
                     Row {
                         TextButton(onClick = {
                             viewModel.dismiss()
-                            onEditFood(food.id)
+                            onEditFood(food) // a dish opens its ingredients (V2.21)
                         }) { Text("Modifier") }
                         TextButton(onClick = {
                             viewModel.dismiss()

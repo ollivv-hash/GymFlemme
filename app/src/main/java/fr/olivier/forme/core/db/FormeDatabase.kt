@@ -12,6 +12,9 @@ import fr.olivier.forme.feature.library.data.LibraryExerciseEntity
 import fr.olivier.forme.feature.nutrition.data.CiqualDao
 import fr.olivier.forme.feature.nutrition.data.CiqualFoodEntity
 import fr.olivier.forme.feature.nutrition.data.CiqualFtsEntity
+import fr.olivier.forme.feature.nutrition.data.DishDao
+import fr.olivier.forme.feature.nutrition.data.DishEntity
+import fr.olivier.forme.feature.nutrition.data.DishIngredientEntity
 import fr.olivier.forme.feature.nutrition.data.FoodDao
 import fr.olivier.forme.feature.nutrition.data.FoodEntity
 import fr.olivier.forme.feature.nutrition.data.MealDao
@@ -56,6 +59,8 @@ import fr.olivier.forme.feature.sport.data.WorkoutTemplateEntity
         ChallengeEntity::class,
         SupplementEntity::class,
         SupplementIntakeEntity::class,
+        DishEntity::class,
+        DishIngredientEntity::class,
     ],
     version = FormeDatabase.VERSION,
     exportSchema = true,
@@ -71,12 +76,13 @@ abstract class FormeDatabase : RoomDatabase() {
     abstract fun foodDao(): FoodDao
     abstract fun mealDao(): MealDao
     abstract fun supplementDao(): SupplementDao
+    abstract fun dishDao(): DishDao
     abstract fun sessionHeartDao(): SessionHeartDao
     abstract fun libraryDao(): LibraryDao
     abstract fun badgeDao(): BadgeDao
 
     companion object {
-        const val VERSION = 10
+        const val VERSION = 11
         const val NAME = "forme.db"
     }
 }

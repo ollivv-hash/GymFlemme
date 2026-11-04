@@ -66,23 +66,38 @@ class FoodsViewModel @Inject constructor(private val repository: NutritionReposi
 }
 
 const val NEW_FOOD_TAG = "new_food"
+const val NEW_DISH_TAG = "new_dish"
 
 /** "Mes aliments": custom foods, scanned products and Ciqual foods already used. */
 @Composable
-fun FoodsScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: FoodsViewModel = hiltViewModel()) {
+fun FoodsScreen(
+    onBack: () -> Unit,
+    onEdit: (Long) -> Unit,
+    onEditDish: (Long) -> Unit = {},
+    viewModel: FoodsViewModel = hiltViewModel(),
+) {
     val foods by viewModel.foods.collectAsStateWithLifecycle()
     var deleting by remember { mutableStateOf<FoodEntity?>(null) }
     Scaffold(
         topBar = { FormeTopBar("Mes aliments", onBack) },
         floatingActionButton = {
-            ExtendedFloatingActionButton(containerColor = MaterialTheme.colorScheme.tertiary, contentColor = MaterialTheme.colorScheme.onTertiary, onClick = { onEdit(0) }, modifier = Modifier.testTag(NEW_FOOD_TAG), icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Aliment") })
+            Column(horizontalAlignment = Alignment.End) {
+                // V2.21: a dish of one's own, made of ingredients.
+                ExtendedFloatingActionButton(
+                    onClick = { onEditDish(0) },
+                    modifier = Modifier.padding(bottom = 12.dp).testTag(NEW_DISH_TAG),
+                    icon = { Icon(Icons.Filled.Add, null) },
+                    text = { Text("Plat") },
+                )
+                ExtendedFloatingActionButton(containerColor = MaterialTheme.colorScheme.tertiary, contentColor = MaterialTheme.colorScheme.onTertiary, onClick = { onEdit(0) }, modifier = Modifier.testTag(NEW_FOOD_TAG), icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Aliment") })
+            }
         },
     ) { padding ->
         LazyColumn(Modifier.padding(padding)) {
             if (foods.isEmpty()) item { Text("Aucun aliment. Ils apparaissent ici dès leur première utilisation.", Modifier.padding(16.dp)) }
             items(foods, key = { it.id }) { food ->
                 ListItem(
-                    modifier = Modifier.clickable { onEdit(food.id) },
+                    modifier = Modifier.clickable { if (food.source == FoodSource.DISH) onEditDish(food.id) else onEdit(food.id) },
                     headlineContent = { Text(food.name) },
                     supportingContent = {
                         Text(
