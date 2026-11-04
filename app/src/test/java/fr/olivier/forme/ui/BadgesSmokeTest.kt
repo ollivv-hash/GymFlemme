@@ -91,11 +91,11 @@ class BadgesSmokeTest {
             rule.onNodeWithTag(BADGES_ACK_TAG).performClick()
             rule.waitUntil(15_000) { rule.onAllNodes(hasText("Tes badges déjà gagnés")).fetchSemanticsNodes().isEmpty() }
 
-            waitFor("Niveau 1 · Flemmarde débutante")
-            waitFor("10 / 30 points")
-            waitFor("🎯 Défi d") // V2.19: the challenge of the month under the level
+            waitFor("Flemmarde débutante")
+            waitFor("10 / 30")
+            waitFor("Défi d") // V2.19: the challenge of the month (V2.22: its tile)
             shot("bg2-home-level")
-            rule.onNode(hasText("Niveau 1", substring = true) and hasClickAction()).performClick()
+            rule.onNodeWithTag(fr.olivier.forme.feature.sport.ui.home.bento.LEVEL_TILE_TAG).performClick()
 
             waitFor("Prochain palier : Bronze")
             waitFor("1 / 10 séances")

@@ -75,8 +75,8 @@ class LibrarySmokeTest {
     @Test
     fun catalogueThumbnailsAndChangingTheIllustration() {
         ActivityScenario.launch(MainActivity::class.java).use {
-            waitFor("Nutrition du jour")
-            rule.onNode(hasText("Config") and hasClickAction()).performClick()
+            rule.waitForHome()
+            rule.openSettings()
             rule.onNode(hasText("Catalogue des exercices") and hasClickAction()).performClick()
             waitFor("Rameur")
             shot("l3-catalogue")
@@ -102,8 +102,8 @@ class LibrarySmokeTest {
     @Test
     fun libraryScreenFiltersAndAddsToTheCatalogue() {
         ActivityScenario.launch(MainActivity::class.java).use {
-            waitFor("Nutrition du jour")
-            rule.onNode(hasText("Config") and hasClickAction()).performClick()
+            rule.waitForHome()
+            rule.openSettings()
             rule.onNode(hasText("Bibliothèque d'exercices") and hasClickAction()).performClick()
             waitForLibraryList()
 
@@ -132,8 +132,8 @@ class LibrarySmokeTest {
     @Test
     fun sourcesAndLicences() {
         ActivityScenario.launch(MainActivity::class.java).use {
-            waitFor("Nutrition du jour")
-            rule.onNode(hasText("Config") and hasClickAction()).performClick()
+            rule.waitForHome()
+            rule.openSettings()
             rule.onNode(hasText("Sources et licences") and hasClickAction()).performScrollTo().performClick()
             waitFor("Open Exercise Illustrations")
             waitFor("CC0 1.0")

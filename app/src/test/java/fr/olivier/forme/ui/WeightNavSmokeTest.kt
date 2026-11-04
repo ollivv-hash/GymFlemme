@@ -35,18 +35,19 @@ class WeightNavSmokeTest {
         }
     }
 
+    /** V2.22: the weight is no longer on the home screen; Nutrition → Poids from the floating bar, then back home. */
     @Test
-    fun weightCardFromHome() {
-        rule.waitUntilAtLeastOneExists(hasText("Aucune pesée"), 10_000)
-        rule.onNodeWithText("Aucune pesée").performScrollTo().performClick()
-        rule.waitUntilAtLeastOneExists(hasText("Pesées"), 10_000)
-        shot("x-weight-from-home")
-        // Back to home with the bottom bar "Accueil" button.
-        rule.onNode(hasText("Accueil") and androidx.compose.ui.test.hasClickAction()).performClick()
-        rule.waitUntilAtLeastOneExists(hasText("Nouvelle séance"), 10_000)
+    fun weightFromTheBarAndBackHome() {
+        rule.waitForHome()
+        rule.tab("Nutrition")
+        rule.onNode(hasText("Poids") and androidx.compose.ui.test.hasClickAction()).performClick()
+        rule.waitUntilAtLeastOneExists(hasText("Aucune pesée", substring = true), 10_000)
+        shot("x-weight-from-bar")
+        rule.tab("Accueil")
+        rule.waitForHome()
         shot("x-back-home")
-        // The Nutrition tab still works afterwards and the system back key leaves home alone.
-        rule.onNode(hasText("Nutrition") and androidx.compose.ui.test.hasClickAction()).performClick()
+        // The Nutrition tab still works afterwards.
+        rule.tab("Nutrition")
         rule.waitUntilAtLeastOneExists(hasText("Journal"), 10_000)
     }
 }

@@ -88,11 +88,11 @@ class FeaturesSmokeTest {
         db.close()
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            waitFor("Cette semaine :")
+            waitFor("Sem. ")
             rule.acknowledgeBadges()
             shot("f1-home")
 
-            rule.onNode(hasText("Historique") and hasClickAction()).performClick()
+            rule.tab("Séances")
             rule.onNode(hasText("Semaine") and hasClickAction()).performClick()
             waitFor("Zone repère : 10 à 20 séries")
             shot("f2-week")
@@ -102,9 +102,9 @@ class FeaturesSmokeTest {
             waitFor("Quadriceps")
             shot("f2b-week-muscles")
 
-            rule.onNode(hasText("Accueil") and hasClickAction()).performClick()
-            waitFor("Nouvelle séance")
-            rule.onNodeWithText("Nouvelle séance").performClick()
+            rule.tab("Accueil")
+            rule.waitForHome()
+            rule.openSessionChoice()
             waitFor("Séance proposée")
             rule.onNodeWithText("Démarrer").performClick()
             waitFor("Allure")

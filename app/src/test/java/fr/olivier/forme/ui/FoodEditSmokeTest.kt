@@ -39,8 +39,8 @@ class FoodEditSmokeTest {
 
     @Test
     fun saveTurnsOnWithNameAndProtein() {
-        waitFor("Nouvelle séance")
-        rule.onNode(hasText("Config") and hasClickAction()).performClick()
+        rule.waitForHome()
+        rule.openSettings()
         rule.onNode(hasText("Mes aliments") and hasClickAction()).performClick()
         rule.waitUntilAtLeastOneExists(hasTestTag(NEW_FOOD_TAG), 15_000)
         rule.onNodeWithTag(NEW_FOOD_TAG).performClick()
@@ -62,8 +62,8 @@ class FoodEditSmokeTest {
     /** V2.19.2: from Nutrition → Ajouter too, the sheet of a food opens its form and deletes it. */
     @Test
     fun editAndDeleteFromTheAddFoodSheet() {
-        waitFor("Nouvelle séance")
-        rule.onNode(hasText("Config") and hasClickAction()).performClick()
+        rule.waitForHome()
+        rule.openSettings()
         rule.onNode(hasText("Mes aliments") and hasClickAction()).performClick()
         rule.waitUntilAtLeastOneExists(hasTestTag(NEW_FOOD_TAG), 15_000)
         rule.onNodeWithTag(NEW_FOOD_TAG).performClick()
@@ -77,7 +77,7 @@ class FoodEditSmokeTest {
 
         // A new food is among the recent ones of Nutrition → Ajouter.
         rule.onNode(hasContentDescription("Retour")).performClick()
-        rule.onNode(hasText("Nutrition") and hasClickAction()).performClick()
+        rule.tab("Nutrition")
         rule.waitUntilAtLeastOneExists(hasContentDescription("Ajouter à Déjeuner"), 15_000)
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasContentDescription("Ajouter à Déjeuner"))
         rule.onNode(hasContentDescription("Ajouter à Déjeuner")).performClick()

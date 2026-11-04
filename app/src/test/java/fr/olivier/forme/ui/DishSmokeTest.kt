@@ -63,8 +63,8 @@ class DishSmokeTest {
 
     @Test
     fun makeADishAddItAndSaveAMealAsADish() {
-        waitFor("Nouvelle séance")
-        rule.onNode(hasText("Config") and hasClickAction()).performClick()
+        rule.waitForHome()
+        rule.openSettings()
         rule.onNode(hasText("Mes aliments") and hasClickAction()).performClick()
         rule.waitUntilAtLeastOneExists(hasTestTag(NEW_DISH_TAG), 15_000)
         rule.onNodeWithTag(NEW_DISH_TAG).performClick()
@@ -93,7 +93,7 @@ class DishSmokeTest {
 
         // Nutrition → Ajouter: the dish is among the recent foods, one serving proposed.
         rule.onNode(hasContentDescription("Retour")).performClick()
-        rule.onNode(hasText("Nutrition") and hasClickAction()).performClick()
+        rule.tab("Nutrition")
         rule.waitUntilAtLeastOneExists(hasContentDescription("Ajouter à Déjeuner"), 15_000)
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasContentDescription("Ajouter à Déjeuner"))
         rule.onNode(hasContentDescription("Ajouter à Déjeuner")).performClick()

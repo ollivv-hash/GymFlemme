@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -74,12 +75,13 @@ class RecapSmokeTest {
         db.close()
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            waitFor("Dernières séances")
+            rule.waitForHome()
             rule.acknowledgeBadges()
+            rule.tab("Séances") // V2.22: the latest sessions are in the Séances tab
             // The session row can arrive a frame after the section title: wait for the row itself.
-            rule.waitUntilAtLeastOneExists(hasTextEndingWith(" min"), 10_000)
+            rule.waitUntilAtLeastOneExists(hasText(" min", substring = true) and hasClickAction(), 10_000)
             shot("6-home-after")
-            rule.onNode(hasTextEndingWith(" min")).performScrollTo().performClick()
+            rule.onAllNodes(hasText(" min", substring = true) and hasClickAction())[0].performScrollTo().performClick()
             waitFor("Copier le bilan texte")
             shot("7-recap")
             rule.onNodeWithText("Chest press").performClick()
@@ -87,8 +89,7 @@ class RecapSmokeTest {
             shot("8-exercise-history")
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
-            waitFor("Nutrition")
-            rule.onNode(hasText("Nutrition") and androidx.compose.ui.test.hasClickAction()).performClick()
+            rule.tab("Nutrition")
             waitFor("Journal")
             rule.onNode(hasText("Poids") and androidx.compose.ui.test.hasClickAction()).performClick()
             waitFor("Pesées")

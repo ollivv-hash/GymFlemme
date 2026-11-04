@@ -104,8 +104,8 @@ class NutritionAdviceSmokeTest {
         db.close()
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            waitFor("Nutrition du jour")
-            rule.onNode(hasText("Nutrition") and hasClickAction()).performClick()
+            rule.waitForHome()
+            rule.tab("Nutrition")
             waitFor("repos ")
             waitFor("protéines")
             shot("n5-calorie-target-advice")
@@ -123,7 +123,7 @@ class NutritionAdviceSmokeTest {
             shot("n7-profile-calories")
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
 
-            rule.onNode(hasText("Historique") and hasClickAction()).performClick()
+            rule.tab("Séances")
             rule.onNode(hasText("Semaine") and hasClickAction()).performClick()
             waitFor("saisi")
             rule.onNodeWithText("Whey", substring = true).performScrollTo()

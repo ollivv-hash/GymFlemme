@@ -105,7 +105,7 @@ class CoachingSmokeTest {
             rule.waitUntil(15_000) { rule.onAllNodes(hasText("Tes badges déjà gagnés")).fetchSemanticsNodes().isEmpty() }
             shot("c1-home-deload")
 
-            rule.onNode(hasText("Historique") and hasClickAction()).performClick()
+            rule.tab("Séances")
             rule.onNode(hasText("Exercices") and hasClickAction()).performClick()
             rule.waitUntilExactlyOneExists(hasScrollAction(), 10_000)
             rule.onNode(hasScrollAction()).performScrollToNode(hasText("Chest press"))
@@ -114,7 +114,7 @@ class CoachingSmokeTest {
             shot("c3-exercise-history")
 
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
-            rule.onNode(hasText("Accueil") and hasClickAction()).performClick()
+            rule.tab("Accueil")
             rule.onNodeWithText("Compris").performScrollTo().performClick()
             rule.waitUntilDoesNotExist(hasText("Semaine de décharge conseillée"), 10_000)
         }

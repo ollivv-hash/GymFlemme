@@ -36,8 +36,8 @@ class ProfileHeartSmokeTest {
 
     @Test
     fun advisedMaximumHeartRate() {
-        rule.waitUntilAtLeastOneExists(hasText("Nouvelle séance"), 10_000)
-        rule.onNode(hasText("Config") and hasClickAction()).performClick()
+        rule.waitForHome()
+        rule.openSettings()
         rule.onNodeWithText("Profil").performClick()
         rule.waitUntilAtLeastOneExists(hasText("Toi (fréquence cardiaque)"), 10_000)
         val year = LocalDate.now().year - 46
@@ -56,8 +56,8 @@ class ProfileHeartSmokeTest {
     /** 2.12.1: training goals moved from Réglages to Profil, saved with « Enregistrer ». */
     @Test
     fun trainingGoalsAreSetInTheProfile() {
-        rule.waitUntilAtLeastOneExists(hasText("Nouvelle séance"), 10_000)
-        rule.onNode(hasText("Config") and hasClickAction()).performClick()
+        rule.waitForHome()
+        rule.openSettings()
         rule.onNodeWithText("Profil").performClick()
         rule.waitUntilAtLeastOneExists(hasText("Objectifs d'entraînement"), 15_000)
         rule.onNodeWithText("Séances par semaine").performScrollTo()

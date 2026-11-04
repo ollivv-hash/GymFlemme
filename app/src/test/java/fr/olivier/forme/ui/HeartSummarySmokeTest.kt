@@ -104,10 +104,11 @@ class HeartSummarySmokeTest {
         db.close()
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            waitFor("Dernières séances")
+            rule.waitForHome()
             rule.acknowledgeBadges()
-            rule.waitUntilAtLeastOneExists(hasTextEndingWith(" min"), 10_000)
-            rule.onNode(hasTextEndingWith(" min")).performScrollTo().performClick()
+            rule.tab("Séances") // V2.22: the latest sessions are in the Séances tab
+            rule.waitUntilAtLeastOneExists(hasText(" min", substring = true) and hasClickAction(), 10_000)
+            rule.onAllNodes(hasText(" min", substring = true) and hasClickAction())[0].performScrollTo().performClick()
             waitFor("Fréquence cardiaque")
             rule.onNodeWithText("Fréquence cardiaque").performScrollTo()
             shot("h3-summary-heart")
@@ -116,12 +117,12 @@ class HeartSummarySmokeTest {
             rule.onNodeWithText("Passer à", substring = true).performScrollTo().performClick()
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
 
-            rule.onNode(hasText("Historique") and hasClickAction()).performClick()
+            rule.tab("Séances")
             rule.onNode(hasText("Semaine") and hasClickAction()).performClick()
             waitFor("séance mesurée")
             shot("h5-week-heart")
 
-            rule.onNode(hasText("Nutrition") and hasClickAction()).performClick()
+            rule.tab("Nutrition")
             waitFor("Dépense des séances")
             shot("h6-nutrition-spend")
         }

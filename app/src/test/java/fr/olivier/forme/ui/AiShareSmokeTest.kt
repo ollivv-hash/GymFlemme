@@ -9,6 +9,7 @@ import android.content.pm.ResolveInfo
 import android.net.Uri
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -121,17 +122,17 @@ class AiShareSmokeTest {
         seedDay()
         ActivityScenario.launch(MainActivity::class.java).use {
             // Choose Claude, sending the file (default method).
-            waitFor("Nouvelle séance")
+            rule.waitForHome()
             rule.acknowledgeBadges()
-            rule.onNode(hasText("Config") and hasClickAction()).performClick()
+            rule.openSettings()
             rule.onNodeWithText("Analyse IA").performClick()
             waitFor("App IA par défaut")
             rule.onNodeWithText("Claude").performClick()
             rule.waitUntilAtLeastOneExists(hasText("Claude") and isSelected(), 10_000)
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
 
-            rule.onNode(hasText("Accueil") and hasClickAction()).performClick()
-            rule.onNodeWithText("Analyse IA du jour").performScrollTo().performClick()
+            rule.tab("Accueil")
+            rule.onNode(hasContentDescription("Analyse IA du jour") and hasClickAction()).performClick()
             rule.waitUntil(20_000) { shadowOf(app).peekNextStartedActivity() != null }
 
             val started = shadowOf(app).nextStartedActivity
