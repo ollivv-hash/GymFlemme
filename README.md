@@ -48,6 +48,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.19.3** ✅ | La FC de la notification n'est plus mise à jour écran éteint (chaque mise à jour rallumait l'écran sur certains téléphones) ; rafraîchie dès que l'écran se rallume |
 | **V2.19.4** ✅ | Badges et défis calculés hors du fil de l'interface, une seule fois pour l'accueil et l'écran Badges, détection des records en un passage (3 ans d'historique : ~280 → ~95 ms) |
 | **V2.20** ✅ | Compléments alimentaires : créatine, oméga-3, vitamine D, magnésium, zinc, multivitamines, vitamine C et compléments perso ; chacun activable, quantité et unité par jour, rappel à l'heure choisie (Config → Compléments) ; une case par complément actif dans Nutrition et sur l'accueil ; export IA ; base v10, sauvegarde v10 |
+| **V2.20.1** ✅ | Correctif : sur un téléphone lent, la proposition de charges allégées (retour après une pause) pouvait s'afficher hors de l'écran, au-dessus du premier exercice ; la séance remonte pour la montrer |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 

@@ -23,8 +23,8 @@ android {
         applicationId = "fr.olivier.forme"
         minSdk = 28
         targetSdk = 37
-        versionCode = 51
-        versionName = "2.20.0"
+        versionCode = 52
+        versionName = "2.20.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
