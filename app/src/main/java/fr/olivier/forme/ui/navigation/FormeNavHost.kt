@@ -35,6 +35,7 @@ import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.nutrition.ui.AddFoodScreen
 import fr.olivier.forme.feature.nutrition.ui.FoodEditScreen
 import fr.olivier.forme.feature.nutrition.ui.FoodsScreen
+import fr.olivier.forme.feature.nutrition.ui.SupplementsScreen
 import fr.olivier.forme.feature.nutrition.ui.NutritionScreen
 import fr.olivier.forme.feature.nutrition.ui.ProfileScreen
 import fr.olivier.forme.feature.nutrition.ui.ScanScreen
@@ -172,6 +173,7 @@ fun FormeNavHost(
                     },
                 )
             }
+            composable<SupplementsRoute> { SupplementsScreen(onBack = { nav.popBackStack() }) }
             composable<FoodsRoute> { FoodsScreen(onBack = { nav.popBackStack() }, onEdit = { nav.navigate(FoodEditRoute(foodId = it)) }) }
             composable<FoodEditRoute> { FoodEditScreen(onDone = { nav.popBackStack() }) }
             composable<ProfileRoute> { ProfileScreen(onDone = { nav.popBackStack() }) }
@@ -185,6 +187,7 @@ fun FormeNavHost(
                     onSettings = { nav.navigate(SettingsRoute) },
                     onProfile = { nav.navigate(ProfileRoute) },
                     onFoods = { nav.navigate(FoodsRoute) },
+                    onSupplements = { nav.navigate(SupplementsRoute) },
                     onWatch = { nav.navigate(WatchTestRoute) },
                     onAi = { nav.navigate(AiSettingsRoute) },
                 )

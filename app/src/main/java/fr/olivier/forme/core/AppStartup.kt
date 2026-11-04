@@ -9,7 +9,7 @@ import fr.olivier.forme.core.launch.QuickAction
 import fr.olivier.forme.feature.badges.reminder.ChallengeReminder
 import fr.olivier.forme.feature.library.data.ExerciseLibraryLoader
 import fr.olivier.forme.feature.nutrition.data.CiqualLoader
-import fr.olivier.forme.feature.nutrition.reminder.CreatineReminder
+import fr.olivier.forme.feature.nutrition.reminder.SupplementReminder
 import fr.olivier.forme.feature.widget.WidgetRefresher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -22,7 +22,7 @@ class AppStartup @Inject constructor(
     @ApplicationContext private val context: Context,
     @ApplicationScope private val scope: CoroutineScope,
     private val ciqual: CiqualLoader,
-    private val creatineReminder: CreatineReminder,
+    private val supplementReminder: SupplementReminder,
     private val challengeReminder: ChallengeReminder,
     private val autoBackup: AutoBackupScheduler,
     private val widget: WidgetRefresher,
@@ -33,7 +33,7 @@ class AppStartup @Inject constructor(
         widget.start()
         runCatching { QuickAction.publishShortcuts(context) }.onFailure { Log.e("Forme", "Shortcuts publishing failed", it) }
         scope.launch {
-            runCatching { creatineReminder.reschedule() }.onFailure { Log.e("Forme", "Reminder scheduling failed", it) }
+            runCatching { supplementReminder.reschedule() }.onFailure { Log.e("Forme", "Reminder scheduling failed", it) }
             runCatching { challengeReminder.reschedule() }.onFailure { Log.e("Forme", "Challenge reminder scheduling failed", it) }
             runCatching { ciqual.ensureLoaded() }.onFailure { Log.e("Forme", "Ciqual load failed", it) }
         }

@@ -6,7 +6,7 @@ import fr.olivier.forme.core.AppStartup
 import fr.olivier.forme.core.backup.BackupNotifier
 import fr.olivier.forme.feature.heart.service.HeartRateService
 import fr.olivier.forme.feature.badges.reminder.ChallengeReminder
-import fr.olivier.forme.feature.nutrition.reminder.CreatineReminder
+import fr.olivier.forme.feature.nutrition.reminder.SupplementReminder
 import fr.olivier.forme.feature.sport.timer.RestTimer
 import javax.inject.Inject
 
@@ -17,7 +17,7 @@ class FormeApp : Application() {
     override fun onCreate() {
         super.onCreate()
         RestTimer.createChannels(this)
-        CreatineReminder.createChannel(this)
+        SupplementReminder.createChannel(this)
         ChallengeReminder.createChannel(this)
         HeartRateService.createChannel(this)
         BackupNotifier.createChannel(this)

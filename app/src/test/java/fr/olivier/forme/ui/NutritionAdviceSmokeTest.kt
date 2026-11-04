@@ -25,7 +25,7 @@ import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
 import fr.olivier.forme.feature.heart.data.HeartRepository
 import fr.olivier.forme.feature.heart.domain.HeartSource
 import fr.olivier.forme.feature.heart.domain.Sex
-import fr.olivier.forme.feature.nutrition.data.CreatineEntryEntity
+import fr.olivier.forme.feature.nutrition.data.SupplementIntakeEntity
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
 import fr.olivier.forme.feature.nutrition.domain.MealType
@@ -89,7 +89,8 @@ class NutritionAdviceSmokeTest {
             (1..5).forEach { d -> db.mealDao().insert(meal(today.minusDays(d.toLong()), MealType.DINNER, "Poulet riz", 35.0, 700.0)) }
             db.mealDao().insert(meal(today, MealType.BREAKFAST, "Flocons d'avoine", 20.0, 550.0))
             db.mealDao().insert(meal(today, MealType.LUNCH, "Steak haché pâtes", 40.0, 900.0))
-            db.creatineDao().upsert(CreatineEntryEntity(date = today, doseG = 5.0, takenAt = Instant.now()))
+            val creatine = db.supplementDao().getByCode("creatine")!!
+            db.supplementDao().upsertIntake(SupplementIntakeEntity(supplementId = creatine.id, date = today, amount = 5.0, takenAt = Instant.now()))
 
             // A 40-minute session today, with its heart rate (~300 kcal estimated).
             val sessions = SessionRepository(db, db.sessionDao(), db.templateDao(), db.exerciseDao(), clock)

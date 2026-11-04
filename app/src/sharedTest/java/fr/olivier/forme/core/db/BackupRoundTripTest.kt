@@ -51,7 +51,7 @@ class BackupRoundTripTest {
         sessions.finish(id, 5, "Bonne séance")
         BodyWeightRepository(source.bodyWeightDao()).save(LocalDate.of(2026, 10, 2), 81.7)
         val nutrition = NutritionRepository(
-            source, source.profileDao(), source.ciqualDao(), source.foodDao(), source.mealDao(), source.creatineDao(),
+            source, source.profileDao(), source.ciqualDao(), source.foodDao(), source.mealDao(), source.supplementDao(),
             source.sessionDao(), OpenFoodFactsClient(), clock,
         )
         nutrition.saveProfile(ProfileEntity(proteinTargetGPerKg = 2.0, wheyProteinPer100g = 80.0, birthYear = 1980, sex = Sex.MALE, hrMaxOverride = 181, heightCm = 178, nutritionGoal = NutritionGoal.BULK, kcalTargetOverride = 2700))

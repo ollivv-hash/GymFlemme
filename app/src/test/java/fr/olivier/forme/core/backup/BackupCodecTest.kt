@@ -1,5 +1,7 @@
 package fr.olivier.forme.core.backup
 
+import fr.olivier.forme.feature.nutrition.data.SupplementDefaults
+import fr.olivier.forme.feature.nutrition.data.SupplementUnit
 import fr.olivier.forme.feature.nutrition.domain.FoodSource
 import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.sport.domain.ExerciseType
@@ -8,6 +10,7 @@ import fr.olivier.forme.feature.sport.domain.SessionExerciseStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import java.time.LocalDate
 
 class BackupCodecTest {
     private val sample = BackupFile(
@@ -31,6 +34,8 @@ class BackupCodecTest {
             foods = listOf(FoodDto(1, FoodSource.OFF, "3017624010701", "Skyr", "Siggi's", 63.0, 10.5, 4.1, 0.2, 150.0, true, 1_790_000_000_000)),
             meals = listOf(MealEntryDto(1, "2026-10-02", MealType.EXTRA, 1, "Skyr (Siggi's)", 150.0, 15.75, 94.5, null, 0.3, false, 1_790_000_100_000)),
             creatine = listOf(CreatineDto(1, "2026-10-02", 5.0, 1_790_000_200_000)),
+            supplements = listOf(SupplementDto(9, "Spiruline", null, 2.0, SupplementUnit.TABLET, true, 7, true, 480)),
+            supplementIntakes = listOf(SupplementIntakeDto(1, 9, "2026-10-02", 2.0, 1_790_000_300_000)),
         ),
     )
 
@@ -64,5 +69,25 @@ class BackupCodecTest {
     @Test
     fun `garbage is rejected with a clear error`() {
         assertThrows(BackupFormatException::class.java) { BackupCodec.decode("not json") }
+    }
+
+    /** V2.20: before v10, creatine (profile + days) becomes the first supplement; the others start off. */
+    @Test
+    fun `creatine of a v9 file becomes the first supplement`() {
+        val (supplements, intakes) = sample.nutrition.supplementsToRestore(9)
+        val creatine = supplements.single { it.isCreatine }
+        assertEquals(5.0, creatine.amount, 0.0)
+        assertEquals(true, creatine.reminderEnabled)
+        assertEquals(1200, creatine.reminderMinutes)
+        assertEquals(listOf(creatine), supplements.filter { it.active })
+        assertEquals(SupplementDefaults.all.size, supplements.size)
+        assertEquals(listOf(creatine.id to LocalDate.of(2026, 10, 2)), intakes.map { it.supplementId to it.date })
+    }
+
+    @Test
+    fun `a v10 file keeps its supplements as they are`() {
+        val (supplements, intakes) = sample.nutrition.supplementsToRestore(10)
+        assertEquals(listOf("Spiruline"), supplements.map { it.name })
+        assertEquals(listOf(9L), intakes.map { it.supplementId })
     }
 }

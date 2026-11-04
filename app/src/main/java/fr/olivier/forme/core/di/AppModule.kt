@@ -55,7 +55,7 @@ object AppModule {
     @Provides fun provideCiqualDao(db: FormeDatabase) = db.ciqualDao()
     @Provides fun provideFoodDao(db: FormeDatabase) = db.foodDao()
     @Provides fun provideMealDao(db: FormeDatabase) = db.mealDao()
-    @Provides fun provideCreatineDao(db: FormeDatabase) = db.creatineDao()
+    @Provides fun provideSupplementDao(db: FormeDatabase) = db.supplementDao()
     @Provides fun provideSessionHeartDao(db: FormeDatabase) = db.sessionHeartDao()
     @Provides fun provideLibraryDao(db: FormeDatabase) = db.libraryDao()
 

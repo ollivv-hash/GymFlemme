@@ -22,6 +22,7 @@ fun ConfigScreen(
     onSettings: () -> Unit,
     onProfile: () -> Unit,
     onFoods: () -> Unit,
+    onSupplements: () -> Unit,
     onWatch: () -> Unit,
     onAi: () -> Unit,
     onSources: () -> Unit,
@@ -33,8 +34,9 @@ fun ConfigScreen(
             Entry("Bibliothèque d'exercices", "Exercices illustrés : rechercher, filtrer, ajouter au catalogue", onLibrary)
             Entry("Modèles de séance", "Créer, dupliquer, modifier, archiver", onTemplates)
             Entry("Rotation", "Modèles de la rotation et leur ordre", onRotation)
-            Entry("Profil", "Âge, sexe, FC max, objectifs (protéines, calories, entraînement), whey, créatine", onProfile)
+            Entry("Profil", "Âge, sexe, FC max, objectifs (protéines, calories, entraînement), whey", onProfile)
             Entry("Mes aliments", "Aliments perso, produits scannés, favoris", onFoods)
+            Entry("Compléments", "Créatine, oméga-3, vitamines… : actifs, quantité, rappels", onSupplements)
             Entry("Montre cardio", "Choisir la montre, tester la FC en direct et Health Connect", onWatch)
             Entry("Analyse IA", "App IA par défaut (Claude, ChatGPT…), test du partage", onAi)
             Entry("Réglages et sauvegarde", "Repos, thème, sauvegarde auto (Drive), export / import", onSettings)

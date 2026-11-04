@@ -130,7 +130,7 @@
             android:exported="false" />
 
         <receiver
-            android:name=".feature.nutrition.reminder.CreatineReminderReceiver"
+            android:name=".feature.nutrition.reminder.SupplementReminderReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

@@ -24,6 +24,7 @@ import fr.olivier.forme.feature.nutrition.data.NutritionRepository
 import fr.olivier.forme.feature.nutrition.data.NutritionWeekSource
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
 import fr.olivier.forme.feature.nutrition.data.bmrPerDay
+import fr.olivier.forme.feature.nutrition.data.dose
 import fr.olivier.forme.feature.nutrition.data.macros
 import fr.olivier.forme.feature.nutrition.data.netKcal
 import fr.olivier.forme.feature.nutrition.data.restDayKcal
@@ -144,7 +145,9 @@ class AiDayRepository @Inject constructor(
                 }
             },
             wheyDoses = entries.count { it.isWhey },
-            creatineTaken = nutrition.isCreatineTaken(date),
+            supplements = nutrition.supplementsTaken(date).first().let { taken ->
+                nutrition.supplementList().filter { it.active }.map { "${it.name} ${it.dose()}" to (it.id in taken) }
+            },
         )
 
         val weekStart = WeeklyStats.weekStart(date)

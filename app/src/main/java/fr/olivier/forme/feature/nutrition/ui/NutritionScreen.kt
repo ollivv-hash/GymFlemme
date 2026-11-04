@@ -47,6 +47,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.olivier.forme.feature.bodyweight.ui.WeightScreen
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
+import fr.olivier.forme.feature.nutrition.data.dose
 import fr.olivier.forme.feature.nutrition.domain.EnergyMath
 import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.nutrition.domain.Per100
@@ -122,18 +123,30 @@ private fun JournalContent(
             }
         }
         item { WheyCard(ui, onAdd = viewModel::addWhey, onProfile = onProfile) }
-        item {
-            Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                Row(Modifier.clickable { viewModel.setCreatine(!ui.creatineTaken) }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = ui.creatineTaken, onCheckedChange = viewModel::setCreatine)
-                    Column(Modifier.weight(1f)) {
-                        Text("Créatine ${Fmt.number(ui.profile.creatineDoseG)} g", style = MaterialTheme.typography.titleMedium)
-                        when {
-                            ui.creatineStreak >= 2 -> QuipText(Quip.CREATINE_STREAK, ui.creatineStreak, style = MaterialTheme.typography.bodySmall)
-                            ui.creatineStreak == 1 -> Text(
-                                pluralStringResource(R.plurals.creatine_streak_days, 1, 1),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
+        if (ui.supplements.isNotEmpty()) {
+            item(key = "supplements") {
+                // V2.20: one box per active supplement (creatine alone until 2.19), in the order of Config → Compléments.
+                Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                    Column(Modifier.padding(vertical = 4.dp)) {
+                        ui.supplements.forEach { (supplement, taken) ->
+                            Row(
+                                Modifier.fillMaxWidth().clickable { viewModel.setSupplement(supplement, !taken) }.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(checked = taken, onCheckedChange = { viewModel.setSupplement(supplement, it) })
+                                Column(Modifier.weight(1f)) {
+                                    Text("${supplement.name} ${supplement.dose()}", style = MaterialTheme.typography.titleMedium)
+                                    if (supplement.isCreatine) {
+                                        when {
+                                            ui.creatineStreak >= 2 -> QuipText(Quip.CREATINE_STREAK, ui.creatineStreak, style = MaterialTheme.typography.bodySmall)
+                                            ui.creatineStreak == 1 -> Text(
+                                                pluralStringResource(R.plurals.creatine_streak_days, 1, 1),
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

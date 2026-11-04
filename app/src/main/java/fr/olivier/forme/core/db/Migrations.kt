@@ -1,9 +1,13 @@
 package fr.olivier.forme.core.db
 
+import android.content.ContentValues
+import android.database.sqlite.SQLiteDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import fr.olivier.forme.feature.badges.domain.BadgeMigration
 import fr.olivier.forme.feature.library.data.ExerciseLibraryLinks
+import fr.olivier.forme.feature.nutrition.data.SupplementDefaults
+import fr.olivier.forme.feature.nutrition.data.SupplementEntity
 
 /**
  * Explicit migrations, registered on the database builder. Destructive migration is never enabled.
@@ -165,7 +169,70 @@ object Migrations {
         }
     }
 
+    /**
+     * V2.20: food supplements. Creatine becomes the first supplement (its dose, reminder and every day taken are
+     * kept), the other built-in ones are added switched off; `creatine_entry` and the creatine columns of the profile
+     * go away.
+     */
+    val MIGRATION_9_10 = object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `supplement` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, " +
+                    "`code` TEXT, `amount` REAL NOT NULL, `unit` TEXT NOT NULL, `active` INTEGER NOT NULL, `sortOrder` INTEGER NOT NULL, " +
+                    "`reminderEnabled` INTEGER NOT NULL, `reminderMinutes` INTEGER NOT NULL)",
+            )
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_supplement_code` ON `supplement` (`code`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `supplement_intake` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`supplementId` INTEGER NOT NULL, `date` INTEGER NOT NULL, `amount` REAL NOT NULL, `takenAt` INTEGER NOT NULL, " +
+                    "FOREIGN KEY(`supplementId`) REFERENCES `supplement`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_supplement_intake_supplementId_date` ON `supplement_intake` (`supplementId`, `date`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_supplement_intake_date` ON `supplement_intake` (`date`)")
+
+            SupplementDefaults.all.forEach { db.insert("supplement", SQLiteDatabase.CONFLICT_ABORT, it.toValues()) }
+            // Creatine as set in the profile (none = the defaults above).
+            db.execSQL(
+                """UPDATE supplement SET
+                     amount = (SELECT creatineDoseG FROM profile WHERE id = 1),
+                     reminderEnabled = (SELECT creatineReminderEnabled FROM profile WHERE id = 1),
+                     reminderMinutes = (SELECT creatineReminderMinutes FROM profile WHERE id = 1)
+                   WHERE code = 'creatine' AND EXISTS (SELECT 1 FROM profile WHERE id = 1)""",
+            )
+            db.execSQL(
+                """INSERT INTO supplement_intake (supplementId, date, amount, takenAt)
+                   SELECT (SELECT id FROM supplement WHERE code = 'creatine'), date, doseG, takenAt FROM creatine_entry""",
+            )
+            db.execSQL("DROP TABLE `creatine_entry`")
+
+            // The profile without its creatine columns (no DROP COLUMN before SQLite 3.35).
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `profile_new` (`id` INTEGER NOT NULL, `proteinTargetGPerKg` REAL NOT NULL, " +
+                    "`wheyProteinPer100g` REAL, `wheyKcalPer100g` REAL, `wheyCarbsPer100g` REAL, `wheyFatPer100g` REAL, " +
+                    "`wheyScoopG` REAL NOT NULL, `birthYear` INTEGER, `sex` TEXT, `hrMaxOverride` INTEGER, `heightCm` INTEGER, " +
+                    "`nutritionGoal` TEXT, `kcalTargetOverride` INTEGER, PRIMARY KEY(`id`))",
+            )
+            val columns = "id, proteinTargetGPerKg, wheyProteinPer100g, wheyKcalPer100g, wheyCarbsPer100g, wheyFatPer100g, " +
+                "wheyScoopG, birthYear, sex, hrMaxOverride, heightCm, nutritionGoal, kcalTargetOverride"
+            db.execSQL("INSERT INTO profile_new ($columns) SELECT $columns FROM profile")
+            db.execSQL("DROP TABLE profile")
+            db.execSQL("ALTER TABLE profile_new RENAME TO profile")
+        }
+    }
+
+    internal fun SupplementEntity.toValues() = ContentValues().apply {
+        put("name", name)
+        put("code", code)
+        put("amount", amount)
+        put("unit", unit.name)
+        put("active", active)
+        put("sortOrder", sortOrder)
+        put("reminderEnabled", reminderEnabled)
+        put("reminderMinutes", reminderMinutes)
+    }
+
     val ALL: Array<Migration> = arrayOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+        MIGRATION_9_10,
     )
 }

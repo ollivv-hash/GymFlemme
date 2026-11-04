@@ -24,10 +24,6 @@ data class ProfileEntity(
     val wheyCarbsPer100g: Double? = null,
     val wheyFatPer100g: Double? = null,
     val wheyScoopG: Double = 30.0,
-    val creatineDoseG: Double = 5.0,
-    val creatineReminderEnabled: Boolean = true,
-    /** Minutes after midnight. */
-    val creatineReminderMinutes: Int = 20 * 60,
     /** Heart rate (V2.1): age and sex for the maximum heart rate and calorie estimates. */
     val birthYear: Int? = null,
     val sex: Sex? = null,
@@ -109,10 +105,3 @@ data class MealEntryEntity(
     val eatenAt: Instant,
 )
 
-@Entity(tableName = "creatine_entry", indices = [Index(value = ["date"], unique = true)])
-data class CreatineEntryEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val date: LocalDate,
-    val doseG: Double,
-    val takenAt: Instant,
-)

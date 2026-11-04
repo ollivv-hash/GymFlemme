@@ -22,7 +22,8 @@ import fr.olivier.forme.feature.nutrition.domain.ProteinAdvice
 import fr.olivier.forme.feature.nutrition.domain.ProteinPlan
 import fr.olivier.forme.feature.nutrition.domain.WheyAdvice
 import fr.olivier.forme.feature.nutrition.domain.WheyMoment
-import fr.olivier.forme.feature.nutrition.reminder.CreatineReminder
+import fr.olivier.forme.feature.nutrition.reminder.SupplementReminder
+import fr.olivier.forme.feature.nutrition.data.SupplementEntity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -45,7 +46,8 @@ data class JournalUi(
     val proteinTargetG: Double? = null,
     val profile: ProfileEntity = ProfileEntity(),
     val wheyMoment: WheyMoment = WheyMoment.REST_DAY,
-    val creatineTaken: Boolean = false,
+    /** Active supplements (V2.20), in their order, and whether each was taken that day. */
+    val supplements: List<SupplementDay> = emptyList(),
     val creatineStreak: Int = 0,
     /** Protein advice of the day (today only, with a target). */
     val proteinPlan: ProteinPlan? = null,
@@ -64,12 +66,14 @@ data class JournalUi(
         get() = wheyDoses < ProteinAdvice.MAX_DOSES && (wheyDoses == 0 || (proteinPlan?.doses ?: 0) > 0)
 }
 
+data class SupplementDay(val supplement: SupplementEntity, val taken: Boolean)
+
 /** Shared by the Nutrition journal and the home card. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class JournalViewModel @Inject constructor(
     private val repository: NutritionRepository,
-    private val reminder: CreatineReminder,
+    private val reminder: SupplementReminder,
     weights: BodyWeightRepository,
     heart: HeartRepository,
     private val badges: BadgeRepository,
@@ -96,14 +100,17 @@ class JournalViewModel @Inject constructor(
                 proteinTargetG = NutritionMath.proteinTarget(weight, profile.proteinTargetGPerKg),
                 profile = profile,
                 wheyMoment = WheyAdvice.moment(entries.any { it.isWhey }, training),
-                creatineTaken = d in creatineDates,
                 creatineStreak = CreatineStreak.days(creatineDates, repository.today()),
                 restDayKcal = profile.restDayKcal(weight, d.year),
                 wheyDoses = entries.count { it.isWhey },
                 weightKg = weight,
             )
         }
-        combine(day, history) { ui, usual ->
+        val supplements = combine(repository.supplements, repository.supplementsTaken(d)) { list, taken ->
+            list.filter { it.active }.map { SupplementDay(it, it.id in taken) }
+        }
+        combine(day, history, supplements) { dayUi, usual, supplementDays ->
+            val ui = dayUi.copy(supplements = supplementDays)
             val target = ui.proteinTargetG
             if (!ui.isToday || target == null) return@combine ui
             val upcoming = ProteinAdvice.upcoming(ui.entries.map { it.protein() }, usual, repository.now())
@@ -120,10 +127,10 @@ class JournalViewModel @Inject constructor(
 
     fun shiftDay(days: Long) = date.update { (it.plusDays(days)).coerceAtMost(repository.today()) }
 
-    fun setCreatine(taken: Boolean) = viewModelScope.launch {
-        repository.setCreatineTaken(date.value, taken)
-        if (taken && date.value == repository.today()) reminder.dismissNotification()
-        if (taken) evaluateBadges() // Créatine fidèle
+    fun setSupplement(supplement: SupplementEntity, taken: Boolean) = viewModelScope.launch {
+        repository.setSupplementTaken(supplement.id, date.value, taken)
+        if (taken && date.value == repository.today()) reminder.dismissNotification(supplement.id)
+        if (taken && supplement.isCreatine) evaluateBadges() // Créatine fidèle
     }
 
     /** Whey goes after the session on training days, otherwise with breakfast (morning) or as a snack. */
