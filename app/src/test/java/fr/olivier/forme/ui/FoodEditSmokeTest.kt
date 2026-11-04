@@ -71,6 +71,8 @@ class FoodEditSmokeTest {
         field("Nom").performTextInput("Arancini Gorgonzola")
         field("Protéines").performTextInput("11")
         save().performClick()
+        // The name is in the form's own field too: wait for the form to close, back on "Mes aliments".
+        rule.waitUntil(15_000) { rule.onAllNodes(hasText("Nouvel aliment")).fetchSemanticsNodes().isEmpty() }
         waitFor("Arancini Gorgonzola")
 
         // A new food is among the recent ones of Nutrition → Ajouter.

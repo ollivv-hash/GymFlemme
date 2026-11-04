@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
@@ -94,6 +95,14 @@ fun ActiveSessionScreen(
     val rest by viewModel.restTimerState.collectAsStateWithLifecycle()
     val lastLogged by viewModel.lastLogged.collectAsStateWithLifecycle()
     val offerLighterLoads by viewModel.offerLighterLoads.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
+    // 2.20.1: the offer is computed just after the exercises. Inserted above a list already shown, it stayed out of
+    // sight (the list keeps its first exercise in place): unless the list was scrolled meanwhile, show it.
+    LaunchedEffect(offerLighterLoads) {
+        if (offerLighterLoads && listState.firstVisibleItemIndex == 1 && listState.firstVisibleItemScrollOffset == 0) {
+            listState.scrollToItem(0)
+        }
+    }
     val catalog by viewModel.catalog.collectAsStateWithLifecycle()
     val noted by viewModel.notedThisSession.collectAsStateWithLifecycle()
     val heart by viewModel.liveHeart.collectAsStateWithLifecycle()
@@ -136,7 +145,7 @@ fun ActiveSessionScreen(
         },
         bottomBar = { rest?.let { RestBar(it, heart, lastLogged, onExtend = viewModel::extendRest, onStop = viewModel::stopRest) } },
     ) { padding ->
-        LazyColumn(Modifier.padding(padding)) {
+        LazyColumn(Modifier.padding(padding), state = listState) {
             if (offerLighterLoads) {
                 item(key = "lighter-loads") {
                     LighterLoadsCard(onApply = viewModel::applyLighterLoads, onDismiss = viewModel::dismissLighterLoads)
