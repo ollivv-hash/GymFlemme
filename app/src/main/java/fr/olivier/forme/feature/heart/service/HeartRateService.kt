@@ -3,11 +3,14 @@ package fr.olivier.forme.feature.heart.service
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -25,7 +28,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -33,6 +41,9 @@ import javax.inject.Inject
 /**
  * Foreground service (type "connected device") running while a session records the watch's heart rate, so the
  * Bluetooth link and the recording survive the screen being off. Its notification shows the live heart rate.
+ *
+ * 2.19.3: the notification is not updated while the screen is off. On some phones each update lit the screen up
+ * like a new notification; it is refreshed as soon as the screen turns back on.
  */
 @AndroidEntryPoint
 class HeartRateService : Service() {
@@ -40,6 +51,15 @@ class HeartRateService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var updates: Job? = null
+    private val screenOn = MutableStateFlow(true)
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_ON -> screenOn.value = true
+                Intent.ACTION_SCREEN_OFF -> screenOn.value = false
+            }
+        }
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -58,9 +78,19 @@ class HeartRateService : Service() {
             return START_NOT_STICKY
         }
         if (updates == null) {
+            screenOn.value = getSystemService(PowerManager::class.java).isInteractive
+            ContextCompat.registerReceiver(
+                this,
+                screenReceiver,
+                IntentFilter().apply {
+                    addAction(Intent.ACTION_SCREEN_ON)
+                    addAction(Intent.ACTION_SCREEN_OFF)
+                },
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
             updates = scope.launch {
-                // Throttled: the notification text changes at most every 5 s.
-                recorder.state.map { text(it) }.distinctUntilChanged().collect {
+                // Throttled: the notification text changes at most every 5 s, and only while the screen is on.
+                shownTexts(recorder.state.map { text(it) }, screenOn).collect {
                     RestTimer.notify(this@HeartRateService, NOTIF_ID, notification(this@HeartRateService, recorder.state.value))
                     delay(UPDATE_EVERY_MS)
                 }
@@ -71,6 +101,7 @@ class HeartRateService : Service() {
 
     override fun onDestroy() {
         scope.cancel()
+        if (updates != null) runCatching { unregisterReceiver(screenReceiver) }
         // Stopping the recording resets its state, which the collector above may have re-posted as a plain
         // notification between stopService() and here: that one would outlive the service ("Séance en cours"
         // left after the session was abandoned). Both run on the main thread, so nothing is posted after this.
@@ -109,6 +140,16 @@ class HeartRateService : Service() {
             // Also when the service is already gone (killed with the app): a notification left behind is removed.
             context.getSystemService(NotificationManager::class.java).cancel(NOTIF_ID)
         }
+
+        /**
+         * The texts to post: none while the screen is off, the latest one when it turns back on (only if it changed
+         * meanwhile), the latest one after each pause of the throttle.
+         */
+        internal fun shownTexts(texts: Flow<String>, screenOn: Flow<Boolean>): Flow<String> =
+            combine(texts, screenOn) { text, on -> text.takeIf { on } }
+                .filterNotNull()
+                .distinctUntilChanged()
+                .conflate()
 
         fun text(live: LiveHeart): String = when (live.status) {
             LiveHeartStatus.CONNECTED -> live.bpm?.let { bpm ->
