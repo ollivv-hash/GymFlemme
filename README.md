@@ -46,6 +46,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.19.1** ✅ | Correctif : le bouton « Enregistrer » de « Nouvel aliment » restait grisé |
 | **V2.19.2** ✅ | Modifier ou supprimer un aliment aussi depuis Nutrition → Ajouter (fiche de l'aliment), comme dans Config → Mes aliments |
 | **V2.19.3** ✅ | La FC de la notification n'est plus mise à jour écran éteint (chaque mise à jour rallumait l'écran sur certains téléphones) ; rafraîchie dès que l'écran se rallume |
+| **V2.19.4** ✅ | Badges et défis calculés hors du fil de l'interface, une seule fois pour l'accueil et l'écran Badges, détection des records en un passage (3 ans d'historique : ~280 → ~95 ms) |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -394,6 +395,11 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
     cours, puis défis réussis « Défi d'octobre 2026 »). Réussi : annoncé dans la feuille unique ; raté : rien, aucun
     message. Pas de défi pour les mois d'avant la 2.19. Notification le 1er du mois vers 9 h (réglage « Annonce du
     défi du mois », activé par défaut) : la seule notification liée aux badges.
+  - **Calcul** (2.19.4) : badges, défis et progression sont recalculés depuis tout l'historique, hors du fil de
+    l'interface (`Dispatchers.Default`), une seule fois pour l'accueil et l'écran Badges (`BadgeBoardSource`) ; une
+    rafale de changements (séries d'une séance, restauration) ne donne qu'un calcul, 300 ms après le dernier. Records
+    détectés en un passage par exercice (meilleure charge et meilleur volume cumulés). Mesuré sur 3 ans
+    (624 séances, 20 000 séries) : ~95 ms, dont ~60 ms de requête SQL ; un calcul incrémental n'est pas nécessaire.
 - Restent neutres : poids, repas, mentions santé, Sources et licences, erreurs, confirmations, autorisations.
 - Test garde-fou : chaque tableau a des variantes, sa version neutre et une entrée `Quip` ; les versions féminines
   ont autant de phrases ; toutes se formatent avec leurs paramètres.
