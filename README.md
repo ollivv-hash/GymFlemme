@@ -596,7 +596,7 @@ Runner **épinglé sur `ubuntu-24.04`** (`ubuntu-latest` passe à Ubuntu 26 à p
 versions **Node 24** (`checkout`/`setup-java`/`setup-gradle` v5, `upload-artifact` v7, `download-artifact` v8) : à
 monter volontairement, ensemble, quand GitHub l'annonce.
 
-- **APK de la PR** : onglet *Actions* → le run → artefact `gymflemme-<version>-apk` (`gymbro-…` de 2.11.0 à 2.13.0, `forme-…` avant) (conservé 30 jours).
+- **APK de la PR** : onglet *Actions* → le run → artefact `gymflemme-<version>-apk` (`gymbro-…` de 2.11.0 à 2.13.0, `forme-…` avant) (conservé 7 jours, pour rester dans le quota de stockage GitHub Actions).
 - **Release** : quand une nouvelle `versionName` arrive sur `main`, une release GitHub `v<version>` est publiée
   avec l'APK signé (une seule fois par version : penser à monter `versionCode`/`versionName`).
   Sur le téléphone : page *Releases* du dépôt → télécharger l'APK → installer (mise à jour sans perte de données,
