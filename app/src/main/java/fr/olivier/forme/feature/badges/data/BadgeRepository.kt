@@ -19,11 +19,13 @@ import fr.olivier.forme.feature.sport.domain.ExerciseType
 import fr.olivier.forme.feature.sport.domain.RecordsCalculator
 import fr.olivier.forme.feature.sport.domain.SessionSets
 import fr.olivier.forme.feature.sport.domain.WorkSet
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -75,9 +77,11 @@ class BadgeRepository @Inject constructor(
 
     /**
      * Stores the awards newly earned and the challenges newly met; returns the awards to announce. The challenge of
-     * the current month is drawn first if needed; a challenge met is always announced.
+     * the current month is drawn first if needed; a challenge met is always announced. Computed off the main thread.
      */
-    suspend fun evaluate(): List<Award> = mutex.withLock {
+    suspend fun evaluate(): List<Award> = withContext(Dispatchers.Default) { evaluateLocked() }
+
+    private suspend fun evaluateLocked(): List<Award> = mutex.withLock {
         val history = history()
         val known = dao.getAll().map { it.id to it.tier }.toSet()
         val earned = Badges.earned(history).filterKeys { it.key() !in known }
@@ -137,7 +141,10 @@ class BadgeRepository @Inject constructor(
         }
     }
 
-    suspend fun history(): BadgeHistory {
+    /** Everything the badges and challenges are computed from (2.19.4: off the main thread). */
+    suspend fun history(): BadgeHistory = withContext(Dispatchers.Default) { readHistory() }
+
+    private suspend fun readHistory(): BadgeHistory {
         val zone = clock.zone
         fun Instant.day() = atZone(zone).toLocalDate()
         val sets = dao.workingSets()
@@ -171,16 +178,20 @@ class BadgeRepository @Inject constructor(
 
     /**
      * Starts of the real sessions beating a record of one of their exercises, once per exercise and session (seed
-     * sessions only as a baseline).
+     * sessions only as a baseline). 2.19.4: running bests, one pass per exercise (was every previous session again).
      */
-    private fun recordDays(sets: List<BadgeSetRow>) = sets.groupBy { it.exerciseId }.values.flatMap { rows ->
-        val sessions = rows.groupBy { it.sessionId }.values.sortedBy { it.first().startedAt }
-        sessions.mapIndexedNotNull { index, current ->
-            val first = current.first()
-            if (first.isSeed) return@mapIndexedNotNull null
-            val previous = sessions.take(index).map { it.toSessionSets() }
-            val records = RecordsCalculator.newRecords(current.toSessionSets(), previous)
-            first.startedAt.takeIf { records.loadKg != null || records.volumeKg != null }
+    internal fun recordDays(sets: List<BadgeSetRow>) = sets.groupBy { it.exerciseId }.values.flatMap { rows ->
+        var bestLoad: Double? = null
+        var bestVolume: Double? = null
+        rows.groupBy { it.sessionId }.values.sortedBy { it.first().startedAt }.mapNotNull { current ->
+            val session = current.toSessionSets()
+            val load = RecordsCalculator.bestLoad(session)
+            val volume = RecordsCalculator.volume(session)
+            val beaten = (load != null && bestLoad.let { it != null && load > it }) ||
+                (volume != null && bestVolume.let { it != null && volume > it })
+            if (load != null) bestLoad = maxOf(bestLoad ?: load, load)
+            if (volume != null) bestVolume = maxOf(bestVolume ?: volume, volume)
+            current.first().takeIf { beaten && !it.isSeed }?.startedAt
         }
     }
 

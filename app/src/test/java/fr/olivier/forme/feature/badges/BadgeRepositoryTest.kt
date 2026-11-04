@@ -6,6 +6,7 @@ import fr.olivier.forme.core.db.SeedData
 import fr.olivier.forme.core.db.TestClock
 import fr.olivier.forme.core.db.testDatabase
 import fr.olivier.forme.feature.badges.data.BadgeRepository
+import fr.olivier.forme.feature.badges.data.BadgeSetRow
 import fr.olivier.forme.feature.badges.data.ChallengeEntity
 import fr.olivier.forme.feature.badges.data.award
 import fr.olivier.forme.feature.badges.domain.Award
@@ -22,6 +23,8 @@ import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.sport.data.CardioEntryEntity
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.SetEntryEntity
+import fr.olivier.forme.feature.sport.domain.ExerciseType
+import fr.olivier.forme.feature.sport.domain.MuscleGroup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -35,6 +38,7 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import java.io.File
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -209,5 +213,31 @@ class BadgeRepositoryTest {
         repository.acknowledge(level = 1)
         assertTrue(db.badgeDao().getChallenge("2026-10")!!.seen)
         assertEquals(20, Badges.points(emptyList(), challengesMet = 1))
+    }
+
+    /**
+     * 2.19.4 (one pass per exercise): a record beats every earlier session, seed included, by load or by volume; an
+     * equal load is not a record, and each exercise has its own bests.
+     */
+    @Test
+    fun recordsAreCountedAgainstEveryEarlierSession() = runTest {
+        fun row(session: Long, exercise: Long, load: Double, reps: Int, seed: Boolean = false, target: Int? = 8) = BadgeSetRow(
+            session, Instant.ofEpochSecond(session * 86_400), seed, exercise, ExerciseType.WEIGHTED, MuscleGroup.entries.first(),
+            load, reps, target,
+        )
+        val sets = listOf(
+            row(1, 1, 40.0, 10, seed = true), // baseline only
+            row(2, 1, 40.0, 10), // equal: no record
+            row(3, 1, 42.5, 8), // load record
+            row(4, 1, 30.0, 6), // below the 8-rep target: its load does not count, its volume is lower
+            row(5, 1, 40.0, 10), row(5, 1, 40.0, 10), // volume record (800 > 400)
+            row(6, 1, 42.5, 8), // nothing beaten
+            row(2, 2, 20.0, 10), // first time on exercise 2: no record
+            row(3, 2, 22.5, 10), // record of exercise 2, same day as exercise 1's: counted for each
+        )
+        assertEquals(
+            listOf(3L, 5L, 3L).map { Instant.ofEpochSecond(it * 86_400) },
+            badges(backgroundScope).recordDays(sets),
+        )
     }
 }
