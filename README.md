@@ -50,6 +50,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.20** ✅ | Compléments alimentaires : créatine, oméga-3, vitamine D, magnésium, zinc, multivitamines, vitamine C et compléments perso ; chacun activable, quantité et unité par jour, rappel à l'heure choisie (Config → Compléments) ; une case par complément actif dans Nutrition et sur l'accueil ; export IA ; base v10, sauvegarde v10 |
 | **V2.20.1** ✅ | Correctif : sur un téléphone lent, la proposition de charges allégées (retour après une pause) pouvait s'afficher hors de l'écran, au-dessus du premier exercice ; la séance remonte pour la montrer |
 | **V2.21** ✅ | Plats personnalisés : un plat est un aliment composé d'ingrédients (Ciqual, scannés, perso), avec poids cuit facultatif et nombre de portions ; créé depuis Config → Mes aliments, Nutrition → Ajouter ou « Enregistrer comme plat » sur un repas du journal ; base v11, sauvegarde v11 |
+| **V2.22** ✅ | Accueil « bento » : grille de tuiles (prochaine séance, calories, protéines, défi du mois, compléments, niveau), police Space Grotesk, thèmes clair et sombre, barre de navigation flottante (Accueil, Séances, Nutrition, Badges ; Config dans l'en-tête), prénom dans le profil ; base v12, sauvegarde v12 |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -133,7 +134,7 @@ Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv`
 
 ---
 
-## Modèle de données (Room, version 11)
+## Modèle de données (Room, version 12)
 
 Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distances en mètres. `Instant` ↔ epoch millis, `LocalDate` ↔ epochDay. Les enums sont stockées en texte.
 
@@ -154,7 +155,7 @@ Tables Nutrition (V1.1, migration explicite 1 → 2) :
 
 | Table | Colonnes principales | Remarques |
 |---|---|---|
-| `profile` | id = 1, proteinTargetGPerKg (1,8), whey (prot./kcal/glucides/lipides pour 100 g, dose 30 g), FC (année de naissance, sexe, FC max), calories (taille, objectif, objectif repos personnalisé) | Ligne absente = valeurs par défaut. Dose et rappel de la créatine dans `supplement` depuis la v10. |
+| `profile` | id = 1, proteinTargetGPerKg (1,8), whey (prot./kcal/glucides/lipides pour 100 g, dose 30 g), FC (année de naissance, sexe, FC max), calories (taille, objectif, objectif repos personnalisé), prénom (v12, accueil) | Ligne absente = valeurs par défaut. Dose et rappel de la créatine dans `supplement` depuis la v10. |
 | `ciqual_food` + `ciqual_fts` | code, nom, groupe, kcal, protéines, glucides, lipides pour 100 g ; index plein texte | Référentiel ANSES en lecture seule, chargé depuis l'APK ; recherche insensible aux accents. **Non exporté.** |
 | `food` | id, source (CIQUAL / OFF / CUSTOM), sourceCode (code Ciqual ou code-barres), nom, marque, valeurs /100 g, portion, favori, dernière utilisation | « Mes aliments » : perso, cache Open Food Facts, aliments Ciqual déjà utilisés (récents / favoris). |
 | `meal_entry` | id, date, mealType, foodId?, nom, quantité (g), protéines, kcal, glucides, lipides, isWhey, heure | **Copie des valeurs** : modifier ou supprimer un aliment ne change jamais l'historique. |
@@ -408,6 +409,30 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 - Test garde-fou : chaque tableau a des variantes, sa version neutre et une entrée `Quip` ; les versions féminines
   ont autant de phrases ; toutes se formatent avec leurs paramètres.
 
+### Accueil « bento » (V2.22)
+
+- **Grille de tuiles** (aplats, coins 26 dp, police **Space Grotesk** embarquée, licence OFL) : en-tête « Salut {prénom} »
+  (Config → Profil) et salutation du catalogue d'humour (message de retour après une pause, ligne « objectif raté » en
+  dessous), boutons **Analyse IA du jour** et **Réglages** (Config). Puis :
+  - **Prochaine séance** (accent, pleine largeur) : séance proposée par la rotation, pastille « Sem. 2 / 3 », « 5 exercices
+    · ~40 min » (médiane des 5 dernières séances de ce modèle, arrondie à 5 min ; séances de plus de 4 h ignorées). Le
+    bouton (« C'est parti », « On y va », « Allez hop » ; « Démarrer » en mode sérieux) lance la séance proposée ; le
+    reste de la tuile ouvre le choix d'une autre séance. Séance en cours : « Reprendre ».
+  - **Conseil de décharge** (pleine largeur), seulement quand il s'applique.
+  - **Calories** et **Protéines** : chiffre du jour, cible, barre. Sans repas : « — » et « Ajouter un repas » ; sans
+    objectif calories : « définis ton objectif » ; sans pesée : « ajoute une pesée ».
+  - **Défi du mois** (segments jusqu'à 15, barre au-delà) et **Créatine / Compléments** (série de la créatine, une case par
+    complément actif, 3 au plus) ; l'une prend toute la largeur si l'autre manque.
+  - **Niveau** : numéro, titre, barre vers le niveau suivant ; ouvre l'écran Badges.
+- **Barre de navigation flottante** sur les onglets et sur Config : Accueil, Séances (ex-Historique), Nutrition, Badges ;
+  Config s'ouvre depuis l'en-tête de l'accueil. Le poids (Nutrition → Poids) et les dernières séances (Séances) ne sont
+  plus sur l'accueil.
+- **Thèmes** : maquette claire validée ; sombre avec la même structure (tuile calories inversée en clair). Contrastes
+  texte ≥ 4,5:1. Barres animées 300 ms, sans animation si « Supprimer les animations » est activé. TalkBack lit chaque
+  tuile d'un bloc (« Calories, 2 012 sur 2 137 kilocalories »).
+- Code : `feature/sport/ui/home/bento/` (une fonction par tuile, `@Preview` clair / sombre, avec et sans données), jetons
+  dans `ui/theme/Bento.kt`.
+
 ### Raccourcis et widget (V2.6)
 
 - **Raccourcis** (appui long sur l'icône) : **Démarrer la séance** lance directement la séance proposée par la rotation
@@ -546,8 +571,8 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 ### Export / import manuel
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
-- Format versionné : `{ "schemaVersion": 11, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "supplements", "supplementIntakes", "dishes", "dishIngredients" }, "badges": [ … ], "challenges": [ … ] }`.
-  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9, les compléments depuis la v10, les plats perso depuis la v11. Les fichiers **v1** à **v10** restent importables (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8 ; créatine des fichiers v1 à v9 (profil + `creatine`) convertie en complément comme la migration 9 → 10). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
+- Format versionné : `{ "schemaVersion": 12, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "supplements", "supplementIntakes", "dishes", "dishIngredients" }, "badges": [ … ], "challenges": [ … ] }`.
+  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9, les compléments depuis la v10, les plats perso depuis la v11, le prénom depuis la v12. Les fichiers **v1** à **v11** restent importables (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8 ; créatine des fichiers v1 à v9 (profil + `creatine`) convertie en complément comme la migration 9 → 10). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 
