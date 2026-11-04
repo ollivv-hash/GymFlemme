@@ -15,6 +15,7 @@ import fr.olivier.forme.ui.components.FormeTopBar
 
 @Composable
 fun ConfigScreen(
+    onBack: (() -> Unit)? = null,
     onCatalog: () -> Unit,
     onLibrary: () -> Unit,
     onTemplates: () -> Unit,
@@ -27,7 +28,7 @@ fun ConfigScreen(
     onAi: () -> Unit,
     onSources: () -> Unit,
 ) {
-    Scaffold(topBar = { FormeTopBar("Configuration") }) { padding ->
+    Scaffold(topBar = { FormeTopBar("Configuration", onBack) }) { padding ->
         // Scrolls: the entries no longer fit a phone screen since the library entry (2.10.1).
         Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
             Entry("Catalogue des exercices", "Machines, réglages, photos, archivage", onCatalog)

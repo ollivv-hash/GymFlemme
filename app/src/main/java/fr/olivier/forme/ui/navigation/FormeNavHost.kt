@@ -3,13 +3,8 @@ package fr.olivier.forme.ui.navigation
 import fr.olivier.forme.feature.badges.ui.BadgeAnnouncer
 import fr.olivier.forme.feature.badges.ui.BadgesScreen
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.MaterialTheme
+import fr.olivier.forme.ui.theme.LocalBento
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,16 +58,14 @@ import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalTime
 
-private data class TopLevel(val route: Any, val label: String, val icon: @Composable () -> Painter)
-
-private fun vector(image: ImageVector): @Composable () -> Painter = { rememberVectorPainter(image) }
+/** Tabs of the floating bar (V2.22): Config moved to the home screen's header ("Réglages"). */
+private data class TopLevel(val route: Any, val label: String, val icon: Int)
 
 private val topLevels = listOf(
-    // Home is the app itself: its tab shows the app's "G" (V2.7).
-    TopLevel(HomeRoute, "Accueil") { painterResource(R.drawable.ic_logo_g) },
-    TopLevel(HistoryRoute, "Historique", vector(Icons.Filled.DateRange)),
-    TopLevel(NutritionRoute(), "Nutrition", vector(Icons.Filled.Favorite)),
-    TopLevel(ConfigRoute, "Config", vector(Icons.Filled.Settings)),
+    TopLevel(HomeRoute, "Accueil", R.drawable.ic_bento_home),
+    TopLevel(HistoryRoute, "Séances", R.drawable.ic_bento_sessions),
+    TopLevel(NutritionRoute(), "Nutrition", R.drawable.ic_bento_nutrition),
+    TopLevel(BadgesRoute(), "Badges", R.drawable.ic_bento_badges),
 )
 
 @Composable
@@ -86,7 +79,8 @@ fun FormeNavHost(
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val destination = backStack?.destination
-    val showBar = topLevels.any { top -> destination?.hasRoute(top.route::class) == true }
+    // V2.22: also on Config (opened from the home screen's header), no tab selected there.
+    val showBar = topLevels.any { top -> destination?.hasRoute(top.route::class) == true } || destination?.hasRoute(ConfigRoute::class) == true
 
     LaunchedEffect(Unit) {
         // A launch action (shortcut, widget) decides where to go instead.
@@ -116,19 +110,21 @@ fun FormeNavHost(
         onActionHandled()
     }
 
+    val onHome = destination?.hasRoute(HomeRoute::class) == true
     Scaffold(
+        // Around the floating bar: the bento background on the home screen, the theme's elsewhere.
+        containerColor = if (onHome) LocalBento.current.background else MaterialTheme.colorScheme.background,
         bottomBar = {
             if (showBar) {
-                NavigationBar {
-                    topLevels.forEach { top ->
-                        NavigationBarItem(
-                            selected = destination?.hasRoute(top.route::class) == true,
-                            onClick = { nav.navigateTopLevel(top.route) },
-                            icon = { Icon(top.icon(), contentDescription = null) },
-                            label = { Text(top.label) },
-                        )
-                    }
-                }
+                FloatingNavBar(
+                    topLevels.map { top ->
+                        NavEntry(top.label, top.icon, destination?.hasRoute(top.route::class) == true) {
+                            // From Config (not a tab), close it first: the home tab would otherwise restore it.
+                            if (destination?.hasRoute(ConfigRoute::class) == true) nav.popBackStack()
+                            nav.navigateTopLevel(top.route)
+                        }
+                    },
+                )
             }
         },
     ) { padding ->
@@ -136,10 +132,9 @@ fun FormeNavHost(
             composable<HomeRoute> {
                 HomeScreen(
                     onOpenSession = { nav.navigate(ActiveSessionRoute) },
-                    onOpenSessionDetail = { nav.navigate(SessionDetailRoute(it)) },
-                    onOpenWeight = { nav.switchTab(NutritionRoute(tab = 1)) },
                     onOpenNutrition = { nav.switchTab(NutritionRoute(tab = 0)) },
-                    onOpenBadges = { tab -> nav.navigate(BadgesRoute(tab)) },
+                    onOpenSettings = { nav.navigate(ConfigRoute) },
+                    onOpenBadges = { tab -> nav.switchTab(BadgesRoute(tab)) },
                 )
             }
             composable<BadgesRoute> { BadgesScreen(onBack = { nav.popBackStack() }, initialTab = it.toRoute<BadgesRoute>().tab) }
@@ -190,6 +185,7 @@ fun FormeNavHost(
             composable<ProfileRoute> { ProfileScreen(onDone = { nav.popBackStack() }) }
             composable<ConfigRoute> {
                 ConfigScreen(
+                    onBack = { nav.popBackStack() },
                     onCatalog = { nav.navigate(CatalogRoute) },
                     onLibrary = { nav.navigate(LibraryRoute) },
                     onSources = { nav.navigate(SourcesRoute) },
