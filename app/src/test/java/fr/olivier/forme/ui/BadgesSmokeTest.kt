@@ -32,6 +32,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -61,7 +62,10 @@ class BadgesSmokeTest {
     @Test
     fun historyRecappedOnceThenBadgesScreen() {
         val zone = ZoneId.systemDefault()
-        val noon = LocalDate.now().minusDays(3).atTime(LocalTime.NOON).atZone(zone).toInstant()
+        // Three days ago or earlier, never a Sunday or a 1 January: no secret badge, only "Pas morte".
+        val day = generateSequence(LocalDate.now().minusDays(3)) { it.minusDays(1) }
+            .first { it.dayOfWeek != DayOfWeek.SUNDAY && !(it.monthValue == 1 && it.dayOfMonth == 1) }
+        val noon = day.atTime(LocalTime.NOON).atZone(zone).toInstant()
         val clock = TestClock(noon.minusSeconds(3_600))
         val db = Room.databaseBuilder(context(), FormeDatabase::class.java, FormeDatabase.NAME)
             .addMigrations(*Migrations.ALL)
@@ -84,7 +88,7 @@ class BadgesSmokeTest {
             waitFor("Tes badges déjà gagnés")
             waitFor("Pas morte")
             waitFor("Tu es vivante")
-                        rule.onNodeWithTag(BADGES_ACK_TAG).performClick()
+            rule.onNodeWithTag(BADGES_ACK_TAG).performClick()
             rule.waitUntil(15_000) { rule.onAllNodes(hasText("Tes badges déjà gagnés")).fetchSemanticsNodes().isEmpty() }
 
             waitFor("Niveau 1 · Flemmarde débutante")
