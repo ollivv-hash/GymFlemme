@@ -45,6 +45,7 @@ Usage strictement personnel : un utilisateur, un téléphone, APK signé install
 | **V2.19** ✅ | Défis mensuels (tirage déterministe, éligibilité, carte sur l'accueil, onglet Défis, 20 points, annonce du 1er du mois désactivable), base v9, sauvegarde v9 |
 | **V2.19.1** ✅ | Correctif : le bouton « Enregistrer » de « Nouvel aliment » restait grisé |
 | **V2.19.2** ✅ | Modifier ou supprimer un aliment aussi depuis Nutrition → Ajouter (fiche de l'aliment), comme dans Config → Mes aliments |
+| **V2.19.3** ✅ | La FC de la notification n'est plus mise à jour écran éteint (chaque mise à jour rallumait l'écran sur certains téléphones) ; rafraîchie dès que l'écran se rallume |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 
@@ -52,6 +53,8 @@ Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets
 
 - Photos des machines : import manuel exercice par exercice (déjà possible), pas d'import en masse.
 - Intégration Drive complète (API Drive v3, copies datées, bilans Markdown) — en réflexion.
+- Nutrition : **plats personnalisés** composés d'aliments scannés ou enregistrés (ex. « mon bol de riz poulet »),
+  ajoutés en un geste à un repas.
 
 ---
 
@@ -269,6 +272,8 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   s'y connecte dès que la diffusion est active, puis se reconnecte après chaque coupure. Un **service au premier plan**
   (type *connected device*) garde la liaison écran éteint ; chaque mesure est écrite au fil de l'eau dans un fichier par
   séance (rien n'est perdu si l'app est tuée). Notification « Séance en cours » avec la FC, *Live Update* Android 16 ; retirée explicitement à l'arrêt (2.9.1 : elle pouvait être republiée juste après l'abandon de la séance et rester affichée).
+  Mise à jour au plus toutes les 5 s, et **jamais écran éteint** (2.19.3 : sur certains téléphones, chaque mise à jour
+  rallumait l'écran comme une nouvelle notification) ; la dernière valeur s'affiche dès que l'écran se rallume.
 - **En séance** : bandeau FC + zone sous le titre ; barre de repos : « récupéré » sous 60 % de la FC max (indication seule).
 - **Complément Health Connect** (après séance) : la FC écrite par Mi Fitness comble les trous de la courbe en direct (le
   direct est prioritaire), et ses calories actives remplacent l'estimation. **Une seule source** est retenue (l'app qui a
