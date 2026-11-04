@@ -23,6 +23,8 @@ import fr.olivier.forme.feature.sport.data.CardioEntryEntity
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.SetEntryEntity
 import kotlinx.coroutines.test.runTest
+import fr.olivier.forme.feature.nutrition.domain.DishIngredient
+import fr.olivier.forme.feature.nutrition.domain.Per100
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -62,6 +64,8 @@ class BackupRoundTripTest {
         nutrition.addFood(nutrition.food(foodId)!!, LocalDate.of(2026, 10, 2), MealType.EXTRA, 150.0)
         nutrition.addWheyDose(LocalDate.of(2026, 10, 2), MealType.SNACK)
         nutrition.setCreatineTaken(LocalDate.of(2026, 10, 2), true)
+        // V2.21: a dish with its ingredients.
+        nutrition.saveDish(0, "Bol riz poulet", listOf(DishIngredient("Riz", 100.0, Per100(7.0, 350.0, 77.0, 1.0))), cookedWeightG = 250.0, servings = 2)
         // V2.17: the first session earned "Pas mort".
         val store = PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "badges.preferences_pb") }
         BadgeRepository(source.badgeDao(), store, clock).evaluate()
@@ -84,6 +88,8 @@ class BackupRoundTripTest {
         assertEquals(1980, exported.nutrition.profile!!.birthYear)
         assertEquals(listOf("NOT_DEAD" to 0), exported.badges.map { it.id to it.tier })
         assertEquals(listOf("2026-09", "2026-10"), exported.challenges.map { it.month })
+        assertEquals(listOf(2), exported.nutrition.dishes.map { it.servings })
+        assertEquals(listOf("Riz"), exported.nutrition.dishIngredients.map { it.name })
         assertEquals(exported, reimported)
         assertEquals(text, BackupCodec.encode(reimported))
         source.close()

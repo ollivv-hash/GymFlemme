@@ -5,6 +5,8 @@ import fr.olivier.forme.feature.heart.data.SessionHeartEntity
 import fr.olivier.forme.feature.heart.domain.HeartSource
 import fr.olivier.forme.feature.heart.domain.KcalSource
 import fr.olivier.forme.feature.heart.domain.Sex
+import fr.olivier.forme.feature.nutrition.data.DishEntity
+import fr.olivier.forme.feature.nutrition.data.DishIngredientEntity
 import fr.olivier.forme.feature.nutrition.data.FoodEntity
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
@@ -40,7 +42,8 @@ import java.time.LocalDate
  * v6 adds the exercise library link (`libraryId`, absent → null), v7 the badges earned (absent → recomputed from
  * the history, silently), v8 their tier (V2.18; v7 badges are converted on restore), v9 the monthly challenges
  * (absent → none; the current month's is drawn again, identically), v10 the food supplements (V2.20; the creatine
- * of older files, in the profile and `creatine`, becomes the first supplement, the others are added switched off).
+ * of older files, in the profile and `creatine`, becomes the first supplement, the others are added switched off),
+ * v11 the dishes of one's own (V2.21; absent → none).
  * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual and exercise library reference tables
  * (embedded in the APK) are not exported.
  */
@@ -75,6 +78,25 @@ data class NutritionBackup(
     /** V2.20 (backup v10). */
     val supplements: List<SupplementDto> = emptyList(),
     val supplementIntakes: List<SupplementIntakeDto> = emptyList(),
+    /** V2.21 (backup v11): dishes of one's own (their food is in [foods]) and their ingredients. */
+    val dishes: List<DishDto> = emptyList(),
+    val dishIngredients: List<DishIngredientDto> = emptyList(),
+)
+
+@Serializable
+data class DishDto(val foodId: Long, val cookedWeightG: Double? = null, val servings: Int = 1)
+
+@Serializable
+data class DishIngredientDto(
+    val id: Long,
+    val dishId: Long,
+    val position: Int,
+    val name: String,
+    val grams: Double,
+    val kcalPer100g: Double? = null,
+    val proteinPer100g: Double,
+    val carbsPer100g: Double? = null,
+    val fatPer100g: Double? = null,
 )
 
 @Serializable
@@ -363,6 +385,11 @@ fun BadgeDto.toEntity(schemaVersion: Int): BadgeEntity {
     val (newId, newTier) = if (schemaVersion < 8) BadgeMigration.fromV1(id) else id to tier
     return BadgeEntity(newId, newTier, LocalDate.parse(earnedAt), seen)
 }
+
+fun DishEntity.toDto() = DishDto(foodId, cookedWeightG, servings)
+fun DishDto.toEntity() = DishEntity(foodId, cookedWeightG, servings)
+fun DishIngredientEntity.toDto() = DishIngredientDto(id, dishId, position, name, grams, kcalPer100g, proteinPer100g, carbsPer100g, fatPer100g)
+fun DishIngredientDto.toEntity() = DishIngredientEntity(id, dishId, position, name, grams, kcalPer100g, proteinPer100g, carbsPer100g, fatPer100g)
 
 fun SupplementEntity.toDto() = SupplementDto(id, name, code, amount, unit, active, sortOrder, reminderEnabled, reminderMinutes)
 fun SupplementDto.toEntity() = SupplementEntity(id, name, code, amount, unit, active, sortOrder, reminderEnabled, reminderMinutes)

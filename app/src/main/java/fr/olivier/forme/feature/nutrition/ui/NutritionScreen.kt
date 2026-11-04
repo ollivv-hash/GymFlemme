@@ -68,6 +68,7 @@ private val timeFormat = DateTimeFormatter.ofPattern("HH:mm", Fmt.locale)
 fun NutritionScreen(
     initialTab: Int,
     onAddFood: (LocalDate, MealType) -> Unit,
+    onSaveAsDish: (LocalDate, MealType) -> Unit = { _, _ -> },
     onScan: (LocalDate, MealType) -> Unit,
     onProfile: () -> Unit,
 ) {
@@ -78,7 +79,7 @@ fun NutritionScreen(
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Journal") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Poids") })
             }
-            if (tab == 0) JournalContent(onAddFood, onScan, onProfile) else WeightScreen(showTopBar = false)
+            if (tab == 0) JournalContent(onAddFood, onSaveAsDish, onScan, onProfile) else WeightScreen(showTopBar = false)
         }
     }
 }
@@ -86,6 +87,7 @@ fun NutritionScreen(
 @Composable
 private fun JournalContent(
     onAddFood: (LocalDate, MealType) -> Unit,
+    onSaveAsDish: (LocalDate, MealType) -> Unit,
     onScan: (LocalDate, MealType) -> Unit,
     onProfile: () -> Unit,
     viewModel: JournalViewModel = hiltViewModel(),
@@ -181,6 +183,12 @@ private fun JournalContent(
                         IconButton(onClick = { viewModel.delete(entry) }) { Icon(Icons.Filled.Delete, "Supprimer") }
                     },
                 )
+            }
+            // V2.21: a usual meal becomes a dish, added next time in one go (whey keeps its own count).
+            if (ui.entriesOf(type).any { !it.isWhey }) {
+                item(key = "dish-${type.name}") {
+                    TextButton(onClick = { onSaveAsDish(ui.date, type) }) { Text("Enregistrer comme plat") }
+                }
             }
         }
         item { Spacer(Modifier.padding(24.dp)) }

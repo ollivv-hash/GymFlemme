@@ -5,6 +5,8 @@ import fr.olivier.forme.core.db.FormeDatabase
 import fr.olivier.forme.feature.heart.data.SessionHeartEntity
 import fr.olivier.forme.feature.heart.domain.HeartZones
 import fr.olivier.forme.feature.heart.domain.KcalSource
+import fr.olivier.forme.feature.nutrition.domain.DishIngredient
+import fr.olivier.forme.feature.nutrition.domain.DishMath
 import fr.olivier.forme.feature.nutrition.domain.EnergyMath
 import fr.olivier.forme.feature.nutrition.domain.FoodSource
 import fr.olivier.forme.feature.nutrition.domain.Macros
@@ -248,6 +250,51 @@ class NutritionRepository @Inject constructor(
             is OffResult.Failed -> BarcodeResult.Failed(result.message)
         }
     }
+
+    // --- Dishes (V2.21) ---------------------------------------------------------------------
+
+    suspend fun dish(foodId: Long): Dish? {
+        val food = foodDao.get(foodId) ?: return null
+        val dish = db.dishDao().get(foodId) ?: return null
+        return Dish(food, dish, db.dishDao().ingredients(foodId).map { it.toDomain() })
+    }
+
+    /**
+     * Creates ([foodId] 0) or updates a dish: its food gets the values per 100 g of the ingredients (of the cooked
+     * dish when [cookedWeightG] is given) and one serving as its portion. Returns the food's id.
+     */
+    suspend fun saveDish(
+        foodId: Long,
+        name: String,
+        ingredients: List<DishIngredient>,
+        cookedWeightG: Double?,
+        servings: Int,
+    ): Long = db.withTransaction {
+        val per100 = DishMath.per100(ingredients, cookedWeightG) ?: Per100(0.0, null, null, null)
+        val base = foodDao.get(foodId)
+            ?: FoodEntity(source = FoodSource.DISH, name = name, proteinPer100g = 0.0, lastUsedAt = clock.instant()) // on top of "Récents"
+        val id = saveFood(
+            base.copy(
+                name = name.trim(),
+                kcalPer100g = per100.kcal,
+                proteinPer100g = per100.proteinG,
+                carbsPer100g = per100.carbsG,
+                fatPer100g = per100.fatG,
+                defaultPortionG = DishMath.portion(ingredients, cookedWeightG, servings).takeIf { it > 0 },
+            ),
+        )
+        db.dishDao().upsert(DishEntity(id, cookedWeightG?.takeIf { it > 0 }, servings.coerceAtLeast(1)))
+        db.dishDao().deleteIngredients(id)
+        db.dishDao().insertIngredients(ingredients.mapIndexed { i, it -> it.toEntity(id, i) })
+        id
+    }
+
+    /** A meal of the journal as ingredients of a new dish (whey left apart: it keeps its own count). */
+    suspend fun mealAsIngredients(date: LocalDate, mealType: MealType): List<DishIngredient> =
+        mealDao.getDay(date).filter { it.mealType == mealType && !it.isWhey && it.quantityG > 0 }.map { e ->
+            val f = 100.0 / e.quantityG
+            DishIngredient(e.name, e.quantityG, Per100(e.proteinG * f, e.kcal?.times(f), e.carbsG?.times(f), e.fatG?.times(f)))
+        }
 
     // --- Supplements (V2.20; creatine alone until 2.19) -------------------------------------
 

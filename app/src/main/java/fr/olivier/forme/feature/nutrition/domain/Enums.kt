@@ -35,4 +35,6 @@ enum class FoodSource(val label: String) {
     CIQUAL("Ciqual"),
     OFF("Open Food Facts"),
     CUSTOM("Perso"),
+    /** V2.21: a dish of one's own, made of ingredients (DishEntity). */
+    DISH("Plat"),
 }
