@@ -21,7 +21,7 @@ fun ComposeTestRule.acknowledgeBadges() {
     waitUntilAtLeastOneExists(hasTestTag(BADGES_ACK_TAG), 15_000)
     onNodeWithTag(BADGES_ACK_TAG).performClick()
     waitUntil(15_000) { onAllNodes(hasTestTag(BADGES_ACK_TAG)).fetchSemanticsNodes().isEmpty() }
-    waitUntilAtLeastOneExists(hasText("🎯 Défi d", substring = true), 15_000)
+    waitUntilAtLeastOneExists(hasText("Défi d", substring = true), 15_000)
     waitForIdle()
 }
 

@@ -67,8 +67,8 @@ class TemplateListsSmokeTest {
     fun newSessionSheetListsProposedThenAllTemplates() {
         seedExtraTemplates()
         ActivityScenario.launch(MainActivity::class.java).use {
-            rule.waitUntilAtLeastOneExists(hasText("Nouvelle séance"), 10_000)
-            rule.onNodeWithText("Nouvelle séance").performClick()
+            rule.waitForHome()
+            rule.openSessionChoice()
             rule.waitUntilAtLeastOneExists(hasText("Séance proposée", substring = true), 10_000)
             rule.onNodeWithText("Démarrer").assertExists()
             shot("r0-new-session-sheet")
@@ -87,8 +87,8 @@ class TemplateListsSmokeTest {
     fun longRotationScrolls() {
         seedExtraTemplates()
         ActivityScenario.launch(MainActivity::class.java).use {
-            rule.waitUntilAtLeastOneExists(hasText("Nouvelle séance"), 10_000)
-            rule.onNode(hasText("Config") and hasClickAction()).performClick()
+            rule.waitForHome()
+            rule.openSettings()
             rule.onNode(hasText("Rotation") and hasClickAction()).performClick()
             rule.waitUntilAtLeastOneExists(hasText("Hors rotation"), 10_000)
             // Wait for the end of the screen transition (the Config list is scrollable too) and for the templates.

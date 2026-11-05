@@ -63,18 +63,22 @@ class AppSmokeTest {
 
     @Test
     fun weightDialog() {
-        waitFor("+ pesée")
-        rule.onNodeWithText("+ pesée").performClick()
+        // V2.22: weights are logged from Nutrition → Poids (no longer on the home screen).
+        rule.waitForHome()
+        rule.tab("Nutrition")
+        rule.onNode(androidx.compose.ui.test.hasText("Poids") and androidx.compose.ui.test.hasClickAction()).performClick()
+        rule.waitUntilAtLeastOneExists(androidx.compose.ui.test.hasTestTag(fr.olivier.forme.feature.bodyweight.ui.ADD_WEIGHT_TAG), 10_000)
+        rule.onNode(androidx.compose.ui.test.hasTestTag(fr.olivier.forme.feature.bodyweight.ui.ADD_WEIGHT_TAG)).performClick()
         waitFor("Nouvelle pesée")
         shot("w-dialog")
     }
 
     @Test
     fun mainFlow() {
-        waitFor("Nouvelle séance")
+        rule.waitForHome()
         shot("1-home")
 
-        rule.onNodeWithText("Nouvelle séance").performClick()
+        rule.openSessionChoice()
         waitFor("C · Mixte + tronc dominant")
         shot("1b-new-session-sheet")
         rule.onNodeWithText("Démarrer").performClick()

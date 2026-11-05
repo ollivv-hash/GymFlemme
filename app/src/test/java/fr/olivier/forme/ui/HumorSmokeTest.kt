@@ -51,21 +51,21 @@ class HumorSmokeTest {
         val resources = context().resources
         val greeting = Quip.greeting(LocalTime.now())
         ActivityScenario.launch(MainActivity::class.java).use {
-            waitFor("Nutrition du jour")
+            rule.waitForHome()
             waitForAny(resources.getStringArray(greeting.humor).toList())
             shot("q1-home-greeting")
 
-            rule.onNode(hasText("Nouvelle séance") and hasClickAction()).performClick()
+            rule.openSessionChoice()
             waitForAny(resources.getStringArray(R.array.humor_start).toList())
             shot("q2-start-line")
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
 
-            rule.onNode(hasText("Config") and hasClickAction()).performClick()
+            rule.openSettings()
             rule.onNode(hasText("Réglages et sauvegarde") and hasClickAction()).performScrollTo().performClick()
             rule.onNode(hasText("Mode sérieux", substring = true) and hasClickAction()).performScrollTo().performClick()
             shot("q3-serious-mode")
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
-            rule.onNode(hasText("Accueil") and hasClickAction()).performClick()
+            rule.tab("Accueil")
             waitFor(resources.getString(greeting.neutral))
         }
     }

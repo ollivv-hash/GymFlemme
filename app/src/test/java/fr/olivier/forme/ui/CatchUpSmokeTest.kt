@@ -81,9 +81,9 @@ class CatchUpSmokeTest {
         db.close()
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            waitFor("Nouvelle séance")
+            rule.waitForHome()
             rule.acknowledgeBadges()
-            rule.onNodeWithText("Nouvelle séance").performClick()
+            rule.openSessionChoice()
             // The rotation goes on (C → A); the lower body template catches up legs that were not trained yet.
             waitFor("suite de la rotation")
             waitFor("Pour rattraper : BAS · Bas du corps")

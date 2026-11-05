@@ -1,5 +1,24 @@
 package fr.olivier.forme.feature.sport.ui.home
 
+import fr.olivier.forme.R
+import kotlin.math.roundToInt
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import fr.olivier.forme.ui.theme.BentoDims
+import fr.olivier.forme.ui.theme.LocalBento
+import fr.olivier.forme.feature.nutrition.domain.EnergyMath
+import fr.olivier.forme.core.humor.rememberQuip
+import fr.olivier.forme.core.humor.rememberQuipStyle
+import fr.olivier.forme.feature.badges.domain.Challenge
+import fr.olivier.forme.feature.badges.ui.ChallengeTexts
+import fr.olivier.forme.feature.badges.ui.ChallengeWording
+import fr.olivier.forme.feature.badges.ui.BadgeWording
+import fr.olivier.forme.feature.badges.ui.LevelViewModel
+import fr.olivier.forme.feature.sport.ui.home.bento.*
 import fr.olivier.forme.feature.badges.ui.LevelCard
 import fr.olivier.forme.feature.badges.data.BadgeRepository
 import androidx.compose.foundation.clickable
@@ -49,7 +68,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
 import fr.olivier.forme.feature.bodyweight.domain.MovingAverage
 import fr.olivier.forme.feature.bodyweight.domain.WeightPoint
-import fr.olivier.forme.feature.bodyweight.ui.WeightEntryDialog
 import fr.olivier.forme.feature.nutrition.data.dose
 import fr.olivier.forme.feature.nutrition.ui.JournalViewModel
 import fr.olivier.forme.feature.nutrition.ui.ProteinGauge
@@ -77,6 +95,9 @@ import fr.olivier.forme.ui.components.SectionTitle
 import fr.olivier.forme.ui.theme.accentButtonColors
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
+import fr.olivier.forme.feature.sport.domain.SessionDurations
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Clock
@@ -95,6 +116,9 @@ data class WeightSummary(val lastKg: Double, val lastDate: LocalDate, val averag
 data class HomeNudge(val welcomeBack: Boolean = false, val missedGoalNext: String? = null)
 
 /** "Pour rattraper" in the new session sheet (V2.13): the lagging muscles and the template catching up best. */
+/** The session tile's line: "5 exercices · ~40 min" (V2.22). */
+data class ProposedInfo(val exercises: Int, val typicalMinutes: Int?)
+
 data class CatchUpUi(val advice: CatchUpAdvice, val title: String)
 
 @HiltViewModel
@@ -113,6 +137,20 @@ class HomeViewModel @Inject constructor(
 
     val proposed = templates.observeProposed().state(null)
     val templates = templates.observeAll().map { list -> list.filterNot { it.archived } }.state(emptyList())
+
+    /** V2.22: number of exercises and typical length of the proposed session (session tile). */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val proposedInfo = proposed.flatMapLatest { t ->
+        if (t == null) {
+            flowOf(null)
+        } else {
+            combine(templates.observeLines(t.id), sessions.observeFinished()) { lines, finished ->
+                val minutes = finished.filter { it.templateId == t.id }.sortedByDescending { it.startedAt }
+                    .mapNotNull { s -> s.endedAt?.let { java.time.Duration.between(s.startedAt, it).toMinutes() } }
+                ProposedInfo(lines.size, SessionDurations.typicalMinutes(minutes))
+            }
+        }
+    }.state(null)
     val active = sessions.observeActive().state(null)
     val recent = sessions.observeRecent(5).state(emptyList())
     val weight = weights.observeAll().map { entries ->
@@ -217,145 +255,139 @@ fun SessionEntity.label() =
 
 fun SessionEntity.durationMin(): Long? = endedAt?.let { Duration.between(startedAt, it).toMinutes() }
 
+/**
+ * Home (V2.22, "bento"): the greeting, then a grid of tiles: next session, calories and proteins, challenge of the
+ * month and supplements, level. The grid scrolls under the floating navigation bar.
+ */
 @Composable
 fun HomeScreen(
     onOpenSession: () -> Unit,
-    onOpenSessionDetail: (Long) -> Unit,
-    onOpenWeight: () -> Unit,
     onOpenNutrition: () -> Unit,
+    onOpenSettings: () -> Unit = {},
     onOpenBadges: (tab: Int) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     journal: JournalViewModel = hiltViewModel(),
+    level: LevelViewModel = hiltViewModel(),
 ) {
     val nutrition by journal.ui.collectAsStateWithLifecycle()
+    val sessionKcal by journal.sessionKcal.collectAsStateWithLifecycle()
     val proposed by viewModel.proposed.collectAsStateWithLifecycle()
+    val proposedInfo by viewModel.proposedInfo.collectAsStateWithLifecycle()
     val templates by viewModel.templates.collectAsStateWithLifecycle()
     val active by viewModel.active.collectAsStateWithLifecycle()
-    val recent by viewModel.recent.collectAsStateWithLifecycle()
-    val weight by viewModel.weight.collectAsStateWithLifecycle()
     val weekProgress by viewModel.weekProgress.collectAsStateWithLifecycle()
     val deload by viewModel.deload.collectAsStateWithLifecycle()
     val catchUp by viewModel.catchUp.collectAsStateWithLifecycle()
     val nudge by viewModel.nudge.collectAsStateWithLifecycle()
-    var addingWeight by remember { mutableStateOf(false) }
+    val board by level.board.collectAsStateWithLifecycle()
     var choosingSession by remember { mutableStateOf(false) }
+    val c = LocalBento.current
+    val resources = LocalContext.current.resources
+    val quipStyle = rememberQuipStyle()
 
-    Scaffold { padding ->
+    val running = active
+    val sessionState = SessionTileState(
+        running = running != null,
+        title = running?.label() ?: proposed?.title(),
+        week = weekProgress,
+        exercises = proposedInfo?.exercises,
+        typicalMinutes = proposedInfo?.typicalMinutes,
+    )
+    val hasMeals = nutrition.entries.isNotEmpty()
+    val calories = CaloriesTileState(
+        kcal = nutrition.totals.kcal.roundToInt().takeIf { hasMeals },
+        target = EnergyMath.target(nutrition.restDayKcal, sessionKcal)?.totalKcal,
+    )
+    val proteins = ProteinTileState(
+        grams = nutrition.totals.proteinG.roundToInt().takeIf { hasMeals },
+        target = nutrition.proteinTargetG?.roundToInt(),
+    )
+    val challenge = board?.current?.let { (month, ch, progress) ->
+        val rower = ch == Challenge.ROWER_OF_THE_MONTH
+        ChallengeTileState(
+            month = ChallengeWording.ofMonth(resources, month),
+            name = ChallengeWording.name(resources, ch),
+            value = progress.value,
+            goal = progress.goal,
+            valueText = measure(rower, progress.value),
+            goalText = measure(rower, progress.goal),
+            unit = stringResource(ChallengeTexts.of(ch).unit),
+            done = progress.completedOn != null,
+        )
+    }
+    val supplements = nutrition.supplements.takeIf { it.isNotEmpty() }?.let { days ->
+        val onlyCreatine = days.size == 1 && days.first().supplement.isCreatine
+        val creatineOn = days.any { it.supplement.isCreatine }
+        val streak = nutrition.creatineStreak
+        SupplementsTileState(
+            title = if (onlyCreatine) "Créatine" else "Compléments",
+            streak = when {
+                !creatineOn -> null
+                streak >= 2 -> "$streak jours d'affilée"
+                streak == 1 -> "1 jour"
+                else -> "Série à lancer"
+            },
+            items = days.take(MAX_SUPPLEMENTS).map { (s, taken) ->
+                SupplementItem(s.id, if (onlyCreatine) "${s.dose()} pris" else "${s.name} ${s.dose()}", taken)
+            },
+            more = (days.size - MAX_SUPPLEMENTS).coerceAtLeast(0),
+        )
+    }
+
+    Box(Modifier.fillMaxSize().background(c.background)) {
         Column(
             Modifier
-                .padding(padding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .statusBarsPadding()
+                .padding(start = BentoDims.screenMargin, end = BentoDims.screenMargin, top = 26.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(BentoDims.gap),
         ) {
-            // V2.15: greeting of the time slot, drawn when the home screen opens.
-            // V2.16: after a break, a welcome back replaces it; a missed goal last week adds a line.
-            val greeting = remember { Quip.greeting(viewModel.now()) }
-            QuipText(
-                if (nudge.welcomeBack) Quip.WELCOME_BACK else greeting,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 8.dp, bottom = if (nudge.missedGoalNext == null) 12.dp else 2.dp),
+            // V2.15: greeting of the time slot, drawn when the home screen opens; V2.16: after a break, a welcome
+            // back replaces it, and a missed goal last week adds a line.
+            val greeting = rememberQuip(if (nudge.welcomeBack) Quip.WELCOME_BACK else remember { Quip.greeting(viewModel.now()) })
+            HomeHeader(
+                hello = nutrition.profile.firstName?.let { "Salut $it" },
+                greeting = greeting,
+                missedGoal = nudge.missedGoalNext?.let { rememberQuip(Quip.MISSED_GOAL, it) },
+                onAnalyse = viewModel::analyse,
+                onSettings = onOpenSettings,
+                modifier = Modifier.padding(bottom = 6.dp),
             )
-            nudge.missedGoalNext?.let { next ->
-                QuipText(
-                    Quip.MISSED_GOAL,
-                    next,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 12.dp),
-                )
-            }
-            LevelCard(onClick = onOpenBadges, modifier = Modifier.padding(bottom = 12.dp))
-            val running = active
-            if (running != null) {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("Séance en cours", style = MaterialTheme.typography.labelLarge)
-                        Text(running.label(), style = MaterialTheme.typography.headlineSmall)
-                        Button(onClick = onOpenSession, colors = accentButtonColors(), modifier = Modifier.fillMaxWidth().height(56.dp).padding(top = 8.dp)) {
-                            Text("Reprendre")
-                        }
+            SessionTile(
+                state = sessionState,
+                startLabel = rememberQuip(Quip.START_BUTTON) ?: stringResource(R.string.neutral_start_button),
+                onStart = {
+                    when {
+                        running != null -> onOpenSession()
+                        proposed != null -> viewModel.start(proposed!!.id, onOpenSession)
+                        else -> choosingSession = true
                     }
-                }
-            } else {
-                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("Entraînement", style = MaterialTheme.typography.labelLarge)
-                        weekProgress?.let { (done, goal) ->
-                            Text(
-                                "Cette semaine : $done/$goal séances" + if (done >= goal) " ✓" else "",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = if (done >= goal) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                        }
-                        Button(
-                            colors = accentButtonColors(),
-                            onClick = { choosingSession = true },
-                            modifier = Modifier.fillMaxWidth().height(64.dp).padding(top = 12.dp),
-                        ) { Text("Nouvelle séance", style = MaterialTheme.typography.titleLarge) }
-                    }
-                }
-            }
-
-            deload?.let { advice ->
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("Semaine de décharge conseillée", style = MaterialTheme.typography.titleMedium)
-                        Text(advice.message, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
-                        TextButton(onClick = viewModel::dismissDeload, modifier = Modifier.align(Alignment.End)) { Text("Compris") }
-                    }
-                }
-            }
-
-            SectionTitle("Nutrition du jour")
-            Card(Modifier.fillMaxWidth().clickable(onClick = onOpenNutrition)) {
-                Column(Modifier.padding(16.dp)) {
-                    ProteinGauge(nutrition.totals, nutrition.proteinTargetG)
-                    nutrition.supplements.forEach { (supplement, taken) ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = taken, onCheckedChange = { journal.setSupplement(supplement, it) })
-                            Text("${supplement.name} ${supplement.dose()}")
-                        }
-                    }
-                }
-            }
-
-            OutlinedButton(onClick = viewModel::analyse, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                Text("Analyse IA du jour")
-            }
-
-            SectionTitle("Poids")
-            Card(Modifier.fillMaxWidth().clickable(onClick = onOpenWeight)) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        val w = weight
-                        if (w == null) {
-                            Text("Aucune pesée")
-                        } else {
-                            Text(Fmt.kg(w.lastKg), style = MaterialTheme.typography.headlineSmall)
-                            Text("le ${w.lastDate.format(dayFormat)} · moyenne 7 j : ${Fmt.kg(w.average7Kg)}")
-                        }
-                    }
-                    FilledTonalButton(onClick = { addingWeight = true }) { Text("+ pesée") }
-                }
-            }
-
-            SectionTitle("Dernières séances")
-            if (recent.isEmpty()) QuipText(Quip.EMPTY_SESSIONS, style = MaterialTheme.typography.bodyMedium)
-            recent.forEach { session ->
-                ListItem(
-                    modifier = Modifier.clickable { onOpenSessionDetail(session.id) },
-                    headlineContent = { Text(session.label()) },
-                    supportingContent = {
-                        Text(
-                            listOfNotNull(
-                                session.startedAt.atZone(viewModel.zone).format(dayFormat),
-                                session.durationMin()?.let { "$it min" },
-                            ).joinToString(" · "),
+                },
+                onChoose = { choosingSession = true },
+            )
+            deload?.let { DeloadTile(it.message, onDismiss = viewModel::dismissDeload) }
+            TileRow(
+                left = { m -> CaloriesTile(calories, onOpenNutrition, m) },
+                right = { m -> ProteinTile(proteins, onOpenNutrition, m) },
+            )
+            TileRow(
+                left = challenge?.let { state -> { m: Modifier -> ChallengeTile(state, { onOpenBadges(2) }, m) } },
+                right = supplements?.let { state ->
+                    { m: Modifier ->
+                        SupplementsTile(
+                            state,
+                            onToggle = { item, taken -> nutrition.supplements.firstOrNull { it.supplement.id == item.id }?.let { journal.setSupplement(it.supplement, taken) } },
+                            onMore = onOpenNutrition,
+                            modifier = m,
                         )
-                    },
+                    }
+                },
+            )
+            board?.level?.let { lv ->
+                LevelTile(
+                    LevelTileState(lv.number, BadgeWording.levelDisplay(resources, lv.number, quipStyle), lv.points, lv.floor, lv.next),
+                    onOpen = { onOpenBadges(0) },
                 )
             }
         }
@@ -373,19 +405,10 @@ fun HomeScreen(
             onDismiss = { choosingSession = false },
         )
     }
-
-    if (addingWeight) {
-        WeightEntryDialog(
-            initialKg = weight?.lastKg ?: 75.0,
-            today = viewModel.today(),
-            onSave = { date, kg ->
-                viewModel.saveWeight(date, kg)
-                addingWeight = false
-            },
-            onDismiss = { addingWeight = false },
-        )
-    }
 }
+
+/** Supplement boxes shown on the home tile; the others are in Nutrition. */
+private const val MAX_SUPPLEMENTS = 3
 
 /**
  * "Nouvelle séance" sheet: the session proposed by the rotation first, then the other templates, then a free session.

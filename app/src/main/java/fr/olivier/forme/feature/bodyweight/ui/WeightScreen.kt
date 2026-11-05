@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -65,6 +66,9 @@ class WeightViewModel @Inject constructor(private val repository: BodyWeightRepo
 private val shortDate = DateTimeFormatter.ofPattern("dd/MM", Fmt.locale)
 private val longDate = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", Fmt.locale)
 
+/** The "Pesée" button (tests: its label appears with the button's expansion). */
+const val ADD_WEIGHT_TAG = "add_weight"
+
 @Composable
 fun WeightScreen(showTopBar: Boolean = true, viewModel: WeightViewModel = hiltViewModel()) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
@@ -72,7 +76,7 @@ fun WeightScreen(showTopBar: Boolean = true, viewModel: WeightViewModel = hiltVi
     Scaffold(
         topBar = { if (showTopBar) FormeTopBar("Poids") },
         floatingActionButton = {
-            ExtendedFloatingActionButton(containerColor = MaterialTheme.colorScheme.tertiary, contentColor = MaterialTheme.colorScheme.onTertiary, onClick = { adding = true }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Pesée") })
+            ExtendedFloatingActionButton(containerColor = MaterialTheme.colorScheme.tertiary, contentColor = MaterialTheme.colorScheme.onTertiary, onClick = { adding = true }, modifier = Modifier.testTag(ADD_WEIGHT_TAG), icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Pesée") })
         },
     ) { padding ->
         LazyColumn(Modifier.padding(padding).padding(horizontal = 16.dp)) {

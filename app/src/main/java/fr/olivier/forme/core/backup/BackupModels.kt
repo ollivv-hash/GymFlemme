@@ -43,7 +43,7 @@ import java.time.LocalDate
  * the history, silently), v8 their tier (V2.18; v7 badges are converted on restore), v9 the monthly challenges
  * (absent → none; the current month's is drawn again, identically), v10 the food supplements (V2.20; the creatine
  * of older files, in the profile and `creatine`, becomes the first supplement, the others are added switched off),
- * v11 the dishes of one's own (V2.21; absent → none).
+ * v11 the dishes of one's own (V2.21; absent → none), v12 the first name of the profile (V2.22; absent → none).
  * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual and exercise library reference tables
  * (embedded in the APK) are not exported.
  */
@@ -133,6 +133,8 @@ data class ProfileDto(
     val heightCm: Int? = null,
     val nutritionGoal: NutritionGoal? = null,
     val kcalTargetOverride: Int? = null,
+    /** V2.22 (backup v12). */
+    val firstName: String? = null,
 )
 
 @Serializable
@@ -354,10 +356,11 @@ fun ProfileEntity.toDto() = ProfileDto(
     proteinTargetGPerKg, wheyProteinPer100g, wheyKcalPer100g, wheyCarbsPer100g, wheyFatPer100g, wheyScoopG,
     birthYear = birthYear, sex = sex, hrMaxOverride = hrMaxOverride, heightCm = heightCm, nutritionGoal = nutritionGoal,
     kcalTargetOverride = kcalTargetOverride,
+    firstName = firstName,
 )
 fun ProfileDto.toEntity() = ProfileEntity(
     1, proteinTargetGPerKg, wheyProteinPer100g, wheyKcalPer100g, wheyCarbsPer100g, wheyFatPer100g, wheyScoopG,
-    birthYear, sex, hrMaxOverride, heightCm, nutritionGoal, kcalTargetOverride,
+    birthYear, sex, hrMaxOverride, heightCm, nutritionGoal, kcalTargetOverride, firstName,
 )
 
 fun FoodEntity.toDto() = FoodDto(

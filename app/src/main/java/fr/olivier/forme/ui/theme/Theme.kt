@@ -84,8 +84,10 @@ fun FormeTheme(mode: ThemeMode, content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = if (dark) DarkColors else LightColors,
         typography = Typography(),
-        content = content,
-    )
+    ) {
+        // V2.22: the bento tokens of the home screen follow the same theme.
+        androidx.compose.runtime.CompositionLocalProvider(LocalBento provides if (dark) DarkBento else LightBento, content = content)
+    }
 }
 
 /** Vivid orange button for the main call to action (start / resume a session). */

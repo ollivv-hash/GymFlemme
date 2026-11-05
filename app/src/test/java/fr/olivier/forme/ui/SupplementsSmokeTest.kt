@@ -46,9 +46,9 @@ class SupplementsSmokeTest {
 
     @Test
     fun switchOnAddAndTickSupplements() {
-        waitFor("Nouvelle séance")
-        waitFor("Créatine 5 g") // home card: creatine on by default, as before
-        rule.onNode(hasText("Config") and hasClickAction()).performClick()
+        rule.waitForHome()
+        waitFor("5 g pris") // home tile: creatine on by default, as before
+        rule.openSettings()
         rule.onNode(hasText("Compléments") and hasClickAction()).performClick()
         waitFor("Oméga-3")
         waitFor("Vitamine D")
@@ -60,7 +60,7 @@ class SupplementsSmokeTest {
         shot("sp1-config-supplements")
 
         rule.onNode(hasContentDescription("Retour")).performClick()
-        rule.onNode(hasText("Nutrition") and hasClickAction()).performClick()
+        rule.tab("Nutrition")
         rule.waitUntilAtLeastOneExists(hasText("Oméga-3 1 g"), 15_000)
         waitFor("Créatine 5 g")
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Oméga-3 1 g"))

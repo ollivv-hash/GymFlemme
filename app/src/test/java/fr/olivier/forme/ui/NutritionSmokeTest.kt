@@ -80,8 +80,8 @@ class NutritionSmokeTest {
         db.close()
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            rule.waitUntilAtLeastOneExists(hasText("Nutrition du jour"), 10_000)
-            rule.onNode(hasText("Nutrition") and hasClickAction()).performClick()
+            rule.waitForHome()
+            rule.tab("Nutrition")
             rule.waitUntilAtLeastOneExists(hasText("/ 148 g", substring = true), 10_000)
             shot("n1-journal-empty")
 

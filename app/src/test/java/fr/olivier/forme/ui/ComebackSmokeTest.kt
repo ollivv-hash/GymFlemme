@@ -88,12 +88,12 @@ class ComebackSmokeTest {
     fun welcomeBackThenLighterLoadsOnRequest() {
         sessionsOn(LocalDate.now().minusDays(20))
         ActivityScenario.launch(MainActivity::class.java).use {
-            waitFor("Nutrition du jour")
+            rule.waitForHome()
             waitForAny(resources.getStringArray(R.array.humor_welcome_back).toList())
             rule.acknowledgeBadges()
             shot("cb1-welcome-back")
 
-            rule.onNode(hasText("Nouvelle séance") and hasClickAction()).performClick()
+            rule.openSessionChoice()
             rule.onNode(hasText("Démarrer") and hasClickAction()).performClick()
             waitFor(resources.getStringArray(R.array.humor_lighter_loads).first())
             shot("cb2-lighter-loads-offer")
@@ -112,7 +112,7 @@ class ComebackSmokeTest {
         // One session last Sunday (goal: 3), one three weeks ago: a regular who missed last week's goal.
         sessionsOn(thisWeek.minusDays(1), thisWeek.minusWeeks(3))
         ActivityScenario.launch(MainActivity::class.java).use {
-            waitFor("Nutrition du jour")
+            rule.waitForHome()
             val variants = resources.getStringArray(R.array.humor_missed_goal).map { it.replace("%1\$s", "A · Poussée + tronc") }
             waitForAny(variants)
             shot("cb4-missed-goal")

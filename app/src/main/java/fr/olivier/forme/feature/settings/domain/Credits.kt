@@ -72,6 +72,14 @@ object Credits {
             url = "https://developers.google.com/ml-kit/vision/barcode-scanning",
         ),
         Credit(
+            title = "Space Grotesk",
+            author = "Florian Karsten et les auteurs du projet Space Grotesk",
+            usage = "Police de l'écran d'accueil (V2.22), embarquée sans modification.",
+            license = "SIL Open Font License 1.1",
+            licenseUrl = "https://openfontlicense.org/open-font-license-official-text/",
+            url = "https://github.com/floriankarsten/space-grotesk",
+        ),
+        Credit(
             title = "Reorderable",
             author = "Calvin Liang",
             usage = "Réorganisation des listes par glisser-déposer.",

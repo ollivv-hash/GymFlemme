@@ -56,7 +56,7 @@ class BackupRoundTripTest {
             source, source.profileDao(), source.ciqualDao(), source.foodDao(), source.mealDao(), source.supplementDao(),
             source.sessionDao(), OpenFoodFactsClient(), clock,
         )
-        nutrition.saveProfile(ProfileEntity(proteinTargetGPerKg = 2.0, wheyProteinPer100g = 80.0, birthYear = 1980, sex = Sex.MALE, hrMaxOverride = 181, heightCm = 178, nutritionGoal = NutritionGoal.BULK, kcalTargetOverride = 2700))
+        nutrition.saveProfile(ProfileEntity(firstName = "Olivier", proteinTargetGPerKg = 2.0, wheyProteinPer100g = 80.0, birthYear = 1980, sex = Sex.MALE, hrMaxOverride = 181, heightCm = 178, nutritionGoal = NutritionGoal.BULK, kcalTargetOverride = 2700))
         val session = source.sessionDao().getSession(id)!!
         HeartRepository(source.sessionHeartDao(), source.sessionDao(), source.profileDao(), source.bodyWeightDao(), clock)
             .saveSession(id, listOf(session.startedAt.plusSeconds(30) to 120, session.startedAt.plusSeconds(90) to 150), HeartSource.BLE, watchKcal = 42.0)
@@ -86,6 +86,7 @@ class BackupRoundTripTest {
         assertEquals(NutritionGoal.BULK, exported.nutrition.profile!!.nutritionGoal)
         assertEquals(2700, exported.nutrition.profile!!.kcalTargetOverride)
         assertEquals(1980, exported.nutrition.profile!!.birthYear)
+        assertEquals("Olivier", exported.nutrition.profile!!.firstName)
         assertEquals(listOf("NOT_DEAD" to 0), exported.badges.map { it.id to it.tier })
         assertEquals(listOf("2026-09", "2026-10"), exported.challenges.map { it.month })
         assertEquals(listOf(2), exported.nutrition.dishes.map { it.servings })
