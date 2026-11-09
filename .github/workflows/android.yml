@@ -5,7 +5,7 @@
 #   FORME_STORE_PASSWORD   keystore password
 #   FORME_KEY_ALIAS        key alias (forme)
 #   FORME_KEY_PASSWORD     key password
-#   (secret names kept from the app's former name "Forme"; the APK and release are named GymBro from 2.11.0, GymFlemme since 2.14.0)
+#   (secret names kept from the app's former name "Forme")
 # Without them the APK is built unsigned (not installable) and no release is published.
 #
 # Runner pinned to ubuntu-24.04 (ubuntu-latest moves to Ubuntu 26 from 2026-10-19) and actions on Node 24
@@ -104,6 +104,12 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            docs/CHANGELOG.md
+            tools/release
+
       - uses: actions/download-artifact@v8
         with:
           name: gymflemme-${{ needs.build.outputs.version }}-apk
@@ -118,5 +124,7 @@ jobs:
             echo "Release v$VERSION already exists: bump versionName to publish a new one."
             exit 0
           fi
+          # French notes from the version's line in docs/CHANGELOG.md.
+          python3 tools/release/notes.py "$VERSION" > "$RUNNER_TEMP/notes.md"
           gh release create "v$VERSION" dist/*.apk --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "GymFlemme $VERSION" --generate-notes
+            --title "GymFlemme $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
