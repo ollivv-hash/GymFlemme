@@ -1,0 +1,61 @@
+# One-off, run by hand before the repository goes public (Actions → "Cleanup old releases" → Run workflow):
+# deletes every release and tag except the one to keep, and rewrites that release's notes in French from
+# docs/CHANGELOG.md. To be removed once it has run.
+name: Cleanup old releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: Release (tag) to keep
+        default: v2.22.0
+        required: true
+      confirm:
+        description: Type SUPPRIMER to delete for real (anything else only lists what would go)
+        default: ""
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            docs/CHANGELOG.md
+            tools/release
+
+      - name: Delete the other releases and tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEEP: ${{ inputs.keep }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          set -euo pipefail
+          gh release view "$KEEP" --repo "$GITHUB_REPOSITORY" > /dev/null \
+            || { echo "::error::Release $KEEP not found: nothing deleted."; exit 1; }
+          for tag in $(gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName --jq '.[].tagName'); do
+            [ "$tag" = "$KEEP" ] && continue
+            echo "release $tag"
+            [ "$CONFIRM" = SUPPRIMER ] && gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+          done
+          # Tags left without a release.
+          for ref in $(gh api --paginate "repos/$GITHUB_REPOSITORY/git/matching-refs/tags" --jq '.[].ref'); do
+            tag=${ref#refs/tags/}
+            [ "$tag" = "$KEEP" ] && continue
+            echo "tag $tag"
+            [ "$CONFIRM" = SUPPRIMER ] && gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" || true
+          done
+          [ "$CONFIRM" = SUPPRIMER ] || echo "::notice::Dry run: type SUPPRIMER in 'confirm' to delete."
+
+      - name: French notes for the release kept
+        if: inputs.confirm == 'SUPPRIMER'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEEP: ${{ inputs.keep }}
+        run: |
+          python3 tools/release/notes.py "${KEEP#v}" > "$RUNNER_TEMP/notes.md"
+          gh release edit "$KEEP" --repo "$GITHUB_REPOSITORY" --notes-file "$RUNNER_TEMP/notes.md"
