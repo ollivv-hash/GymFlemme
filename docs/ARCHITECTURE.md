@@ -501,6 +501,16 @@ Source des données de composition : *Anses. 2025. Table de composition nutritio
 
 ---
 
+## Partage de modèles de séance (V2.27)
+
+Réglages → Modèles de séance : **Partager** sur chaque modèle (prénom facultatif ; fichier `.gymflemme` par la feuille
+de partage, ou QR code), **Importer un modèle** (sélecteur de fichiers) et **Scanner un modèle** (QR code, caméra ML
+Kit) ; un `.gymflemme` s'ouvre aussi depuis une autre app (filtres d'intention de `MainActivity`). Prévisualisation
+avant tout écrit (exercices reconnus par `libraryId` puis nom sans accents, ou à créer ; « Changer » ; nom en conflit
+→ « nom (auteur) ») ; import = copie indépendante, hors rotation, « Ajouter à ma rotation » proposé. Format, QR code
+(deflate + base64, préfixe `GYMFLEMME1:`, niveau M, version 25 au plus) et règles : [format-partage.md](format-partage.md).
+Code : `feature/sharing/` ; QR dessiné par ZXing core (Apache 2.0). Pas de changement de base ni de sauvegarde.
+
 ## Assistant du premier lancement (V2.25)
 
 Sur une **nouvelle installation** seulement (`Onboarding.shouldShow` : ni pesée, ni profil rempli, et pas déjà vu ; un
