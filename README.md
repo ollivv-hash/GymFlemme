@@ -33,15 +33,19 @@ réseau. Faite pour un usage personnel, partagée telle quelle avec quelques ami
 
 ## Installer
 
-1. Sur le téléphone, ouvrez la [dernière version](https://github.com/ollivv-hash/GymFlemme/releases/latest) et
+1. Sur le téléphone, ouvrez la [dernière version](https://github.com/ollivv-hash/gymflemme-releases/releases/latest) et
    téléchargez le fichier `gymflemme-x.y.z.apk`.
 2. Ouvrez-le. Android demande d'autoriser l'installation depuis le navigateur (ou le gestionnaire de fichiers) :
    acceptez pour cette fois.
 3. Play Protect peut avertir que l'app est inconnue : elle ne vient pas du Play Store, c'est normal. Choisissez
    « Installer quand même ».
 
-Android 9 ou plus récent. Pour mettre à jour, installez simplement le nouvel APK par-dessus : vos données sont
-conservées.
+Android 9 ou plus récent. Ensuite, l'app **se met à jour toute seule** : elle signale une nouvelle version sur
+l'accueil, la télécharge (en Wi-Fi par défaut), vérifie le fichier et l'installe après votre accord ; vos données sont
+conservées. Réglages → À propos → « Rechercher une mise à jour » pour vérifier tout de suite.
+
+Les versions jusqu'à la 2.27 sont dans les [anciennes releases](https://github.com/ollivv-hash/GymFlemme/releases) de ce
+dépôt ; depuis la 2.28, elles sont publiées dans [gymflemme-releases](https://github.com/ollivv-hash/gymflemme-releases).
 
 ## Premier lancement
 
@@ -75,6 +79,8 @@ Désinstaller l'app efface ses données : faites une sauvegarde avant.
 - [Historique des versions](docs/CHANGELOG.md)
 - [Architecture et règles de fonctionnement](docs/ARCHITECTURE.md)
 - [Compiler l'app](docs/DEVELOPPEMENT.md)
+- [Publier une version](docs/publication.md)
+- [Format de partage d'un modèle](docs/format-partage.md)
 
 ## Crédits
 
