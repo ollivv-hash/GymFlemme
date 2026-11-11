@@ -41,6 +41,8 @@ import fr.olivier.forme.feature.settings.ui.ConfigScreen
 import fr.olivier.forme.feature.settings.ui.SettingsScreen
 import fr.olivier.forme.feature.settings.ui.AboutScreen
 import fr.olivier.forme.feature.onboarding.OnboardingScreen
+import fr.olivier.forme.feature.sharing.TemplateImportScreen
+import fr.olivier.forme.feature.sharing.TemplateScanScreen
 import fr.olivier.forme.feature.settings.ui.AppearanceScreen
 import fr.olivier.forme.feature.heart.ui.WatchTestScreen
 import fr.olivier.forme.feature.library.ui.ExerciseSheetScreen
@@ -79,6 +81,10 @@ fun FormeNavHost(
     resumeOnStart: Boolean,
     hasActiveSession: suspend () -> Boolean,
     shouldShowOnboarding: suspend () -> Boolean = { false },
+    /** V2.27: a template file opened from another app, or picked by "Importer un modèle". */
+    templateToImport: String? = null,
+    onTemplateHandled: () -> Unit = {},
+    onPickTemplateFile: () -> Unit = {},
     pendingAction: QuickAction? = null,
     startProposedSession: (then: () -> Unit) -> Unit = { it() },
     onActionHandled: () -> Unit = {},
@@ -105,6 +111,13 @@ fun FormeNavHost(
     }
 
     // Launcher shortcuts and widget (V2.6): opened above the home screen, so "back" returns to it.
+    LaunchedEffect(templateToImport) {
+        val uri = templateToImport ?: return@LaunchedEffect
+        nav.currentBackStackEntryFlow.first()
+        withContext(Dispatchers.Main.immediate) { nav.navigate(TemplateImportRoute(uri = uri)) }
+        onTemplateHandled()
+    }
+
     LaunchedEffect(pendingAction) {
         val action = pendingAction ?: return@LaunchedEffect
         nav.currentBackStackEntryFlow.first()
@@ -278,6 +291,15 @@ fun FormeNavHost(
                     onDuplicate = { nav.navigate(TemplateEditRoute(sourceTemplateId = it)) },
                     onCreate = { nav.navigate(TemplateEditRoute()) },
                     onRotation = { nav.navigate(RotationRoute) },
+                    onImport = onPickTemplateFile,
+                    onScan = { nav.navigate(TemplateScanRoute) },
+                )
+            }
+            composable<TemplateImportRoute> { TemplateImportScreen(onDone = { nav.popBackStack() }) }
+            composable<TemplateScanRoute> {
+                TemplateScanScreen(
+                    onBack = { nav.popBackStack() },
+                    onPayload = { payload -> nav.navigate(TemplateImportRoute(payload = payload)) { popUpTo<TemplateScanRoute> { inclusive = true } } },
                 )
             }
             composable<TemplateEditRoute> { TemplateEditScreen(onDone = { nav.popBackStack() }) }

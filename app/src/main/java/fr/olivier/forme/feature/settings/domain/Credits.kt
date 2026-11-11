@@ -88,6 +88,14 @@ object Credits {
             url = "https://github.com/google/material-design-icons",
         ),
         Credit(
+            title = "ZXing",
+            author = "Les auteurs de ZXing",
+            usage = "Dessin du QR code d'un modèle de séance partagé (V2.27).",
+            license = "Apache 2.0",
+            licenseUrl = "https://www.apache.org/licenses/LICENSE-2.0",
+            url = "https://github.com/zxing/zxing",
+        ),
+        Credit(
             title = "Reorderable",
             author = "Calvin Liang",
             usage = "Réorganisation des listes par glisser-déposer.",
