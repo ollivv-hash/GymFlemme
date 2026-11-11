@@ -271,11 +271,19 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   déduit (machine cardio → Cardio 1 × 20 min ; image de maintien → Durée 3 × 30 s, par côté si unilatéral ; sans
   matériel → Poids du corps ; sinon Charge + reps, 3 × 10–12), relié à son illustration. Le message de confirmation
   propose **Modifier** pour ajuster aussitôt.
-- **Config → Sources et licences** (V2.11) : pour chaque donnée embarquée ou interrogée, son auteur, son usage, sa
+- **Réglages → À propos** (« Sources et licences » de V2.11 à V2.22) : version de l'app, puis pour chaque donnée embarquée ou interrogée, son auteur, son usage, sa
   licence et deux liens (site, texte de la licence) : Open Exercise Illustrations (CC0 1.0, commit `2786aef`, avec la
   mise en garde « générées par IA »), table Ciqual 2025 (Licence Ouverte / Etalab 2.0), Open Food Facts (ODbL 1.0) ;
-  puis les logiciels (Android Jetpack, Kotlin : Apache 2.0 ; ML Kit : conditions Google ; Reorderable : Apache 2.0).
+  puis les logiciels (Android Jetpack, Kotlin, Material Symbols, Reorderable : Apache 2.0 ; ML Kit : conditions Google ;
+  Space Grotesk : OFL 1.1).
   Un test vérifie que le commit affiché est celui de `SOURCE.md` et de `ExerciseLibraryLoader.DATASET_VERSION`.
+- **Mode développeur** (V2.23) : 7 appuis de suite sur la version dans À propos (une pause de plus de 3 s recommence le
+  compte ; « Encore N appuis » à partir de 3) → « Mode développeur activé ». Il affiche le **journal Bluetooth** dans
+  Réglages → Montre cardio (et l'ajoute au rapport copié) ; un interrupteur dans À propos le désactive. Préférence
+  DataStore `developer_mode`, propre au téléphone : pas dans la sauvegarde JSON.
+- Écran « Réglages » de l'ancienne entrée « Réglages et sauvegarde » renommé **Préférences et sauvegarde** (V2.23).
+- **Textes** : depuis V2.23, les nouveaux textes vont dans `res/values/strings.xml` (les plus anciens restent dans le
+  code).
 - **Poids de l'APK** (release, mesuré sur les releases GitHub) :
 
   | Version | APK | Écart |
@@ -356,7 +364,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
     rafale de changements (séries d'une séance, restauration) ne donne qu'un calcul, 300 ms après le dernier. Records
     détectés en un passage par exercice (meilleure charge et meilleur volume cumulés). Mesuré sur 3 ans
     (624 séances, 20 000 séries) : ~95 ms, dont ~60 ms de requête SQL ; un calcul incrémental n'est pas nécessaire.
-- Restent neutres : poids, repas, mentions santé, Sources et licences, erreurs, confirmations, autorisations.
+- Restent neutres : poids, repas, mentions santé, À propos, erreurs, confirmations, autorisations.
 - Test garde-fou : chaque tableau a des variantes, sa version neutre et une entrée `Quip` ; les versions féminines
   ont autant de phrases ; toutes se formatent avec leurs paramètres.
 
@@ -364,7 +372,7 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 
 - **Grille de tuiles** (aplats, coins 26 dp, police **Space Grotesk** embarquée, licence OFL) : en-tête « Salut {prénom} »
   (Config → Profil) et salutation du catalogue d'humour (message de retour après une pause, ligne « objectif raté » en
-  dessous), boutons **Analyse IA du jour** et **Réglages** (Config). Puis :
+  dessous), bouton **Analyse IA du jour** (le bouton Réglages de V2.22 est devenu un onglet en V2.23). Puis :
   - **Prochaine séance** (accent, pleine largeur) : séance proposée par la rotation, pastille « Sem. 2 / 3 », « 5 exercices
     · ~40 min » (médiane des 5 dernières séances de ce modèle, arrondie à 5 min ; séances de plus de 4 h ignorées). Le
     bouton (« C'est parti », « On y va », « Allez hop » ; « Démarrer » en mode sérieux) lance la séance proposée ; le
@@ -375,8 +383,10 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   - **Défi du mois** (segments jusqu'à 15, barre au-delà) et **Créatine / Compléments** (série de la créatine, une case par
     complément actif, 3 au plus) ; l'une prend toute la largeur si l'autre manque.
   - **Niveau** : numéro, titre, barre vers le niveau suivant ; ouvre l'écran Badges.
-- **Barre de navigation flottante** sur les onglets et sur Config : Accueil, Séances (ex-Historique), Nutrition, Badges ;
-  Config s'ouvre depuis l'en-tête de l'accueil. Le poids (Nutrition → Poids) et les dernières séances (Séances) ne sont
+- **Barre de navigation flottante** sur les 5 onglets (V2.23) : Accueil, Séances (ex-Historique), Nutrition, Badges,
+  **Réglages** (ex-Config, sans flèche retour). Icônes **Material Symbols** Outlined, graisse 400 (`home`,
+  `fitness_center`, `restaurant`, `military_tech`, `settings` ; `auto_awesome` pour l'analyse IA), Apache 2.0, converties
+  telles quelles (`third_party/material-symbols`). Zones tactiles 48 dp, une description par onglet. Le poids (Nutrition → Poids) et les dernières séances (Séances) ne sont
   plus sur l'accueil.
 - **Thèmes** : maquette claire validée ; sombre avec la même structure (tuile calories inversée en clair). Contrastes
   texte ≥ 4,5:1. Barres animées 300 ms, sans animation si « Supprimer les animations » est activé. TalkBack lit chaque
