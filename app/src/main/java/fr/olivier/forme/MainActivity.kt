@@ -102,11 +102,15 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var quips: QuipRepository
 
+    /** V2.28: the GitHub update in the "github" variant, nothing in "play". */
+    @Inject lateinit var updates: fr.olivier.forme.core.update.UpdateFeature
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         // After a recreation (rotation), the launching action was already performed.
         if (savedInstanceState == null) handle(intent)
+        if (savedInstanceState == null) updates.onAppStart()
         setContent {
             val appearance = viewModel.appearance.collectAsStateWithLifecycle()
             val pendingAction = viewModel.pendingAction.collectAsStateWithLifecycle()
@@ -116,7 +120,7 @@ class MainActivity : ComponentActivity() {
                 androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
             ) { uri -> uri?.let(viewModel::importTemplate) }
             FormeTheme(appearance.value) {
-                CompositionLocalProvider(LocalQuips provides quips) {
+                CompositionLocalProvider(LocalQuips provides quips, fr.olivier.forme.core.update.LocalUpdateFeature provides updates) {
                     FormeNavHost(
                         resumeOnStart = savedInstanceState == null,
                         hasActiveSession = viewModel::hasActiveSession,

@@ -1,10 +1,22 @@
 """Prints the French release notes of a version, taken from its line in docs/CHANGELOG.md.
 
-Usage: python3 tools/release/notes.py 2.22.0 [path/to/CHANGELOG.md]
+Usage: python3 tools/release/notes.py [--plain] 2.22.0 [path/to/CHANGELOG.md]
+--plain: the line alone, as plain text (the "notes" of update.json, shown in the app).
 """
 import os
 import re
 import sys
+
+
+def line(version: str, changelog: str) -> str | None:
+    """The version's line of the changelog ("2.22.0" is listed as V2.22, "2.20.1" as V2.20.1), or None."""
+    names = {version, re.sub(r"\.0$", "", version)}
+    content = None
+    for row in changelog.splitlines():
+        m = re.match(r"\|\s*\*\*V([\d.]+)\*\*[^|]*\|\s*(.+?)\s*\|\s*$", row)
+        if m and m.group(1) in names:
+            content = m.group(2)
+    return content
 
 
 def notes(version: str, changelog: str, repo: str = "ollivv-hash/GymFlemme") -> str:
@@ -30,6 +42,13 @@ def notes(version: str, changelog: str, repo: str = "ollivv-hash/GymFlemme") -> 
 
 
 if __name__ == "__main__":
-    path = sys.argv[2] if len(sys.argv) > 2 else "docs/CHANGELOG.md"
+    args = sys.argv[1:]
+    plain = "--plain" in args
+    args = [a for a in args if a != "--plain"]
+    path = args[1] if len(args) > 1 else "docs/CHANGELOG.md"
     with open(path, encoding="utf-8") as f:
-        sys.stdout.write(notes(sys.argv[1], f.read(), os.environ.get("GITHUB_REPOSITORY", "ollivv-hash/GymFlemme")))
+        text = f.read()
+    if plain:
+        sys.stdout.write((line(args[0], text) or f"GymFlemme {args[0]}").replace("`", "") + "\n")
+    else:
+        sys.stdout.write(notes(args[0], text, os.environ.get("GITHUB_REPOSITORY", "ollivv-hash/GymFlemme")))

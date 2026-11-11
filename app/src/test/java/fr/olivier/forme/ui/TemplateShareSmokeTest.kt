@@ -69,6 +69,8 @@ class TemplateShareSmokeTest {
             rule.onNode(hasContentDescription("Partager Tirage + tronc")).performClick()
             waitFor("Seule la structure est partagée")
             waitFor("Afficher mon prénom")
+            // The QR code is computed after the dialog opens: its button is enabled then.
+            rule.waitUntilAtLeastOneExists(hasText("Afficher un QR code") and hasClickAction() and androidx.compose.ui.test.isEnabled(), 15_000)
             rule.onNode(hasText("Afficher un QR code") and hasClickAction()).performClick()
             rule.waitUntilAtLeastOneExists(hasTestTag(TEMPLATE_QR_TAG), 15_000)
             File(File("build/smoke-screens").apply { mkdirs() }, "t1-share-qr.png").outputStream().use { out ->

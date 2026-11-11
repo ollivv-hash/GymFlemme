@@ -1,4 +1,5 @@
-# Tests, lint and release APK on every pull request; GitHub release on every new version merged into main.
+# Tests, lint and release APKs of both variants ("github", "play") on every pull request and push to main.
+# Since V2.28 releases are published by publish.yml, on a tag v* (docs/publication.md), no longer on a merge.
 #
 # Release signing uses four repository secrets (Settings → Secrets and variables → Actions):
 #   FORME_KEYSTORE_BASE64  the .jks file, base64-encoded
@@ -6,7 +7,7 @@
 #   FORME_KEY_ALIAS        key alias (forme)
 #   FORME_KEY_PASSWORD     key password
 #   (secret names kept from the app's former name "Forme")
-# Without them the APK is built unsigned (not installable) and no release is published.
+# Without them the APKs are built unsigned (not installable).
 #
 # Runner pinned to ubuntu-24.04 (ubuntu-latest moves to Ubuntu 26 from 2026-10-19) and actions on Node 24
 # (Node 20 is deprecated on the runners): bump them on purpose, together, when needed.
@@ -69,8 +70,11 @@ jobs:
           EOF
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Tests, lint, release build
-        run: ./gradlew testDebugUnitTest lintDebug assembleRelease --stacktrace
+      # Both variants compile and pass the tests; the "play" one also checks it holds no install permission.
+      - name: Tests, lint, release builds
+        run: |
+          ./gradlew testGithubDebugUnitTest testPlayDebugUnitTest lintGithubDebug lintPlayDebug \
+            assembleGithubRelease assemblePlayRelease --stacktrace
 
       - name: Remove signing key
         if: always()
@@ -78,9 +82,10 @@ jobs:
 
       - name: Rename APK
         run: |
-          src=$(ls app/build/outputs/apk/release/*.apk | head -1)
           suffix=$([ "${{ steps.signing.outputs.signed }}" = true ] && echo "" || echo "-unsigned")
-          mkdir -p dist && cp "$src" "dist/gymflemme-${{ steps.version.outputs.name }}$suffix.apk"
+          mkdir -p dist
+          cp "$(ls app/build/outputs/apk/github/release/*.apk | head -1)" "dist/gymflemme-${{ steps.version.outputs.name }}$suffix.apk"
+          cp "$(ls app/build/outputs/apk/play/release/*.apk | head -1)" "dist/gymflemme-play-${{ steps.version.outputs.name }}$suffix.apk"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -96,35 +101,3 @@ jobs:
             app/build/reports/
             app/build/smoke-screens/
           retention-days: 7
-
-  release:
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.outputs.signed == 'true'
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          sparse-checkout: |
-            docs/CHANGELOG.md
-            tools/release
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: gymflemme-${{ needs.build.outputs.version }}-apk
-          path: dist
-
-      - name: Publish release (once per version)
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.build.outputs.version }}
-        run: |
-          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            echo "Release v$VERSION already exists: bump versionName to publish a new one."
-            exit 0
-          fi
-          # French notes from the version's line in docs/CHANGELOG.md.
-          python3 tools/release/notes.py "$VERSION" > "$RUNNER_TEMP/notes.md"
-          gh release create "v$VERSION" dist/*.apk --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "GymFlemme $VERSION" --notes-file "$RUNNER_TEMP/notes.md"

@@ -501,6 +501,29 @@ Source des données de composition : *Anses. 2025. Table de composition nutritio
 
 ---
 
+## Mise à jour depuis GitHub (V2.28)
+
+Deux variantes (`productFlavors`, dimension `distribution`), même identifiant `fr.olivier.forme` :
+- **`github`** : `src/github/` (code `fr.olivier.forme.update`, manifeste avec `REQUEST_INSTALL_PACKAGES`,
+  `ACCESS_NETWORK_STATE` et le récepteur de l'installeur, textes `update_strings.xml`) ;
+- **`play`** : `src/play/` ne fournit qu'une implémentation vide ; la tâche `check<Variante>NoInstallPermission` fait
+  échouer le build si le manifeste fusionné de `play` contient `REQUEST_INSTALL_PACKAGES`.
+
+Le code commun ne connaît que l'interface `core/update/UpdateFeature` (fournie par Hilt, transmise par
+`LocalUpdateFeature`) : carte de l'accueil, section d'À propos, route de l'écran de mise à jour.
+**Comportement (`github`)** : vérification au lancement au plus une fois par 24 h (`update_last_check`) ou par
+« Rechercher une mise à jour » : `GET api.github.com/repos/ollivv-hash/gymflemme-releases/releases/latest`, sans
+authentification, puis lecture de l'asset `update.json` (lien https, SHA-256 de 64 chiffres hexadécimaux). Plus récent
+que la version installée (`versionCode`, jamais de retour en arrière) et compatible (`minSdk`) → carte sur l'accueil
+(« Plus tard » la cache jusqu'à la version suivante, `update_dismissed_version`) et écran (version, notes). Téléchargement
+dans `cache/updates` avec progression, seulement sur un réseau non facturé à l'usage si « Télécharger uniquement en
+Wi-Fi » (défaut, `update_wifi_only`), sinon « Télécharger quand même » ; SHA-256 vérifié, fichier supprimé s'il ne
+correspond pas. Installation par une session `PackageInstaller` (confirmation d'Android) ; la première fois, écran
+d'explication puis paramètres « Installer des applis inconnues ». Erreurs (pas de réseau, limite de l'API, fichier
+illisible ou modifié, installation refusée) : message neutre, jamais bloquant ; nouvel essai au lancement suivant.
+Publication : [publication.md](publication.md). Les tests JVM ne contactent pas GitHub (propriété
+`gymflemme.skipUpdateCheck`).
+
 ## Partage de modèles de séance (V2.27)
 
 Réglages → Modèles de séance : **Partager** sur chaque modèle (prénom facultatif ; fichier `.gymflemme` par la feuille

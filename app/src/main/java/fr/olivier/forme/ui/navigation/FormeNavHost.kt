@@ -1,5 +1,6 @@
 package fr.olivier.forme.ui.navigation
 
+import fr.olivier.forme.core.update.LocalUpdateFeature
 import fr.olivier.forme.feature.badges.ui.BadgeAnnouncer
 import fr.olivier.forme.feature.badges.ui.BadgesScreen
 import androidx.compose.foundation.layout.padding
@@ -90,6 +91,7 @@ fun FormeNavHost(
     onActionHandled: () -> Unit = {},
 ) {
     val nav = rememberNavController()
+    val updates = LocalUpdateFeature.current
     val backStack by nav.currentBackStackEntryAsState()
     val destination = backStack?.destination
     val showBar = topLevels.any { top -> destination?.hasRoute(top.route::class) == true }
@@ -153,11 +155,13 @@ fun FormeNavHost(
         },
     ) { padding ->
         NavHost(nav, startDestination = HomeRoute, modifier = Modifier.padding(bottom = padding.calculateBottomPadding())) {
+            updates?.register(this, nav)
             composable<HomeRoute> {
                 HomeScreen(
                     onOpenSession = { nav.navigate(ActiveSessionRoute) },
                     onOpenNutrition = { nav.switchTab(NutritionRoute(tab = 0)) },
                     onOpenBadges = { tab -> nav.switchTab(BadgesRoute(tab)) },
+                    onOpenUpdate = { updates?.open(nav) },
                 )
             }
             composable<BadgesRoute> { BadgesScreen(onBack = { nav.popBackStack() }, initialTab = it.toRoute<BadgesRoute>().tab) }
@@ -283,7 +287,7 @@ fun FormeNavHost(
                     onEdit = { nav.navigate(ExerciseEditRoute(it)) },
                 )
             }
-            composable<SourcesRoute> { AboutScreen(onBack = { nav.popBackStack() }) }
+            composable<SourcesRoute> { AboutScreen(onBack = { nav.popBackStack() }, onOpenUpdate = { updates?.open(nav) }) }
             composable<TemplatesRoute> {
                 TemplatesScreen(
                     onBack = { nav.popBackStack() },

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "github" variant only (V2.28): the app updates itself from the releases repository. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Wi-Fi or mobile data, for "Télécharger uniquement en Wi-Fi". -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application>
+        <receiver
+            android:name="fr.olivier.forme.update.InstallReceiver"
+            android:exported="false" />
+    </application>
+</manifest>

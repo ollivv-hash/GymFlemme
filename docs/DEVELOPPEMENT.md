@@ -4,7 +4,8 @@ Compiler, signer, tester et publier GymFlemme. Le fonctionnement de l'app est d�
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Méthode de travail du projet : proposition → validation → implémentation par étapes ; commits atomiques ;
-vérifications locales complètes (`gradlew testDebugUnitTest lintDebug assembleRelease`) avant chaque push ; une PR par
+vérifications locales complètes (`gradlew testGithubDebugUnitTest testPlayDebugUnitTest lintGithubDebug lintPlayDebug
+assembleGithubRelease assemblePlayRelease`) avant chaque push ; une PR par
 version, fusionnée sur `main`, qui publie la release.
 
 ## Prérequis (Windows)
@@ -50,18 +51,22 @@ La configuration `release` lit un fichier `keystore.properties` à la racine, **
 
 ## Build
 
+Deux variantes depuis V2.28 (même code, même identifiant) : **`github`**, qui se met à jour depuis le dépôt de
+versions, et **`play`**, sans code de mise à jour ni permission d'installer (voir [publication.md](publication.md)).
+
 ```bat
-gradlew assembleRelease
+gradlew assembleGithubRelease
+gradlew assemblePlayRelease
 ```
 
-APK produit : `app\build\outputs\apk\release\app-release.apk`
+APK produits : `app\build\outputs\apk\github\release\app-github-release.apk` et `…\play\release\app-play-release.apk`
 
 Tests :
 
 ```bat
-gradlew testDebugUnitTest       :: règles métier, sauvegarde, Room (Robolectric), parcours UI — sans téléphone
+gradlew testGithubDebugUnitTest testPlayDebugUnitTest  :: règles métier, sauvegarde, Room (Robolectric), parcours UI — sans téléphone
 gradlew connectedAndroidTest    :: tests Room instrumentés (DAO, migrations 1 → 2 → 3 → 4 → 5) sur le téléphone branché
-gradlew lintDebug               :: analyse statique Android
+gradlew lintGithubDebug lintPlayDebug                  :: analyse statique Android
 ```
 
 Couverture : règle de progression, rotation (ajout / archivage / réordonnancement), records et volume,
@@ -75,16 +80,16 @@ Les tests de fumée (`AppSmokeTest`, `RecapSmokeTest`, `FeaturesSmokeTest`, …)
 ## CI GitHub Actions
 
 `.github/workflows/android.yml` lance à chaque pull request (et à chaque push sur `main`) :
-`testDebugUnitTest`, `lintDebug` et `assembleRelease`.
+les tests, le lint et la compilation release des **deux variantes** (`github` et `play`) ; la variante `play` vérifie
+qu'elle ne contient pas la permission d'installer des apps. Depuis V2.28, **la publication se fait par un tag**
+(`.github/workflows/publish.yml`, procédure dans [publication.md](publication.md)).
 Runner **épinglé sur `ubuntu-24.04`** (`ubuntu-latest` passe à Ubuntu 26 à partir du 19 octobre 2026) et actions en
 versions **Node 24** (`checkout`/`setup-java`/`setup-gradle` v5, `upload-artifact` v7, `download-artifact` v8) : à
 monter volontairement, ensemble, quand GitHub l'annonce.
 
 - **APK de la PR** : onglet *Actions* → le run → artefact `gymflemme-<version>-apk` (`gymbro-…` de 2.11.0 à 2.13.0, `forme-…` avant) (conservé 7 jours, pour rester dans le quota de stockage GitHub Actions).
-- **Release** : quand une nouvelle `versionName` arrive sur `main`, une release GitHub `v<version>` est publiée
-  avec l'APK signé (une seule fois par version : penser à monter `versionCode`/`versionName`).
-  Sur le téléphone : page *Releases* du dépôt → télécharger l'APK → installer (mise à jour sans perte de données,
-  même clé que les builds locaux).
+- **Release** : jusqu'à la 2.27, publiée dans ce dépôt au merge sur `main` ; depuis la 2.28, par un tag `v*` dans
+  `ollivv-hash/gymflemme-releases` (voir [publication.md](publication.md)).
 
 Signature : quatre secrets de dépôt (*Settings → Secrets and variables → Actions*) :
 
@@ -101,7 +106,7 @@ Encodage du keystore sous Windows (copié dans le presse-papiers) :
 [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\chemin\vers\forme-release.jks")) | Set-Clipboard
 ```
 
-Sans ces secrets, l'APK est construit **non signé** (non installable) et aucune release n'est publiée.
+Sans ces secrets, les APK de la CI sont construits **non signés** (non installables) ; le workflow de publication, lui, s'arrête.
 Le keystore n'est écrit que le temps du build sur le runner, puis supprimé.
 
 ---
@@ -110,7 +115,7 @@ Le keystore n'est écrit que le temps du build sur le runner, puis supprimé.
 
 ```bat
 adb devices
-adb install -r app\build\outputs\apk\release\app-release.apk
+adb install -r app\build\outputs\apk\github\release\app-github-release.apk
 ```
 
 `-r` réinstalle en conservant les données (même clé de signature obligatoire).

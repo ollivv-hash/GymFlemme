@@ -95,7 +95,7 @@ class SettingsTabSmokeTest {
 
         // Off from the same screen.
         rule.onNode(hasText("À propos") and hasClickAction()).performScrollTo().performClick()
-        rule.onNode(androidx.compose.ui.test.isToggleable()).performClick()
+        rule.onNodeWithTag(fr.olivier.forme.feature.settings.ui.DEVELOPER_SWITCH_TAG).performClick()
         waitFor("Mode développeur désactivé")
         rule.waitUntil(10_000) { rule.onAllNodes(hasText("Affiche le journal Bluetooth", substring = true)).fetchSemanticsNodes().isEmpty() }
         rule.onNode(hasContentDescription("Retour")).performClick()

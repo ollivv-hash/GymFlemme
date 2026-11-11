@@ -1,5 +1,6 @@
 package fr.olivier.forme.feature.settings.ui
 
+import fr.olivier.forme.core.update.LocalUpdateFeature
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Spacer
@@ -65,13 +66,14 @@ class AboutViewModel @Inject constructor(private val settings: SettingsRepositor
 }
 
 const val ABOUT_VERSION_TAG = "about_version"
+const val DEVELOPER_SWITCH_TAG = "developer_switch"
 
 /**
  * Réglages → À propos (V2.23, formerly "Sources et licences", V2.10): the version, whose 7 taps turn the developer
  * mode on (off with its switch here), then the data and software shipped in the app, with their licences.
  */
 @Composable
-fun AboutScreen(onBack: () -> Unit, viewModel: AboutViewModel = hiltViewModel()) {
+fun AboutScreen(onBack: () -> Unit, onOpenUpdate: () -> Unit = {}, viewModel: AboutViewModel = hiltViewModel()) {
     val developerMode by viewModel.developerMode.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -109,6 +111,7 @@ fun AboutScreen(onBack: () -> Unit, viewModel: AboutViewModel = hiltViewModel())
                     supportingContent = { Text(stringResource(R.string.developer_mode_hint)) },
                     trailingContent = {
                         Switch(
+                            modifier = Modifier.testTag(DEVELOPER_SWITCH_TAG),
                             checked = true,
                             onCheckedChange = {
                                 viewModel.disableDeveloperMode()
@@ -118,6 +121,8 @@ fun AboutScreen(onBack: () -> Unit, viewModel: AboutViewModel = hiltViewModel())
                     },
                 )
             }
+            // V2.28 ("github" variant): "Rechercher une mise à jour".
+            LocalUpdateFeature.current?.AboutSection(onOpenUpdate)
             SectionTitle(stringResource(R.string.about_sources))
             SectionTitle("Données")
             Credits.data.forEach { CreditCard(it) }
