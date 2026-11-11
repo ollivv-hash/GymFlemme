@@ -1,5 +1,6 @@
 package fr.olivier.forme.feature.sport.ui.home
 
+import fr.olivier.forme.core.update.LocalUpdateFeature
 import fr.olivier.forme.R
 import kotlin.math.roundToInt
 import androidx.compose.ui.res.stringResource
@@ -264,6 +265,7 @@ fun HomeScreen(
     onOpenSession: () -> Unit,
     onOpenNutrition: () -> Unit,
     onOpenBadges: (tab: Int) -> Unit = {},
+    onOpenUpdate: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     journal: JournalViewModel = hiltViewModel(),
     level: LevelViewModel = hiltViewModel(),
@@ -364,6 +366,8 @@ fun HomeScreen(
                 },
                 onChoose = { choosingSession = true },
             )
+            // V2.28 ("github" variant): a new version of the app.
+            LocalUpdateFeature.current?.HomeCard(onOpenUpdate, Modifier)
             deload?.let { DeloadTile(it.message, onDismiss = viewModel::dismissDeload) }
             TileRow(
                 left = { m -> CaloriesTile(calories, onOpenNutrition, m) },

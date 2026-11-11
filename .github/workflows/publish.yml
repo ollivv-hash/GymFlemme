@@ -1,0 +1,129 @@
+# Publishes a version (V2.28): on a tag v* pushed to this repository (docs/publication.md), tests, builds and signs
+# the "github" variant, then creates the release in the releases repository with three files: the APK, its SHA-256
+# and update.json, read by the app to update itself.
+#
+# Secrets (Settings → Secrets and variables → Actions of THIS repository):
+#   FORME_KEYSTORE_BASE64, FORME_STORE_PASSWORD, FORME_KEY_ALIAS, FORME_KEY_PASSWORD   the signing key (as android.yml)
+#   GYMFLEMME_RELEASES_TOKEN   fine-grained token, Contents: read and write on the releases repository only
+# GitHub masks secret values in the logs; none is printed. The certificate fingerprint printed is public.
+name: Publish
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  RELEASES_REPOSITORY: ollivv-hash/gymflemme-releases
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Version matches the tag
+        id: version
+        run: |
+          name=$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)
+          code=$(sed -n 's/^ *versionCode = \([0-9]*\)/\1/p' app/build.gradle.kts)
+          if [ "v$name" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match versionName $name (app/build.gradle.kts): nothing published."
+            exit 1
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Secrets present
+        env:
+          KEYSTORE_BASE64: ${{ secrets.FORME_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.FORME_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.FORME_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.FORME_KEY_PASSWORD }}
+          RELEASES_TOKEN: ${{ secrets.GYMFLEMME_RELEASES_TOKEN }}
+        run: |
+          missing=""
+          for v in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD RELEASES_TOKEN; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing secrets:$missing (docs/publication.md). Nothing published."
+            exit 1
+          fi
+
+      - name: Signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.FORME_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.FORME_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.FORME_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.FORME_KEY_PASSWORD }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "$RUNNER_TEMP/release.jks"
+          cat > keystore.properties <<EOF
+          storeFile=$RUNNER_TEMP/release.jks
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Tests and signed build ("github" variant)
+        run: ./gradlew testGithubDebugUnitTest assembleGithubRelease --stacktrace
+
+      - name: Remove signing key
+        if: always()
+        run: rm -f keystore.properties "$RUNNER_TEMP/release.jks"
+
+      - name: APK, SHA-256, update.json
+        env:
+          VERSION: ${{ steps.version.outputs.name }}
+          CODE: ${{ steps.version.outputs.code }}
+        run: |
+          mkdir -p dist
+          apk="dist/gymflemme-$VERSION.apk"
+          cp "$(ls app/build/outputs/apk/github/release/*.apk | head -1)" "$apk"
+          # The signing certificate: must be the one of the installed app, or Android refuses the update.
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          "$apksigner" verify --print-certs "$apk" | grep -i "SHA-256 digest" | sed 's/^/Signing certificate /'
+          (cd dist && sha256sum "gymflemme-$VERSION.apk" > "gymflemme-$VERSION.apk.sha256")
+          sha=$(cut -d' ' -f1 "dist/gymflemme-$VERSION.apk.sha256")
+          notes=$(python3 tools/release/notes.py --plain "$VERSION")
+          python3 - "$VERSION" "$CODE" "$sha" "$notes" "$RELEASES_REPOSITORY" > dist/update.json <<'PY'
+          import json, sys
+          version, code, sha, notes, repo = sys.argv[1:6]
+          print(json.dumps({
+              "versionCode": int(code),
+              "versionName": version,
+              "apkUrl": f"https://github.com/{repo}/releases/download/v{version}/gymflemme-{version}.apk",
+              "sha256": sha,
+              "minSdk": 28,
+              "notes": notes,
+          }, ensure_ascii=False, indent=2))
+          PY
+          cat dist/update.json
+
+      - name: Release in the releases repository
+        env:
+          GH_TOKEN: ${{ secrets.GYMFLEMME_RELEASES_TOKEN }}
+          VERSION: ${{ steps.version.outputs.name }}
+        run: |
+          if gh release view "v$VERSION" --repo "$RELEASES_REPOSITORY" > /dev/null 2>&1; then
+            echo "::error::Release v$VERSION already exists in $RELEASES_REPOSITORY: bump the version to publish again."
+            exit 1
+          fi
+          GITHUB_REPOSITORY="$GITHUB_REPOSITORY" python3 tools/release/notes.py "$VERSION" > "$RUNNER_TEMP/notes.md"
+          gh release create "v$VERSION" dist/gymflemme-*.apk dist/gymflemme-*.apk.sha256 dist/update.json \
+            --repo "$RELEASES_REPOSITORY" --title "GymFlemme $VERSION" --notes-file "$RUNNER_TEMP/notes.md"

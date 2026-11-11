@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Update from GitHub (V2.28, "github" variant): neutral texts. -->
+<resources>
+    <string name="update_title">Mise à jour</string>
+    <string name="update_card_title">Version %1$s disponible</string>
+    <string name="update_card_text">Une nouvelle version de GymFlemme est prête. Rien ne s\'installe sans ton accord.</string>
+    <string name="update_see">Voir</string>
+    <string name="update_later">Plus tard</string>
+    <string name="update_check">Rechercher une mise à jour</string>
+    <string name="update_wifi_only">Télécharger uniquement en Wi-Fi</string>
+    <string name="update_installed">Version installée : %1$s</string>
+    <string name="update_checking">Recherche d\'une mise à jour…</string>
+    <string name="update_up_to_date">GymFlemme est à jour (%1$s).</string>
+    <string name="update_available">Version %1$s disponible.</string>
+    <string name="update_new_version">Nouvelle version : %1$s</string>
+    <string name="update_download">Télécharger</string>
+    <string name="update_waiting_wifi">Le téléchargement attend une connexion Wi-Fi.</string>
+    <string name="update_download_anyway">Télécharger quand même</string>
+    <string name="update_downloading">Téléchargement…</string>
+    <string name="update_ready">Version %1$s téléchargée et vérifiée.</string>
+    <string name="update_install">Installer</string>
+    <string name="update_installing">Installation en cours : Android va demander ta confirmation.</string>
+    <string name="update_permission_text">Pour installer la mise à jour, Android doit autoriser GymFlemme à installer des applications. Dans l\'écran qui s\'ouvre, active « Autoriser cette source », puis reviens ici.</string>
+    <string name="update_permission_open">Ouvrir les paramètres</string>
+    <string name="update_retry">Réessayer</string>
+    <string name="update_data_kept">La mise à jour s\'installe par-dessus la version actuelle : tes données sont conservées.</string>
+    <string name="update_error_offline">Pas de connexion. La vérification se refera au prochain lancement.</string>
+    <string name="update_error_rate">GitHub limite les vérifications pour le moment. Réessaie plus tard.</string>
+    <string name="update_error_none">Aucune version publiée pour le moment.</string>
+    <string name="update_error_invalid">Les informations de mise à jour sont illisibles. Réessaie plus tard.</string>
+    <string name="update_error_incompatible">Cette version nécessite une version d\'Android plus récente.</string>
+    <string name="update_error_download">Le téléchargement a échoué. Réessaie plus tard.</string>
+    <string name="update_error_checksum">Le fichier téléchargé est incomplet ou modifié : il a été supprimé. Réessaie plus tard.</string>
+    <string name="update_error_install">L\'installation n\'a pas abouti. Tu peux réessayer, ou installer l\'APK depuis la page des versions.</string>
+</resources>

@@ -23,9 +23,22 @@ android {
         applicationId = "fr.olivier.forme"
         minSdk = 28
         targetSdk = 37
-        versionCode = 59
-        versionName = "2.27.0"
+        versionCode = 60
+        versionName = "2.28.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // V2.28: two variants of the same app (same id: one replaces the other). "github" updates itself from the
+    // releases repository; "play" has no update code nor REQUEST_INSTALL_PACKAGES (the Play Store forbids both).
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("github") {
+            dimension = "distribution"
+            buildConfigField("String", "UPDATE_REPOSITORY", "\"ollivv-hash/gymflemme-releases\"")
+        }
+        create("play") {
+            dimension = "distribution"
+        }
     }
 
     signingConfigs {
@@ -90,7 +103,11 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
         // V2.25: the app tests start past the first-launch wizard (OnboardingSmokeTest turns it back on).
-        unitTests.all { it.systemProperty("gymflemme.skipOnboarding", "true") }
+        unitTests.all {
+            it.systemProperty("gymflemme.skipOnboarding", "true")
+            // V2.28: no request to GitHub from the tests (UpdatePolicyTest and UpdateSmokeTest cover the update).
+            it.systemProperty("gymflemme.skipUpdateCheck", "true")
+        }
     }
 }
 
@@ -156,3 +173,31 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.room.testing)
 }
+
+/**
+ * V2.28: the "play" variant must never ask to install packages. Fails the build when its merged manifest holds
+ * REQUEST_INSTALL_PACKAGES (from the app or a library); run by `check` and before every "play" APK.
+ */
+abstract class CheckNoInstallPermission : DefaultTask() {
+    @get:InputFile
+    abstract val manifest: RegularFileProperty
+
+    @TaskAction
+    fun verify() {
+        val text = manifest.get().asFile.readText()
+        if ("android.permission.REQUEST_INSTALL_PACKAGES" in text) {
+            throw GradleException("The play variant must not hold REQUEST_INSTALL_PACKAGES (${manifest.get().asFile}).")
+        }
+    }
+}
+
+androidComponents {
+    onVariants(selector().withFlavor("distribution" to "play")) { variant ->
+        val name = variant.name.replaceFirstChar { it.uppercase() }
+        val guard = tasks.register<CheckNoInstallPermission>("check${name}NoInstallPermission") {
+            manifest.set(variant.artifacts.get(com.android.build.api.artifact.SingleArtifact.MERGED_MANIFEST))
+        }
+        tasks.matching { it.name == "assemble$name" || it.name == "check" }.configureEach { dependsOn(guard) }
+    }
+}
+
