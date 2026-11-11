@@ -65,12 +65,24 @@ fun List<SessionHeartEntity>.netKcal(bmrPerDay: Double?): Double? =
         }
     }.takeIf { it.isNotEmpty() }?.sum()
 
-/** Rest-day calorie target: personalised, else advised from the goal; null without a goal or missing measures. */
-fun ProfileEntity.restDayKcal(weightKg: Double?, currentYear: Int): Int? {
+/** Rest-day calorie target advised from the goal and the activity (V2.25); null without a goal or a measure. */
+fun ProfileEntity.advisedRestDayKcal(weightKg: Double?, currentYear: Int): Int? {
     val goal = nutritionGoal ?: return null
-    return kcalTargetOverride
-        ?: EnergyMath.advisedBase(weightKg, heightCm, birthYear?.let { HeartZones.age(it, currentYear) }, sex, goal)
+    return EnergyMath.advisedBase(weightKg, heightCm, birthYear?.let { HeartZones.age(it, currentYear) }, sex, goal, activityLevel)
 }
+
+/**
+ * Rest-day calorie target: personalised, else advised; null without a goal or missing measures, and under 16
+ * (V2.25: no calorie target for a minor).
+ */
+fun ProfileEntity.restDayKcal(weightKg: Double?, currentYear: Int): Int? {
+    if (nutritionGoal == null || EnergyMath.isMinor(birthYear, currentYear)) return null
+    return kcalTargetOverride ?: advisedRestDayKcal(weightKg, currentYear)
+}
+
+/** Protein target of a day (g): personalised in grams (V2.25), else g/kg × the last weight. */
+fun ProfileEntity.proteinTargetG(weightKg: Double?): Double? =
+    proteinTargetOverrideG?.toDouble() ?: NutritionMath.proteinTarget(weightKg, proteinTargetGPerKg)
 
 @Singleton
 class NutritionRepository @Inject constructor(

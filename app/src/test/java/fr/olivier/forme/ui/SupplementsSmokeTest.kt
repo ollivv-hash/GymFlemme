@@ -47,7 +47,7 @@ class SupplementsSmokeTest {
     @Test
     fun switchOnAddAndTickSupplements() {
         rule.waitForHome()
-        waitFor("5 g pris") // home tile: creatine on by default, as before
+        waitFor("3 g pris") // home tile: creatine on by default (3 g on a new install since V2.25)
         rule.openSettings()
         rule.onNode(hasText("Compléments") and hasClickAction()).performClick()
         waitFor("Oméga-3")
@@ -62,7 +62,7 @@ class SupplementsSmokeTest {
         rule.onNode(hasContentDescription("Retour")).performClick()
         rule.tab("Nutrition")
         rule.waitUntilAtLeastOneExists(hasText("Oméga-3 1 g"), 15_000)
-        waitFor("Créatine 5 g")
+        waitFor("Créatine 3 g")
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText("Oméga-3 1 g"))
         val ticked = rule.onAllNodes(isOn()).fetchSemanticsNodes().size
         rule.onNode(hasText("Oméga-3 1 g") and hasClickAction()).performClick()

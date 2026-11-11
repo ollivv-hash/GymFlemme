@@ -21,6 +21,7 @@ import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.core.settings.Appearance
 import fr.olivier.forme.core.settings.ThemeMode
 import android.content.Context
+import fr.olivier.forme.feature.onboarding.Onboarding
 import dagger.hilt.android.qualifiers.ApplicationContext
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.ui.navigation.FormeNavHost
@@ -40,7 +41,11 @@ class MainViewModel @Inject constructor(
     settings: SettingsRepository,
     private val sessions: SessionRepository,
     private val quickStart: QuickStart,
+    private val onboarding: Onboarding,
 ) : ViewModel() {
+    /** V2.25: the first-launch wizard, once, on a new install. */
+    suspend fun shouldShowOnboarding(): Boolean = onboarding.shouldShow()
+
     val appearance: StateFlow<Appearance> =
         settings.appearance.stateIn(viewModelScope, SharingStarted.Eagerly, Appearance(mode = ThemeMode.DARK))
 
@@ -91,6 +96,7 @@ class MainActivity : ComponentActivity() {
                     FormeNavHost(
                         resumeOnStart = savedInstanceState == null,
                         hasActiveSession = viewModel::hasActiveSession,
+                        shouldShowOnboarding = viewModel::shouldShowOnboarding,
                         pendingAction = pendingAction.value,
                         startProposedSession = { then -> viewModel.startProposedSession(then) },
                         onActionHandled = viewModel::actionHandled,

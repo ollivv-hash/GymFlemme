@@ -1,5 +1,6 @@
 package fr.olivier.forme.feature.ai.data
 
+import fr.olivier.forme.feature.nutrition.data.proteinTargetG
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.feature.ai.domain.AiDay
 import fr.olivier.forme.feature.ai.domain.AiExerciseHistory
@@ -73,7 +74,7 @@ class AiDayRepository @Inject constructor(
         val average = averages.lastOrNull()
         val monthAgo = averages.lastOrNull { !it.date.isAfter(date.minusWeeks(4)) }
         val heartProfile = heart.heartProfile()
-        val proteinTarget = NutritionMath.proteinTarget(lastWeight, profileEntity.proteinTargetGPerKg)
+        val proteinTarget = profileEntity.proteinTargetG(lastWeight)
         val restDayKcal = profileEntity.restDayKcal(lastWeight, date.year)
 
         val profile = AiProfile(

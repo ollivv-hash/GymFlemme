@@ -190,7 +190,7 @@ object Migrations {
             db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_supplement_intake_supplementId_date` ON `supplement_intake` (`supplementId`, `date`)")
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_supplement_intake_date` ON `supplement_intake` (`date`)")
 
-            SupplementDefaults.all.forEach { db.insert("supplement", SQLiteDatabase.CONFLICT_ABORT, it.toValues()) }
+            SupplementDefaults.legacy.forEach { db.insert("supplement", SQLiteDatabase.CONFLICT_ABORT, it.toValues()) }
             // Creatine as set in the profile (none = the defaults above).
             db.execSQL(
                 """UPDATE supplement SET
@@ -244,6 +244,14 @@ object Migrations {
         }
     }
 
+    /** V2.25: activity level and a protein target in grams in the profile (null: as before). */
+    val MIGRATION_12_13 = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `profile` ADD COLUMN `activityLevel` TEXT")
+            db.execSQL("ALTER TABLE `profile` ADD COLUMN `proteinTargetOverrideG` INTEGER")
+        }
+    }
+
     internal fun SupplementEntity.toValues() = ContentValues().apply {
         put("name", name)
         put("code", code)
@@ -257,6 +265,6 @@ object Migrations {
 
     val ALL: Array<Migration> = arrayOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
+        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
     )
 }
