@@ -16,6 +16,19 @@ import javax.inject.Singleton
 
 enum class ThemeMode(val label: String) { DARK("Sombre"), LIGHT("Clair"), SYSTEM("Système") }
 
+/** Accent colour of the bento design (V2.24): session tile, active tab, goal reached, progress bars. */
+enum class AccentColor { GREEN, BLUE, ORANGE, LIME, LAVENDER, CORAL }
+
+/**
+ * Réglages → Apparence (V2.24). [dynamicColor]: the accent comes from the wallpaper (Material You, Android 12+),
+ * the chosen [accent] is kept for when it is turned off.
+ */
+data class Appearance(
+    val mode: ThemeMode = ThemeMode.SYSTEM,
+    val accent: AccentColor = AccentColor.GREEN,
+    val dynamicColor: Boolean = false,
+)
+
 data class TrainingGoals(
     val sessionsPerWeek: Int = SettingsRepository.DEFAULT_SESSIONS_PER_WEEK,
     val minSets: Int = SettingsRepository.DEFAULT_MIN_SETS,
@@ -54,8 +67,47 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
 
     val defaultRestSec: Flow<Int> = dataStore.data.map { it[DEFAULT_REST] ?: DEFAULT_REST_SEC }
 
-    val themeMode: Flow<ThemeMode> = dataStore.data.map { prefs ->
-        prefs[THEME]?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } } ?: ThemeMode.DARK
+    /** Follows the system by default since V2.24 (dark before: kept for those who updated, see [keepDarkThemeOnUpdate]). */
+    val themeMode: Flow<ThemeMode> = dataStore.data.map { prefs -> prefs.themeMode() }
+
+    val appearance: Flow<Appearance> = dataStore.data.map { prefs ->
+        Appearance(
+            mode = prefs.themeMode(),
+            accent = prefs[ACCENT]?.let { name -> AccentColor.entries.firstOrNull { it.name == name } } ?: AccentColor.GREEN,
+            dynamicColor = prefs[DYNAMIC_COLOR] == true,
+        )
+    }
+
+    private fun Preferences.themeMode(): ThemeMode =
+        this[THEME]?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } } ?: ThemeMode.SYSTEM
+
+    suspend fun setAccent(accent: AccentColor) {
+        dataStore.edit { it[ACCENT] = accent.name }
+    }
+
+    suspend fun setDynamicColor(enabled: Boolean) {
+        dataStore.edit { it[DYNAMIC_COLOR] = enabled }
+    }
+
+    /** From a backup (V2.24, backup v13). */
+    suspend fun setAppearance(appearance: Appearance) {
+        dataStore.edit {
+            it[THEME] = appearance.mode.name
+            it[ACCENT] = appearance.accent.name
+            it[DYNAMIC_COLOR] = appearance.dynamicColor
+        }
+    }
+
+    /**
+     * Once, at the first launch of V2.24: the default theme went from dark to "follow the system". Someone who
+     * [updated] the app and never chose a theme keeps the dark one they had; a new install follows the system.
+     */
+    suspend fun keepDarkThemeOnUpdate(updated: Boolean) {
+        dataStore.edit {
+            if (it[THEME_DEFAULT_CHECKED] == true) return@edit
+            if (updated && it[THEME] == null) it[THEME] = ThemeMode.DARK.name
+            it[THEME_DEFAULT_CHECKED] = true
+        }
     }
 
     val restTimer: Flow<RestTimerState?> = dataStore.data.map { prefs ->
@@ -225,5 +277,8 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         private val AI_AS_TEXT = booleanPreferencesKey("ai_share_as_text")
         private val AI_PROMPT = stringPreferencesKey("ai_prompt")
         private val DEVELOPER_MODE = booleanPreferencesKey("developer_mode")
+        private val ACCENT = stringPreferencesKey("accent_color")
+        private val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
+        private val THEME_DEFAULT_CHECKED = booleanPreferencesKey("theme_default_checked")
     }
 }

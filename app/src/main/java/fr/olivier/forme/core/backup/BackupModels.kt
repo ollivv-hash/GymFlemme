@@ -43,7 +43,8 @@ import java.time.LocalDate
  * the history, silently), v8 their tier (V2.18; v7 badges are converted on restore), v9 the monthly challenges
  * (absent → none; the current month's is drawn again, identically), v10 the food supplements (V2.20; the creatine
  * of older files, in the profile and `creatine`, becomes the first supplement, the others are added switched off),
- * v11 the dishes of one's own (V2.21; absent → none), v12 the first name of the profile (V2.22; absent → none).
+ * v11 the dishes of one's own (V2.21; absent → none), v12 the first name of the profile (V2.22; absent → none), v13 the appearance (V2.24: theme, accent, dynamic colours;
+ * absent → the phone's settings are kept).
  * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual and exercise library reference tables
  * (embedded in the APK) are not exported.
  */
@@ -59,7 +60,23 @@ data class BackupFile(
     val badges: List<BadgeDto> = emptyList(),
     /** V2.19 (backup v9): the challenge of each month; absent in older files. */
     val challenges: List<ChallengeDto> = emptyList(),
+    /** V2.24 (backup v13): Réglages → Apparence; absent in older files (the current one is kept). */
+    val appearance: AppearanceDto? = null,
 )
+
+/** Names of [fr.olivier.forme.core.settings.ThemeMode] and [fr.olivier.forme.core.settings.AccentColor]. */
+@Serializable
+data class AppearanceDto(val mode: String, val accent: String, val dynamicColor: Boolean = false) {
+    fun toAppearance() = fr.olivier.forme.core.settings.Appearance(
+        mode = fr.olivier.forme.core.settings.ThemeMode.entries.firstOrNull { it.name == mode } ?: fr.olivier.forme.core.settings.ThemeMode.SYSTEM,
+        accent = fr.olivier.forme.core.settings.AccentColor.entries.firstOrNull { it.name == accent } ?: fr.olivier.forme.core.settings.AccentColor.GREEN,
+        dynamicColor = dynamicColor,
+    )
+
+    companion object {
+        fun of(a: fr.olivier.forme.core.settings.Appearance) = AppearanceDto(a.mode.name, a.accent.name, a.dynamicColor)
+    }
+}
 
 @Serializable
 data class ChallengeDto(val month: String, val challenge: String, val completedAt: String? = null, val seen: Boolean)

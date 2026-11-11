@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.room.withTransaction
 import dagger.hilt.android.qualifiers.ApplicationContext
 import fr.olivier.forme.core.db.FormeDatabase
+import fr.olivier.forme.core.settings.SettingsRepository
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -21,8 +23,10 @@ class BackupRepository @Inject constructor(
     private val db: FormeDatabase,
     @ApplicationContext private val context: Context,
     private val clock: Clock,
+    private val settings: SettingsRepository,
 ) {
     suspend fun snapshot(): BackupFile {
+        val appearance = AppearanceDto.of(settings.appearance.first())
         val exercises = db.exerciseDao()
         val templates = db.templateDao()
         val sessions = db.sessionDao()
@@ -52,6 +56,7 @@ class BackupRepository @Inject constructor(
                 ),
                 badges = db.badgeDao().getAll().sortedWith(compareBy({ it.id }, { it.tier })).map { it.toDto() },
                 challenges = db.badgeDao().getChallenges().map { it.toDto() },
+                appearance = appearance,
             )
         }
     }
@@ -92,6 +97,7 @@ class BackupRepository @Inject constructor(
             db.badgeDao().insertAll(file.badges.map { it.toEntity(file.schemaVersion) })
             db.badgeDao().insertChallenges(file.challenges.map { it.toEntity() })
         }
+        file.appearance?.let { settings.setAppearance(it.toAppearance()) }
     }
 
     suspend fun exportTo(uri: Uri) = withContext(Dispatchers.IO) {

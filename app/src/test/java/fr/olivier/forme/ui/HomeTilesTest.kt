@@ -19,6 +19,12 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.olivier.forme.R
+import fr.olivier.forme.core.settings.AccentColor
+import fr.olivier.forme.ui.theme.pair
+import fr.olivier.forme.ui.theme.withAccent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import fr.olivier.forme.feature.sport.ui.home.bento.BentoHomeContent
 import fr.olivier.forme.feature.sport.ui.home.bento.BentoSamples
 import fr.olivier.forme.feature.sport.ui.home.bento.CaloriesTile
@@ -62,9 +68,9 @@ class HomeTilesTest {
         }
     }
 
-    private fun home(dark: Boolean) {
+    private fun home(dark: Boolean, accent: AccentColor = AccentColor.GREEN) {
         rule.setContent {
-            CompositionLocalProvider(LocalBento provides if (dark) DarkBento else LightBento) {
+            CompositionLocalProvider(LocalBento provides (if (dark) DarkBento else LightBento).withAccent(accent.pair(), dark)) {
                 Box(Modifier.fillMaxSize()) {
                     BentoHomeContent(
                         BentoSamples.session, BentoSamples.calories, BentoSamples.proteins, BentoSamples.challenge,
@@ -107,6 +113,28 @@ class HomeTilesTest {
         home(dark = true)
         rule.onNodeWithText("B · Dos").assertExists()
         shot("bento-dark")
+    }
+
+    /** V2.24: the home screen in each accent, light and dark (screenshots for review). */
+    @Test
+    fun eachAccent() {
+        var current by mutableStateOf(AccentColor.GREEN to false)
+        rule.setContent {
+            val (accent, dark) = current
+            CompositionLocalProvider(LocalBento provides (if (dark) DarkBento else LightBento).withAccent(accent.pair(), dark)) {
+                BentoHomeContent(
+                    BentoSamples.session, BentoSamples.calories, BentoSamples.proteins, BentoSamples.challenge,
+                    BentoSamples.creatine, BentoSamples.level, modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+        AccentColor.entries.forEach { accent ->
+            listOf(false, true).forEach { dark ->
+                current = accent to dark
+                rule.waitForIdle()
+                shot("accent-${accent.name.lowercase()}-${if (dark) "dark" else "light"}")
+            }
+        }
     }
 
     @Test

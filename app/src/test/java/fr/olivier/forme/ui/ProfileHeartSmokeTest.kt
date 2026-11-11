@@ -74,7 +74,7 @@ class ProfileHeartSmokeTest {
         rule.onNode(hasText("Enregistrer") and hasClickAction()).performClick()
         rule.waitUntilAtLeastOneExists(hasText("À propos"), 10_000) // back to Réglages
         rule.onNode(hasText("Préférences et sauvegarde") and hasClickAction()).performScrollTo().performClick()
-        rule.waitUntilAtLeastOneExists(hasText("Thème"), 10_000)
+        rule.waitUntilAtLeastOneExists(hasText("Entre deux séries"), 10_000)
         rule.onNodeWithText("Séances par semaine").assertDoesNotExist()
     }
 }

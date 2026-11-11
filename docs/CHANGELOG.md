@@ -40,6 +40,7 @@ s'appelaient « Forme », 2.7 à 2.13 « GymBro ».
 | **V2.21** ✅ | Plats personnalisés : un plat est un aliment composé d'ingrédients (Ciqual, scannés, perso), avec poids cuit facultatif et nombre de portions ; créé depuis Config → Mes aliments, Nutrition → Ajouter ou « Enregistrer comme plat » sur un repas du journal ; base v11, sauvegarde v11 |
 | **V2.22** ✅ | Accueil « bento » : grille de tuiles (prochaine séance, calories, protéines, défi du mois, compléments, niveau), police Space Grotesk, thèmes clair et sombre, barre de navigation flottante (Accueil, Séances, Nutrition, Badges ; Config dans l'en-tête), prénom dans le profil ; base v12, sauvegarde v12 |
 | **V2.23** ✅ | Barre de navigation à 5 onglets (Réglages, ex-Config, rejoint Accueil, Séances, Nutrition et Badges), icônes Material Symbols ; « Sources et licences » devient « À propos » ; mode développeur (7 appuis sur la version) qui seul affiche le journal Bluetooth de Montre cardio ; « Réglages et sauvegarde » devient « Préférences et sauvegarde » |
+| **V2.24** ✅ | Réglages → Apparence : mode clair / sombre / suivre le système (par défaut pour une nouvelle installation ; une mise à jour garde le sombre), 6 couleurs d'accent (vert, bleu, orange, citron vert, lavande, corail) appliquées aussitôt à l'accueil et à la barre de navigation, couleurs dynamiques (Android 12+) ; test de contraste ; sauvegarde v13 |
 
 Hors périmètre V1.1 : Drive, Health Connect, BLE, partage vers Claude, widgets, Wear OS, multi-utilisateur, analyse photo.
 

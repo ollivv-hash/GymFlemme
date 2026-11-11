@@ -29,7 +29,7 @@ data class BentoColors(
     val onContrastTileSecondary: Color,
     val contrastTrack: Color,
     val caloriesBar: Color,
-    /** Session tile, active tab, goal reached. */
+    /** Session tile, active tab, goal reached: the accent of Réglages → Apparence (V2.24), see [withAccent]. */
     val accent: Color,
     val onAccent: Color,
     /** Chip on the accent tile ("Sem. 2 / 3"). */
@@ -91,6 +91,17 @@ val DarkBento = BentoColors(
     nav = Color(0xFF22282C),
     navInactive = Color(0xFFC4C9CB),
 )
+
+/**
+ * The bento colours with [pair] as accent (V2.24). In the dark theme the accent also fills the level square and bar
+ * and the ticked boxes; in the light theme those stay dark (an accent is too pale on a white tile for a box).
+ */
+fun BentoColors.withAccent(pair: AccentPair, dark: Boolean): BentoColors =
+    if (dark) {
+        copy(accent = pair.accent, onAccent = pair.onAccent, levelBar = pair.accent, onStrong = pair.onAccent, check = pair.accent, onCheck = pair.onAccent)
+    } else {
+        copy(accent = pair.accent, onAccent = pair.onAccent, check = text, onCheck = tile)
+    }
 
 val LocalBento = staticCompositionLocalOf { DarkBento }
 

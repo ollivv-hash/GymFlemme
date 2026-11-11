@@ -282,6 +282,18 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   Réglages → Montre cardio (et l'ajoute au rapport copié) ; un interrupteur dans À propos le désactive. Préférence
   DataStore `developer_mode`, propre au téléphone : pas dans la sauvegarde JSON.
 - Écran « Réglages » de l'ancienne entrée « Réglages et sauvegarde » renommé **Préférences et sauvegarde** (V2.23).
+- **Réglages → Apparence** (V2.24) : mode Clair / Sombre / Suivre le système (le choix Thème a quitté Préférences et
+  sauvegarde). Par défaut « Suivre le système » ; au premier lancement de 2.24, une app **mise à jour** sans thème
+  choisi garde le sombre d'avant (préférence `theme_default_checked`, une seule fois). **Couleur d'accent** parmi 6
+  (`AccentColor`, couples accent / texte dans `ui/theme/Accents.kt`) : vert `#8BD48F` (défaut), bleu `#8DBDF0`, orange
+  `#F4B678`, citron vert `#B7E36A`, lavande `#C3A6F2`, corail `#F29C8F`. Elle colore la tuile séance, l'onglet actif,
+  la barre « objectif atteint » et, en sombre, le carré et la barre de niveau et les cases cochées (en clair ceux-ci
+  restent sombres : un accent pâle sur une tuile blanche ne suffit pas pour une case). Les autres écrans gardent la
+  palette Material bleu / orange ; le widget garde ses couleurs. **Couleurs dynamiques** (Android 12+, désactivées par
+  défaut) : l'accent est le `primaryContainer` / `onPrimaryContainer` du schéma Material You clair, les pastilles
+  sont grisées. Changement immédiat (`BentoColors.withAccent`, recalculé par `FormeTheme`). `ThemeContrastTest` : chaque
+  couple accent / texte, texte / fond et texte / tuile, en clair et en sombre, ≥ 4,5:1. Sauvegarde v13 : bloc
+  `appearance` (absent des fichiers plus anciens : les réglages du téléphone restent).
 - **Textes** : depuis V2.23, les nouveaux textes vont dans `res/values/strings.xml` (les plus anciens restent dans le
   code).
 - **Poids de l'APK** (release, mesuré sur les releases GitHub) :
@@ -533,7 +545,7 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
 - Format versionné : `{ "schemaVersion": 12, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "supplements", "supplementIntakes", "dishes", "dishIngredients" }, "badges": [ … ], "challenges": [ … ] }`.
-  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9, les compléments depuis la v10, les plats perso depuis la v11, le prénom depuis la v12. Les fichiers **v1** à **v11** restent importables (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8 ; créatine des fichiers v1 à v9 (profil + `creatine`) convertie en complément comme la migration 9 → 10). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
+  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9, les compléments depuis la v10, les plats perso depuis la v11, le prénom depuis la v12, l'apparence (thème, accent, couleurs dynamiques) depuis la v13. Les fichiers **v1** à **v12** restent importables (sans apparence : celle du téléphone est gardée) (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8 ; créatine des fichiers v1 à v9 (profil + `creatine`) convertie en complément comme la migration 9 → 10). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 

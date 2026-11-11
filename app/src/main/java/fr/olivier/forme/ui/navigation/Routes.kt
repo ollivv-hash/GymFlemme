@@ -23,6 +23,8 @@ import kotlinx.serialization.Serializable
 )
 @Serializable data object RotationRoute
 @Serializable data object SettingsRoute
+/** Réglages → Apparence (V2.24). */
+@Serializable data object AppearanceRoute
 
 // --- Nutrition (V1.1) ---
 /** [tab]: 0 = journal, 1 = body weight. */

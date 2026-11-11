@@ -90,4 +90,20 @@ class BackupCodecTest {
         assertEquals(listOf("Spiruline"), supplements.map { it.name })
         assertEquals(listOf(9L), intakes.map { it.supplementId })
     }
+
+    @Test
+    fun `v13 keeps the appearance, older files have none`() {
+        val v13 = sample.copy(schemaVersion = 13, appearance = AppearanceDto("LIGHT", "CORAL", dynamicColor = true))
+        val decoded = BackupCodec.decode(BackupCodec.encode(v13))
+        assertEquals(v13, decoded)
+        assertEquals(
+            fr.olivier.forme.core.settings.Appearance(
+                fr.olivier.forme.core.settings.ThemeMode.LIGHT, fr.olivier.forme.core.settings.AccentColor.CORAL, true,
+            ),
+            decoded.appearance!!.toAppearance(),
+        )
+        assertEquals(null, BackupCodec.decode(BackupCodec.encode(sample)).appearance)
+        // A value this version does not know falls back to the defaults.
+        assertEquals(fr.olivier.forme.core.settings.Appearance(), AppearanceDto("SEPIA", "MAUVE").toAppearance())
+    }
 }

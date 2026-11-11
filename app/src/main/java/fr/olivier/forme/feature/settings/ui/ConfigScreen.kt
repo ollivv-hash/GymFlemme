@@ -22,6 +22,7 @@ fun ConfigScreen(
     onTemplates: () -> Unit,
     onRotation: () -> Unit,
     onSettings: () -> Unit,
+    onAppearance: () -> Unit,
     onProfile: () -> Unit,
     onFoods: () -> Unit,
     onSupplements: () -> Unit,
@@ -42,7 +43,8 @@ fun ConfigScreen(
             Entry("Compléments", "Créatine, oméga-3, vitamines… : actifs, quantité, rappels", onSupplements)
             Entry("Montre cardio", "Choisir la montre, tester la FC en direct et Health Connect", onWatch)
             Entry("Analyse IA", "App IA par défaut (Claude, ChatGPT…), test du partage", onAi)
-            Entry(stringResource(R.string.preferences_title), "Repos, thème, sauvegarde auto (Drive), export / import", onSettings)
+            Entry(stringResource(R.string.appearance_title), stringResource(R.string.appearance_subtitle), onAppearance)
+            Entry(stringResource(R.string.preferences_title), "Repos, ton, sauvegarde auto (Drive), export / import", onSettings)
             Entry(stringResource(R.string.about_title), stringResource(R.string.about_subtitle), onSources)
         }
     }

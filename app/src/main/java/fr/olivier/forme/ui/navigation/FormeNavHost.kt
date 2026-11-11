@@ -40,6 +40,7 @@ import fr.olivier.forme.feature.nutrition.ui.ScanScreen
 import fr.olivier.forme.feature.settings.ui.ConfigScreen
 import fr.olivier.forme.feature.settings.ui.SettingsScreen
 import fr.olivier.forme.feature.settings.ui.AboutScreen
+import fr.olivier.forme.feature.settings.ui.AppearanceScreen
 import fr.olivier.forme.feature.heart.ui.WatchTestScreen
 import fr.olivier.forme.feature.library.ui.ExerciseSheetScreen
 import fr.olivier.forme.feature.library.ui.LibraryPickerScreen
@@ -189,6 +190,7 @@ fun FormeNavHost(
                     onTemplates = { nav.navigate(TemplatesRoute) },
                     onRotation = { nav.navigate(RotationRoute) },
                     onSettings = { nav.navigate(SettingsRoute) },
+                    onAppearance = { nav.navigate(AppearanceRoute) },
                     onProfile = { nav.navigate(ProfileRoute) },
                     onFoods = { nav.navigate(FoodsRoute) },
                     onSupplements = { nav.navigate(SupplementsRoute) },
@@ -270,6 +272,7 @@ fun FormeNavHost(
             composable<TemplateEditRoute> { TemplateEditScreen(onDone = { nav.popBackStack() }) }
             composable<RotationRoute> { RotationScreen(onBack = { nav.popBackStack() }) }
             composable<SettingsRoute> { SettingsScreen(onBack = { nav.popBackStack() }) }
+            composable<AppearanceRoute> { AppearanceScreen(onBack = { nav.popBackStack() }) }
             composable<WatchTestRoute> { WatchTestScreen(onBack = { nav.popBackStack() }) }
             composable<AiSettingsRoute> { AiSettingsScreen(onBack = { nav.popBackStack() }) }
         }
