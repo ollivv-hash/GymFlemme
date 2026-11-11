@@ -51,6 +51,6 @@ import kotlinx.serialization.Serializable
 @Serializable data object LibraryPickerRoute
 /** Config → Bibliothèque: browse the library and add entries to the catalogue (V2.10). */
 @Serializable data object LibraryRoute
-/** Config → Sources et licences (V2.10). */
+/** Réglages → À propos (V2.23; "Sources et licences" since V2.10). */
 @Serializable data object SourcesRoute
 const val LIBRARY_PICK_KEY = "library_pick"

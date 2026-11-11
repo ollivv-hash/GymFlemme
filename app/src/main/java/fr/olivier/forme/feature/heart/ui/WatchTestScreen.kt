@@ -1,5 +1,7 @@
 package fr.olivier.forme.feature.heart.ui
 
+import fr.olivier.forme.R
+import androidx.compose.ui.res.stringResource
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -92,6 +94,7 @@ class WatchTestViewModel @Inject constructor(
 ) : ViewModel() {
     val bleState = ble.state
     val savedDevice = settings.hrDevice.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val developerMode = settings.developerMode.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     private val _hc = MutableStateFlow(HealthConnectUi())
     val hc = _hc.asStateFlow()
 
@@ -155,8 +158,11 @@ class WatchTestViewModel @Inject constructor(
         appendLine("Lien : ${describe(s.link)}")
         appendLine("Appareils vus : ${s.devices.size} (dont ${s.devices.count { it.advertisesHeartRate }} avec service FC)")
         s.devices.take(12).forEach { appendLine("  - ${it.name ?: "(sans nom)"} ${it.address} ${it.rssi ?: "-"} dBm${if (it.advertisesHeartRate) " FC" else ""}${if (it.bonded) " appairé" else ""}") }
-        appendLine("Journal Bluetooth :")
-        s.log.forEach { appendLine("  $it") }
+        // V2.23: the Bluetooth log only in developer mode.
+        if (developerMode.value) {
+            appendLine("Journal Bluetooth :")
+            s.log.forEach { appendLine("  $it") }
+        }
         val h = _hc.value
         appendLine("Health Connect : ${h.availability}, lecture arrière-plan ${if (h.backgroundSupported) "supportée" else "non supportée"}")
         hcPermissions.forEach { appendLine("  ${if (it in h.granted) "✓" else "✗"} ${it.substringAfterLast('.')}") }
@@ -199,6 +205,7 @@ fun WatchTestScreen(onBack: () -> Unit, viewModel: WatchTestViewModel = hiltView
     val ble by viewModel.bleState.collectAsStateWithLifecycle()
     val saved by viewModel.savedDevice.collectAsStateWithLifecycle()
     val hc by viewModel.hc.collectAsStateWithLifecycle()
+    val developerMode by viewModel.developerMode.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -251,13 +258,15 @@ fun WatchTestScreen(onBack: () -> Unit, viewModel: WatchTestViewModel = hiltView
                 onRead = viewModel::readHealthConnect,
             )
 
-            SectionTitle("Journal Bluetooth")
-            Text(
-                ble.log.takeLast(20).joinToString("\n").ifEmpty { "(vide)" },
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp,
-                lineHeight = 14.sp,
-            )
+            if (developerMode) {
+                SectionTitle(stringResource(R.string.bluetooth_log_title))
+                Text(
+                    ble.log.takeLast(20).joinToString("\n").ifEmpty { "(vide)" },
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                )
+            }
 
             Button(
                 onClick = {

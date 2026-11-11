@@ -2,4 +2,32 @@
 <resources>
     <string name="app_name">GymFlemme</string>
     <string name="widget_description">Prochaine séance, séances de la semaine, kcal et protéines du jour</string>
+
+    <!-- Floating navigation bar (V2.23). -->
+    <string name="nav_home">Accueil</string>
+    <string name="nav_sessions">Séances</string>
+    <string name="nav_nutrition">Nutrition</string>
+    <string name="nav_badges">Badges</string>
+    <string name="nav_settings">Réglages</string>
+
+    <!-- Réglages (V2.23). -->
+    <string name="settings_title">Réglages</string>
+    <string name="preferences_title">Préférences et sauvegarde</string>
+    <string name="about_title">À propos</string>
+    <string name="about_subtitle">Version, sources et licences</string>
+    <string name="about_version">GymFlemme %1$s</string>
+    <string name="about_version_note">Application personnelle, données gardées sur le téléphone.</string>
+    <string name="about_sources">Sources et licences</string>
+
+    <!-- Developer mode (V2.23): 7 taps on the version in À propos. -->
+    <string name="developer_mode">Mode développeur</string>
+    <string name="developer_mode_hint">Affiche le journal Bluetooth dans Montre cardio.</string>
+    <string name="developer_mode_enabled">Mode développeur activé</string>
+    <string name="developer_mode_disabled">Mode développeur désactivé</string>
+    <string name="developer_mode_already">Le mode développeur est déjà activé</string>
+    <plurals name="developer_mode_taps_left">
+        <item quantity="one">Encore %d appui pour activer le mode développeur</item>
+        <item quantity="other">Encore %d appuis pour activer le mode développeur</item>
+    </plurals>
+    <string name="bluetooth_log_title">Journal Bluetooth</string>
 </resources>

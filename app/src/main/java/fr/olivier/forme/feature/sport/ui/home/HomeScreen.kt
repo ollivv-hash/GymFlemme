@@ -263,7 +263,6 @@ fun SessionEntity.durationMin(): Long? = endedAt?.let { Duration.between(started
 fun HomeScreen(
     onOpenSession: () -> Unit,
     onOpenNutrition: () -> Unit,
-    onOpenSettings: () -> Unit = {},
     onOpenBadges: (tab: Int) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     journal: JournalViewModel = hiltViewModel(),
@@ -351,7 +350,6 @@ fun HomeScreen(
                 greeting = greeting,
                 missedGoal = nudge.missedGoalNext?.let { rememberQuip(Quip.MISSED_GOAL, it) },
                 onAnalyse = viewModel::analyse,
-                onSettings = onOpenSettings,
                 modifier = Modifier.padding(bottom = 6.dp),
             )
             SessionTile(

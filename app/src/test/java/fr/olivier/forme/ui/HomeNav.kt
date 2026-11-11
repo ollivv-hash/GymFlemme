@@ -9,17 +9,14 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import fr.olivier.forme.feature.sport.ui.home.bento.SESSION_TILE_TAG
 
-/**
- * V2.22: the bento home screen and the floating bar (icons with descriptions, Config behind "Réglages" in the home
- * screen's header).
- */
+/** V2.22: the bento home screen and the floating bar (icons with descriptions; V2.23: Réglages is the 5th tab). */
 @OptIn(ExperimentalTestApi::class)
 fun ComposeTestRule.waitForHome() = waitUntilAtLeastOneExists(hasTestTag(SESSION_TILE_TAG), 15_000)
 
-/** A tab of the floating bar: Accueil, Séances, Nutrition or Badges. */
+/** A tab of the floating bar: Accueil, Séances, Nutrition, Badges or Réglages. */
 fun ComposeTestRule.tab(label: String) = onNode(hasContentDescription(label) and hasClickAction()).performClick()
 
-/** Config, from the home screen's header. */
+/** Réglages (the former Config), from its tab. */
 fun ComposeTestRule.openSettings() = onNode(hasContentDescription("Réglages") and hasClickAction()).performClick()
 
 /** The choice of a session ("Nouvelle séance" sheet), from the session tile. */

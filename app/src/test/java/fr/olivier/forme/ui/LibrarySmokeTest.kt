@@ -134,7 +134,7 @@ class LibrarySmokeTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             rule.waitForHome()
             rule.openSettings()
-            rule.onNode(hasText("Sources et licences") and hasClickAction()).performScrollTo().performClick()
+            rule.onNode(hasText("À propos") and hasClickAction()).performScrollTo().performClick()
             waitFor("Open Exercise Illustrations")
             waitFor("CC0 1.0")
             waitFor("2786aef")

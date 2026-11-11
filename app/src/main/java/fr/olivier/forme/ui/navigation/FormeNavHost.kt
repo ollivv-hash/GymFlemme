@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -38,7 +39,7 @@ import fr.olivier.forme.feature.nutrition.ui.ProfileScreen
 import fr.olivier.forme.feature.nutrition.ui.ScanScreen
 import fr.olivier.forme.feature.settings.ui.ConfigScreen
 import fr.olivier.forme.feature.settings.ui.SettingsScreen
-import fr.olivier.forme.feature.settings.ui.SourcesScreen
+import fr.olivier.forme.feature.settings.ui.AboutScreen
 import fr.olivier.forme.feature.heart.ui.WatchTestScreen
 import fr.olivier.forme.feature.library.ui.ExerciseSheetScreen
 import fr.olivier.forme.feature.library.ui.LibraryPickerScreen
@@ -58,14 +59,15 @@ import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalTime
 
-/** Tabs of the floating bar (V2.22): Config moved to the home screen's header ("Réglages"). */
-private data class TopLevel(val route: Any, val label: String, val icon: Int)
+/** Tabs of the floating bar (V2.22; Réglages, the former Config, a tab since V2.23). Icons: Material Symbols. */
+private data class TopLevel(val route: Any, val label: Int, val icon: Int)
 
 private val topLevels = listOf(
-    TopLevel(HomeRoute, "Accueil", R.drawable.ic_bento_home),
-    TopLevel(HistoryRoute, "Séances", R.drawable.ic_bento_sessions),
-    TopLevel(NutritionRoute(), "Nutrition", R.drawable.ic_bento_nutrition),
-    TopLevel(BadgesRoute(), "Badges", R.drawable.ic_bento_badges),
+    TopLevel(HomeRoute, R.string.nav_home, R.drawable.ic_nav_home),
+    TopLevel(HistoryRoute, R.string.nav_sessions, R.drawable.ic_nav_sessions),
+    TopLevel(NutritionRoute(), R.string.nav_nutrition, R.drawable.ic_nav_nutrition),
+    TopLevel(BadgesRoute(), R.string.nav_badges, R.drawable.ic_nav_badges),
+    TopLevel(ConfigRoute, R.string.nav_settings, R.drawable.ic_nav_settings),
 )
 
 @Composable
@@ -79,8 +81,7 @@ fun FormeNavHost(
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val destination = backStack?.destination
-    // V2.22: also on Config (opened from the home screen's header), no tab selected there.
-    val showBar = topLevels.any { top -> destination?.hasRoute(top.route::class) == true } || destination?.hasRoute(ConfigRoute::class) == true
+    val showBar = topLevels.any { top -> destination?.hasRoute(top.route::class) == true }
 
     LaunchedEffect(Unit) {
         // A launch action (shortcut, widget) decides where to go instead.
@@ -118,9 +119,7 @@ fun FormeNavHost(
             if (showBar) {
                 FloatingNavBar(
                     topLevels.map { top ->
-                        NavEntry(top.label, top.icon, destination?.hasRoute(top.route::class) == true) {
-                            // From Config (not a tab), close it first: the home tab would otherwise restore it.
-                            if (destination?.hasRoute(ConfigRoute::class) == true) nav.popBackStack()
+                        NavEntry(stringResource(top.label), top.icon, destination?.hasRoute(top.route::class) == true) {
                             nav.navigateTopLevel(top.route)
                         }
                     },
@@ -133,7 +132,6 @@ fun FormeNavHost(
                 HomeScreen(
                     onOpenSession = { nav.navigate(ActiveSessionRoute) },
                     onOpenNutrition = { nav.switchTab(NutritionRoute(tab = 0)) },
-                    onOpenSettings = { nav.navigate(ConfigRoute) },
                     onOpenBadges = { tab -> nav.switchTab(BadgesRoute(tab)) },
                 )
             }
@@ -185,7 +183,6 @@ fun FormeNavHost(
             composable<ProfileRoute> { ProfileScreen(onDone = { nav.popBackStack() }) }
             composable<ConfigRoute> {
                 ConfigScreen(
-                    onBack = { nav.popBackStack() },
                     onCatalog = { nav.navigate(CatalogRoute) },
                     onLibrary = { nav.navigate(LibraryRoute) },
                     onSources = { nav.navigate(SourcesRoute) },
@@ -260,7 +257,7 @@ fun FormeNavHost(
                     onEdit = { nav.navigate(ExerciseEditRoute(it)) },
                 )
             }
-            composable<SourcesRoute> { SourcesScreen(onBack = { nav.popBackStack() }) }
+            composable<SourcesRoute> { AboutScreen(onBack = { nav.popBackStack() }) }
             composable<TemplatesRoute> {
                 TemplatesScreen(
                     onBack = { nav.popBackStack() },

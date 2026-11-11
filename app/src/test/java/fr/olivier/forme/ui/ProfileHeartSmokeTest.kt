@@ -63,7 +63,7 @@ class ProfileHeartSmokeTest {
         rule.onNodeWithText("Séances par semaine").performScrollTo()
         rule.onNode(hasContentDescription("Augmenter : Séances par semaine")).performClick()
         rule.onNode(hasText("Enregistrer") and hasClickAction()).performClick()
-        rule.waitUntilAtLeastOneExists(hasText("Sources et licences"), 10_000) // back to Config
+        rule.waitUntilAtLeastOneExists(hasText("À propos"), 10_000) // back to Réglages
 
         rule.onNodeWithText("Profil").performClick()
         rule.waitUntilAtLeastOneExists(hasText("Objectifs d'entraînement"), 15_000)
@@ -72,8 +72,8 @@ class ProfileHeartSmokeTest {
         rule.onNode(hasText("4") and hasAnySibling(hasContentDescription("Augmenter : Séances par semaine"))).assertExists()
         // Réglages no longer shows them.
         rule.onNode(hasText("Enregistrer") and hasClickAction()).performClick()
-        rule.waitUntilAtLeastOneExists(hasText("Sources et licences"), 10_000) // back to Config
-        rule.onNode(hasText("Réglages et sauvegarde") and hasClickAction()).performScrollTo().performClick()
+        rule.waitUntilAtLeastOneExists(hasText("À propos"), 10_000) // back to Réglages
+        rule.onNode(hasText("Préférences et sauvegarde") and hasClickAction()).performScrollTo().performClick()
         rule.waitUntilAtLeastOneExists(hasText("Thème"), 10_000)
         rule.onNodeWithText("Séances par semaine").assertDoesNotExist()
     }

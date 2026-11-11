@@ -174,7 +174,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMo
         pendingImport = uri
     }
 
-    Scaffold(topBar = { FormeTopBar("Réglages", onBack) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+    Scaffold(topBar = { FormeTopBar(androidx.compose.ui.res.stringResource(fr.olivier.forme.R.string.preferences_title), onBack) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
         Column(
             Modifier
                 .padding(padding)
