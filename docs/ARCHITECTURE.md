@@ -85,7 +85,7 @@ Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv`
 
 ---
 
-## Modèle de données (Room, version 13)
+## Modèle de données (Room, version 14)
 
 Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distances en mètres. `Instant` ↔ epoch millis, `LocalDate` ↔ epochDay. Les enums sont stockées en texte.
 
@@ -112,7 +112,7 @@ Tables Nutrition (V1.1, migration explicite 1 → 2) :
 | `meal_entry` | id, date, mealType, foodId?, nom, quantité (g), protéines, kcal, glucides, lipides, isWhey, heure | **Copie des valeurs** : modifier ou supprimer un aliment ne change jamais l'historique. |
 | `supplement` (v10) | id, name, code (`creatine`, `omega3`…, null = complément perso ; unique), amount, unit (`G`, `MG`, `UG`, `IU`, `CAPSULE`, `TABLET`, `ML`), active, sortOrder, reminderEnabled, reminderMinutes | Compléments proposés d'office (créatine active, les autres inactifs) et perso. Migration 9 → 10 : la créatine du profil devient la première ligne. |
 | `supplement_intake` (v10) | id, supplementId (→ supplement, suppression en cascade), date, amount, takenAt ; unique (supplementId, date) | Une prise par complément et par jour. Migration 9 → 10 : reprend `creatine_entry` (supprimée). |
-| `dish` (v11) | foodId (clé, → food de source `DISH`, suppression en cascade), cookedWeightG (null = poids des ingrédients), servings | Plat perso ; ses valeurs pour 100 g et sa portion sont écrites dans son `food`. |
+| `dish` (v11) | foodId (clé, → food de source `DISH`, suppression en cascade), cookedWeightG (null = poids des ingrédients), servings, useCount (v14 : ajouts à un repas) | Plat perso ; ses valeurs pour 100 g et sa portion sont écrites dans son `food`. |
 | `dish_ingredient` (v11) | id, dishId (→ dish, suppression en cascade), position, name, grams, valeurs pour 100 g (kcal, protéines, glucides, lipides) | Copie des valeurs de l'aliment au moment de l'ajout : un aliment supprimé ou modifié ensuite ne change pas le plat. |
 | `badge` (v7, palier v8) | id (nom du badge, ex. `REPEAT_OFFENDER`), tier (1 à 4 = Bronze à Platine, 0 = sans palier), earnedAt (jour), seen ; clé (id, tier) | Badges et paliers obtenus ; recalculés depuis l'historique, jamais retirés. Migration 7 → 8 : Pilier de la salle → Récidiviste Argent, Créatine fidèle → Argent, Récidiviste / Plus fort que le canapé / Touche-à-tout → Bronze. Exportés depuis la sauvegarde v7 (palier depuis la v8). |
 | `monthly_challenge` (v9) | month (`2026-10`, clé), challenge (nom du défi), completedAt (jour, null tant que non réussi), seen | Défi de chaque mois, tiré une fois. Exporté depuis la sauvegarde v9. |
@@ -447,6 +447,15 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
   le journal Nutrition et sur la carte « Nutrition du jour » de l'accueil. Rappel **non envoyé si la prise est déjà
   notée**, bouton « C'est pris » dans la notification, reprogrammé après redémarrage du téléphone. La série de jours,
   le badge « Créatine fidèle » et le bilan de la semaine restent propres à la créatine ; la whey reste à part.
+- **Ajouter → Mes plats** (V2.26) : l'écran d'ajout d'un repas a trois onglets, **Mes plats** (ouvert d'abord) ·
+  **Aliments** · **Scanner** (ouvre le scanner). Mes plats : recherche limitée aux plats (sans accents ni casse), plats
+  **épinglés** en tête (épinglé = favori ; appui long ou punaise), puis **Les plus utilisés** (défaut) · **Récents** ·
+  **A → Z** (choix retenu, préférence `dish_sort`). Chaque ligne : kcal et protéines d'une portion ; un appui ajoute une
+  portion du plat aussitôt, message avec **Annuler** (l'entrée et son compte retirés) ; le crayon ouvre la quantité
+  (Modifier, Supprimer). « Créer un plat » en bas, état vide : « Aucun plat enregistré… ». Aliments : favoris, récents
+  et recherche sans les plats, sauf un plat dont le nom correspond, montré à part en tête (« Mes plats »). `dish.useCount`
+  compte les ajouts ; la migration 13 → 14 le calcule, avec `lastUsedAt`, depuis les repas déjà saisis. Icônes Material
+  Symbols `push_pin`, `edit`.
 - **Plats personnalisés** (V2.21) : un plat (« Poulet du dimanche ») est un aliment de type **Plat**, composé
   d'ingrédients choisis parmi les aliments connus (Ciqual, produits scannés, aliments perso) avec leurs grammes. Ses
   valeurs pour 100 g sont calculées sur le **poids total cuit** s'il est saisi (pâtes, riz…), sinon sur le poids des
@@ -565,7 +574,7 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
 - Format versionné : `{ "schemaVersion": 12, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "supplements", "supplementIntakes", "dishes", "dishIngredients" }, "badges": [ … ], "challenges": [ … ] }`.
-  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9, les compléments depuis la v10, les plats perso depuis la v11, le prénom depuis la v12, l'apparence (thème, accent, couleurs dynamiques) depuis la v13, le niveau d'activité et la cible de protéines en grammes depuis la v14. Les fichiers **v1** à **v12** restent importables (sans apparence : celle du téléphone est gardée) (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8 ; créatine des fichiers v1 à v9 (profil + `creatine`) convertie en complément comme la migration 9 → 10). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
+  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9, les compléments depuis la v10, les plats perso depuis la v11, le prénom depuis la v12, l'apparence (thème, accent, couleurs dynamiques) depuis la v13, le niveau d'activité et la cible de protéines en grammes depuis la v14, le nombre d'utilisations des plats depuis la v15. Les fichiers **v1** à **v12** restent importables (sans apparence : celle du téléphone est gardée) (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8 ; créatine des fichiers v1 à v9 (profil + `creatine`) convertie en complément comme la migration 9 → 10). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 
