@@ -75,6 +75,29 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- V2.27: a shared template (.gymflemme). Its own type, as sent by GymFlemme... -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/vnd.gymflemme.template+json" />
+            </intent-filter>
+            <!-- ...and the generic types some apps give it, for a name ending in .gymflemme (file managers). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/json" />
+                <data android:mimeType="text/plain" />
+                <data android:pathPattern=".*\\.gymflemme" />
+                <data android:pathPattern=".*\\..*\\.gymflemme" />
+                <data android:pathPattern=".*\\..*\\..*\\.gymflemme" />
+            </intent-filter>
         </activity>
 
         <!-- AI analysis (V2.4): the day's Markdown file is shared from the cache through this provider. -->

@@ -15,6 +15,9 @@ import kotlinx.serialization.Serializable
 @Serializable data object CatalogRoute
 @Serializable data class ExerciseEditRoute(val exerciseId: Long = 0)
 @Serializable data object TemplatesRoute
+/** V2.27: a shared template, from a file ([uri]) or a QR code ([payload]). */
+@Serializable data class TemplateImportRoute(val uri: String? = null, val payload: String? = null)
+@Serializable data object TemplateScanRoute
 /** templateId = 0 → new template; sourceTemplateId / sourceSessionId → duplicate. */
 @Serializable data class TemplateEditRoute(
     val templateId: Long = 0,

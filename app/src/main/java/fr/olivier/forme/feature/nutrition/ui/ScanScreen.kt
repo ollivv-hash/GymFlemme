@@ -182,17 +182,24 @@ fun ScanScreen(
     }
 }
 
-/** CameraX preview with an ML Kit analyzer limited to product barcodes (EAN / UPC). */
+/**
+ * CameraX preview with an ML Kit analyzer limited to [formats]: product barcodes (EAN / UPC) by default, QR codes for
+ * a shared template (V2.27).
+ */
 @OptIn(ExperimentalGetImage::class)
 @Composable
-private fun CameraPreview(onBarcode: (String) -> Unit, onController: (LifecycleCameraController) -> Unit) {
+internal fun CameraPreview(
+    onBarcode: (String) -> Unit,
+    onController: (LifecycleCameraController) -> Unit,
+    formats: IntArray = intArrayOf(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E),
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val executor = remember { Executors.newSingleThreadExecutor() }
     val scanner = remember {
         BarcodeScanning.getClient(
             BarcodeScannerOptions.Builder()
-                .setBarcodeFormats(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E)
+                .setBarcodeFormats(formats.first(), *formats.drop(1).toIntArray())
                 .build(),
         )
     }

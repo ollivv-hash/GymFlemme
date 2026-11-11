@@ -7,5 +7,5 @@
 - Used (V2.23), converted as is to Android vector drawables (path unchanged, shifted by the SVG's `-960` viewBox
   origin; `auto_awesome` is published on a 24 × 24 grid, used without shift): `home` → `ic_nav_home`, `fitness_center` → `ic_nav_sessions`, `restaurant` → `ic_nav_nutrition`,
   `military_tech` → `ic_nav_badges`, `settings` → `ic_nav_settings`, `auto_awesome` → `ic_auto_awesome`; V2.26: `push_pin` → `ic_pin`, `push_pin` filled → `ic_pin_filled`,
-  `edit` → `ic_edit` (`push_pin` is published on a 24 × 24 grid).
+  `edit` → `ic_edit`; V2.27: `content_copy` → `ic_copy` (`push_pin` is published on a 24 × 24 grid).
 - `LICENSE` and `SOURCE.md`: proof of license, not packaged in the APK.

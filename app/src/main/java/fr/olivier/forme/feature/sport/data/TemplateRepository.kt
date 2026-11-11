@@ -51,6 +51,28 @@ class TemplateRepository @Inject constructor(
         )
     }
 
+    /**
+     * V2.27: an imported template, a copy of its own: the exercises to create are added to the catalogue, then the
+     * template with its lines, out of the rotation. Returns the template's id.
+     */
+    suspend fun importTemplate(
+        name: String,
+        code: String,
+        lines: List<Pair<TemplateExerciseEntity, ExerciseEntity>>,
+    ): Long = db.withTransaction {
+        val resolved = lines.mapIndexed { i, (line, exercise) ->
+            val exerciseId = if (exercise.id == 0L) db.exerciseDao().insert(exercise) else exercise.id
+            line.copy(templateId = 0, exerciseId = exerciseId, position = i)
+        }
+        dao.saveTemplate(WorkoutTemplateEntity(name = name, code = code, orderInRotation = null), resolved)
+    }
+
+    /** V2.27: [id] added at the end of the rotation. */
+    suspend fun addToRotation(id: Long) {
+        val order = dao.getAll().filter { it.orderInRotation != null && !it.archived }.sortedBy { it.orderInRotation }.map { it.id }
+        if (id !in order) saveRotation(order + id)
+    }
+
     /** Lines of a past session, to create a template variant from it. */
     suspend fun linesFromSession(sessionId: Long): List<TemplateExerciseEntity> =
         sessionDao.getSessionLines(sessionId).map { (line, _) ->

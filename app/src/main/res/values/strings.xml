@@ -123,4 +123,46 @@
     <string name="dishes_add_one">Ajouter une portion</string>
     <string name="dishes_create">Créer un plat</string>
     <string name="dishes_undo">Annuler</string>
+
+    <!-- Sharing a template (V2.27). -->
+    <string name="share_template">Partager %1$s</string>
+    <string name="share_title">Partager « %1$s »</string>
+    <string name="share_with_name">Afficher mon prénom (%1$s)</string>
+    <string name="share_no_name">Afficher mon prénom (à renseigner dans Réglages → Profil)</string>
+    <string name="share_what">Seule la structure est partagée : exercices, séries, répétitions, repos. Jamais tes charges, ton historique ni ton profil.</string>
+    <string name="share_file">Envoyer un fichier</string>
+    <string name="share_qr">Afficher un QR code</string>
+    <string name="share_qr_too_long">Modèle trop long pour un QR code, utilise l\'envoi par fichier.</string>
+    <string name="share_qr_description">QR code du modèle, à scanner depuis GymFlemme</string>
+    <string name="import_template">Importer un modèle</string>
+    <string name="scan_template">Scanner un modèle</string>
+    <string name="import_title">Importer un modèle</string>
+    <string name="import_too_new">Ce modèle vient d\'une version plus récente de GymFlemme. Mets l\'app à jour pour l\'importer.</string>
+    <string name="import_unreadable">Ce fichier n\'est pas un modèle GymFlemme lisible.</string>
+    <string name="import_close">Fermer</string>
+    <string name="import_name">Nom du modèle</string>
+    <string name="import_author">Partagé par %1$s</string>
+    <plurals name="import_recognised">
+        <item quantity="one">%1$d exercice reconnu</item>
+        <item quantity="other">%1$d exercices reconnus</item>
+    </plurals>
+    <plurals name="import_to_create">
+        <item quantity="one">%1$d à créer : %2$s</item>
+        <item quantity="other">%1$d à créer : %2$s</item>
+    </plurals>
+    <string name="import_optional">facultatif</string>
+    <string name="import_uses">reconnu : %1$s</string>
+    <string name="import_new">à créer dans ton catalogue</string>
+    <string name="import_change">Changer</string>
+    <string name="import_create_it">Créer « %1$s »</string>
+    <string name="import_button">Importer</string>
+    <string name="import_done">« %1$s » est importé.</string>
+    <string name="import_not_in_rotation">Il n\'est pas dans ta rotation.</string>
+    <string name="import_add_rotation">Ajouter à ma rotation</string>
+    <string name="import_in_rotation">Ajouté à la fin de ta rotation.</string>
+    <string name="import_finish">Terminé</string>
+    <string name="scan_template_hint">Vise le QR code du modèle affiché sur l\'autre téléphone.</string>
+    <string name="scan_template_other">Ce QR code n\'est pas un modèle GymFlemme.</string>
+    <string name="scan_template_camera">L\'accès à la caméra est nécessaire pour scanner un QR code.</string>
+    <string name="scan_template_allow">Autoriser la caméra</string>
 </resources>

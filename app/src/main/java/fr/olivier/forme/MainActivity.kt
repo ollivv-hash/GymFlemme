@@ -64,6 +64,25 @@ class MainViewModel @Inject constructor(
 
     fun onIntent(intent: Intent?) {
         QuickAction.from(intent)?.let { _pendingAction.value = it }
+        templateUri(intent)?.let { _templateToImport.value = it.toString() }
+    }
+
+    /** V2.27: a shared template opened from another app (file manager, messaging, mail) or picked in the app. */
+    private val _templateToImport = MutableStateFlow<String?>(null)
+    val templateToImport: StateFlow<String?> = _templateToImport.asStateFlow()
+
+    fun importTemplate(uri: android.net.Uri) {
+        _templateToImport.value = uri.toString()
+    }
+
+    fun templateHandled() {
+        _templateToImport.value = null
+    }
+
+    private fun templateUri(intent: Intent?): android.net.Uri? = when (intent?.action) {
+        Intent.ACTION_VIEW -> intent.data
+        Intent.ACTION_SEND -> androidx.core.content.IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, android.net.Uri::class.java)
+        else -> null
     }
 
     fun actionHandled() {
@@ -91,12 +110,20 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appearance = viewModel.appearance.collectAsStateWithLifecycle()
             val pendingAction = viewModel.pendingAction.collectAsStateWithLifecycle()
+            val templateToImport = viewModel.templateToImport.collectAsStateWithLifecycle()
+            // "Importer un modèle": the system file picker (V2.27), any type: the content is checked on reading.
+            val pickTemplate = androidx.activity.compose.rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+            ) { uri -> uri?.let(viewModel::importTemplate) }
             FormeTheme(appearance.value) {
                 CompositionLocalProvider(LocalQuips provides quips) {
                     FormeNavHost(
                         resumeOnStart = savedInstanceState == null,
                         hasActiveSession = viewModel::hasActiveSession,
                         shouldShowOnboarding = viewModel::shouldShowOnboarding,
+                        templateToImport = templateToImport.value,
+                        onTemplateHandled = viewModel::templateHandled,
+                        onPickTemplateFile = { pickTemplate.launch(arrayOf("*/*")) },
                         pendingAction = pendingAction.value,
                         startProposedSession = { then -> viewModel.startProposedSession(then) },
                         onActionHandled = viewModel::actionHandled,
