@@ -1,6 +1,9 @@
-# Publishes a version (V2.28): on a tag v* pushed to this repository (docs/publication.md), tests, builds and signs
-# the "github" variant, then creates the release in the releases repository with three files: the APK, its SHA-256
-# and update.json, read by the app to update itself.
+# Publishes a version (V2.28): on every push to main (a merged PR), if the release v<versionName> does not exist yet
+# in the releases repository, tests, builds and signs the "github" variant, creates the release there with three
+# files (the APK, its SHA-256 and update.json, read by the app to update itself), then tags the published commit
+# v<versionName> in this repository. A merge that does not change versionName publishes nothing.
+# "Run workflow" (workflow_dispatch, on main only) runs the same thing again, e.g. after a failure. See
+# docs/publication.md.
 #
 # Secrets (Settings → Secrets and variables → Actions of THIS repository):
 #   FORME_KEYSTORE_BASE64, FORME_STORE_PASSWORD, FORME_KEY_ALIAS, FORME_KEY_PASSWORD   the signing key (as android.yml)
@@ -10,7 +13,8 @@ name: Publish
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: publish
@@ -23,9 +27,62 @@ env:
   RELEASES_REPOSITORY: ollivv-hash/gymflemme-releases
 
 jobs:
+  # Fast: reads the version and asks the releases repository whether it is already published.
+  check:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      name: ${{ steps.version.outputs.name }}
+      code: ${{ steps.version.outputs.code }}
+      publish: ${{ steps.released.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: app/build.gradle.kts
+          sparse-checkout-cone-mode: false
+
+      - name: Version
+        id: version
+        run: |
+          name=$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)
+          code=$(sed -n 's/^ *versionCode = \([0-9]*\)/\1/p' app/build.gradle.kts)
+          if [ -z "$name" ] || [ -z "$code" ]; then
+            echo "::error::versionName / versionCode not found in app/build.gradle.kts."
+            exit 1
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Already published?
+        id: released
+        env:
+          GH_TOKEN: ${{ secrets.GYMFLEMME_RELEASES_TOKEN }}
+          VERSION: ${{ steps.version.outputs.name }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::Missing secret GYMFLEMME_RELEASES_TOKEN (docs/publication.md). Nothing published."
+            exit 1
+          fi
+          if out=$(gh release view "v$VERSION" --repo "$RELEASES_REPOSITORY" --json tagName 2>&1); then
+            echo "::notice::v$VERSION is already published in $RELEASES_REPOSITORY: nothing to do."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          elif printf '%s' "$out" | grep -qi "not found"; then
+            echo "v$VERSION is not published yet: publishing."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "$out"
+            echo "::error::Could not read the releases of $RELEASES_REPOSITORY (token expired or without access?)."
+            exit 1
+          fi
+
   publish:
+    needs: check
+    if: needs.check.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    permissions:
+      contents: write   # to push the tag v<version> on the published commit
     steps:
       - uses: actions/checkout@v5
 
@@ -36,28 +93,15 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
-      - name: Version matches the tag
-        id: version
-        run: |
-          name=$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)
-          code=$(sed -n 's/^ *versionCode = \([0-9]*\)/\1/p' app/build.gradle.kts)
-          if [ "v$name" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match versionName $name (app/build.gradle.kts): nothing published."
-            exit 1
-          fi
-          echo "name=$name" >> "$GITHUB_OUTPUT"
-          echo "code=$code" >> "$GITHUB_OUTPUT"
-
       - name: Secrets present
         env:
           KEYSTORE_BASE64: ${{ secrets.FORME_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.FORME_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.FORME_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.FORME_KEY_PASSWORD }}
-          RELEASES_TOKEN: ${{ secrets.GYMFLEMME_RELEASES_TOKEN }}
         run: |
           missing=""
-          for v in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD RELEASES_TOKEN; do
+          for v in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
             [ -n "${!v}" ] || missing="$missing $v"
           done
           if [ -n "$missing" ]; then
@@ -89,8 +133,8 @@ jobs:
 
       - name: APK, SHA-256, update.json
         env:
-          VERSION: ${{ steps.version.outputs.name }}
-          CODE: ${{ steps.version.outputs.code }}
+          VERSION: ${{ needs.check.outputs.name }}
+          CODE: ${{ needs.check.outputs.code }}
         run: |
           mkdir -p dist
           apk="dist/gymflemme-$VERSION.apk"
@@ -118,7 +162,7 @@ jobs:
       - name: Release in the releases repository
         env:
           GH_TOKEN: ${{ secrets.GYMFLEMME_RELEASES_TOKEN }}
-          VERSION: ${{ steps.version.outputs.name }}
+          VERSION: ${{ needs.check.outputs.name }}
         run: |
           if gh release view "v$VERSION" --repo "$RELEASES_REPOSITORY" > /dev/null 2>&1; then
             echo "::error::Release v$VERSION already exists in $RELEASES_REPOSITORY: bump the version to publish again."
@@ -127,3 +171,14 @@ jobs:
           GITHUB_REPOSITORY="$GITHUB_REPOSITORY" python3 tools/release/notes.py "$VERSION" > "$RUNNER_TEMP/notes.md"
           gh release create "v$VERSION" dist/gymflemme-*.apk dist/gymflemme-*.apk.sha256 dist/update.json \
             --repo "$RELEASES_REPOSITORY" --title "GymFlemme $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+
+      - name: Tag the published commit
+        env:
+          VERSION: ${{ needs.check.outputs.name }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" > /dev/null; then
+            echo "::notice::Tag v$VERSION already exists in this repository: left as is."
+          else
+            git tag "v$VERSION" "$GITHUB_SHA"
+            git push origin "v$VERSION"
+          fi

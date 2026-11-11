@@ -81,15 +81,15 @@ Les tests de fumée (`AppSmokeTest`, `RecapSmokeTest`, `FeaturesSmokeTest`, …)
 
 `.github/workflows/android.yml` lance à chaque pull request (et à chaque push sur `main`) :
 les tests, le lint et la compilation release des **deux variantes** (`github` et `play`) ; la variante `play` vérifie
-qu'elle ne contient pas la permission d'installer des apps. Depuis V2.28, **la publication se fait par un tag**
-(`.github/workflows/publish.yml`, procédure dans [publication.md](publication.md)).
+qu'elle ne contient pas la permission d'installer des apps. Depuis V2.28, **la publication se fait au merge
+d'une PR qui monte la version** (`.github/workflows/publish.yml`, procédure dans [publication.md](publication.md)).
 Runner **épinglé sur `ubuntu-24.04`** (`ubuntu-latest` passe à Ubuntu 26 à partir du 19 octobre 2026) et actions en
 versions **Node 24** (`checkout`/`setup-java`/`setup-gradle` v5, `upload-artifact` v7, `download-artifact` v8) : à
 monter volontairement, ensemble, quand GitHub l'annonce.
 
 - **APK de la PR** : onglet *Actions* → le run → artefact `gymflemme-<version>-apk` (`gymbro-…` de 2.11.0 à 2.13.0, `forme-…` avant) (conservé 7 jours, pour rester dans le quota de stockage GitHub Actions).
-- **Release** : jusqu'à la 2.27, publiée dans ce dépôt au merge sur `main` ; depuis la 2.28, par un tag `v*` dans
-  `ollivv-hash/gymflemme-releases` (voir [publication.md](publication.md)).
+- **Release** : jusqu'à la 2.27, publiée dans ce dépôt au merge sur `main` ; depuis la 2.28, au merge sur `main` d'une
+  nouvelle version, dans `ollivv-hash/gymflemme-releases`, avec un tag `vX.Y.Z` posé ici (voir [publication.md](publication.md)).
 
 Signature : quatre secrets de dépôt (*Settings → Secrets and variables → Actions*) :
 

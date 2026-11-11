@@ -1,5 +1,5 @@
 # Tests, lint and release APKs of both variants ("github", "play") on every pull request and push to main.
-# Since V2.28 releases are published by publish.yml, on a tag v* (docs/publication.md), no longer on a merge.
+# Since V2.28 releases are published by publish.yml, on a merge to main that bumps the version (docs/publication.md).
 #
 # Release signing uses four repository secrets (Settings → Secrets and variables → Actions):
 #   FORME_KEYSTORE_BASE64  the .jks file, base64-encoded

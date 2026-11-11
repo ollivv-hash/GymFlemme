@@ -1,21 +1,24 @@
 # Publier une version
 
-Depuis la V2.28, une version se publie en **poussant un tag** `vX.Y.Z` sur ce dépôt de code. Le workflow
-`.github/workflows/publish.yml` :
+Depuis la V2.28, une version se publie **en mergeant sur `main` une PR qui monte la version**. Le workflow
+`.github/workflows/publish.yml` se lance à chaque push sur `main` et regarde d'abord si la release `vX.Y.Z`
+(`versionName` de `app/build.gradle.kts`) existe déjà dans le dépôt de versions : si oui, il s'arrête sans rien publier
+(un merge qui ne change pas la version ne publie rien) ; sinon il :
 
 1. lance les tests ;
 2. compile la variante `github` (`assembleGithubRelease`), signée avec la clé stockée dans les secrets du dépôt ;
 3. calcule le SHA-256 de l'APK et écrit `update.json` (`versionCode` et `versionName` lus dans `app/build.gradle.kts`,
-   notes tirées de la ligne de la version dans `docs/CHANGELOG.md`) ; le workflow échoue si le tag ne correspond pas au
-   `versionName` ;
+   notes tirées de la ligne de la version dans `docs/CHANGELOG.md`) ;
 4. crée la release `vX.Y.Z` dans le **dépôt de versions** `ollivv-hash/gymflemme-releases`, avec trois fichiers :
-   `gymflemme-X.Y.Z.apk`, `gymflemme-X.Y.Z.apk.sha256` et `update.json`.
+   `gymflemme-X.Y.Z.apk`, `gymflemme-X.Y.Z.apk.sha256` et `update.json` ;
+5. pose le tag `vX.Y.Z` sur le commit publié de ce dépôt de code (pour retrouver le code de chaque version). Aucun tag
+   n'est à créer à la main.
 
 L'app (variante `github`) lit la dernière release de ce dépôt, au lancement au plus une fois par 24 h, ou par
 Réglages → À propos → « Rechercher une mise à jour ».
 
-Le merge d'une PR sur `main` ne publie plus rien : la CI (`android.yml`) teste et compile les deux variantes, et
-l'APK de chaque run reste téléchargeable comme artefact pendant 7 jours.
+En parallèle, la CI (`android.yml`) teste et compile les deux variantes à chaque PR et push sur `main` ; l'APK de
+chaque run reste téléchargeable comme artefact pendant 7 jours.
 
 ## Une seule fois : préparer GitHub
 
@@ -31,7 +34,8 @@ l'APK de chaque run reste téléchargeable comme artefact pendant 7 jours.
 
 1. github.com → photo de profil → **Settings** → **Developer settings** → **Personal access tokens** →
    **Fine-grained tokens** → **Generate new token**.
-2. **Token name** : `gymflemme-publish`. **Expiration** : 1 an (noter la date pour le renouveler).
+2. **Token name** : `gymflemme-publish`. **Expiration** : la plus longue que GitHub accepte (noter la date pour le
+   renouveler : un jeton expiré fait échouer la publication, voir plus bas).
 3. **Resource owner** : ton compte. **Repository access** : **Only select repositories** → `gymflemme-releases` seul.
 4. **Permissions** → **Repository permissions** → **Contents : Read and write** (le reste à *No access* ; *Metadata :
    Read-only* est ajouté d'office).
@@ -85,18 +89,8 @@ mots de passe dans un gestionnaire de mots de passe, avec une copie hors ligne.
 1. Dans une PR, monter la version dans `app/build.gradle.kts` : `versionCode` + 1, `versionName` (`2.28.0` → `2.29.0`),
    et ajouter sa ligne dans `docs/CHANGELOG.md` (`| **V2.29** ✅ | … |` : elle devient les notes de la release et
    de l'écran de mise à jour).
-2. Merger la PR quand la CI est verte.
-3. Taguer le commit de `main` et pousser le tag :
-
-   ```bash
-   git checkout main && git pull
-   git tag v2.29.0
-   git push origin v2.29.0
-   ```
-
-   (ou github.com → *Releases* → *Draft a new release* → *Choose a tag* → `v2.29.0` sur `main` → *Create new tag*,
-   puis **annuler** le brouillon : seul le tag compte, la release est créée dans l'autre dépôt.)
-4. Onglet **Actions** du dépôt de code → workflow **Publish** : vert en 10 minutes environ. La release apparaît dans
+2. Merger la PR quand la CI est verte. C'est tout : le merge lance la publication.
+3. Onglet **Actions** du dépôt de code → workflow **Publish** : vert en 10 minutes environ. La release apparaît dans
    `gymflemme-releases`, et les téléphones la proposent au prochain lancement (au plus 24 h) ou tout de suite par
    « Rechercher une mise à jour ».
 
@@ -106,11 +100,14 @@ Le journal du run indique l'étape en échec ; rien n'est publié tant que la de
 
 | Message | Cause | Que faire |
 |---|---|---|
-| `Tag … does not match versionName …` | le tag n'est pas la version de `build.gradle.kts` | supprimer le tag (`git push --delete origin v2.29.0` puis `git tag -d v2.29.0`), corriger, retaguer |
-| `Missing secrets: …` | un secret manque ou est vide | le créer (tableau plus haut), puis *Re-run all jobs* |
-| tests ou compilation en échec | le commit tagué ne passe pas | corriger dans une PR, merger, puis supprimer et recréer le tag sur le nouveau commit |
+| `v… is already published …: nothing to do` (avertissement, run vert) | la version n'a pas changé | normal pour un merge sans nouvelle version ; pour publier, monter la version |
+| `Missing secret …` / `Missing secrets: …` | un secret manque ou est vide | le créer (tableau plus haut), puis *Re-run all jobs* |
+| `Could not read the releases …` ou `HTTP 401` / `403` | jeton expiré ou sans droit `Contents: write` sur `gymflemme-releases` | régénérer le jeton, mettre à jour `GYMFLEMME_RELEASES_TOKEN`, *Re-run all jobs* |
+| tests ou compilation en échec | le commit de `main` ne passe pas | corriger dans une PR et merger : le merge relance la publication |
 | `Release v… already exists` | version déjà publiée | monter la version : une release publiée ne se remplace pas (les téléphones l'ont peut-être déjà) |
-| `HTTP 401` / `403` à la dernière étape | jeton expiré ou sans droit `Contents: write` sur `gymflemme-releases` | régénérer le jeton, mettre à jour `GYMFLEMME_RELEASES_TOKEN`, *Re-run all jobs* |
+
+Pour relancer sans nouveau merge (après avoir corrigé un secret, par exemple) : onglet **Actions** → **Publish** →
+**Run workflow** sur `main`.
 
 **Publier à la main** (si GitHub Actions est indisponible) :
 
