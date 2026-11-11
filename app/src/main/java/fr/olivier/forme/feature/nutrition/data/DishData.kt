@@ -1,5 +1,6 @@
 package fr.olivier.forme.feature.nutrition.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -24,6 +25,8 @@ data class DishEntity(
     /** Weight of the whole cooked dish; null = the raw ingredients' weight. */
     val cookedWeightG: Double? = null,
     val servings: Int = 1,
+    /** V2.26: times added to a meal (the "most used" order of Mes plats). */
+    @ColumnInfo(defaultValue = "0") val useCount: Int = 0,
 )
 
 /**
@@ -81,4 +84,17 @@ interface DishDao {
 
     @Query("SELECT * FROM dish_ingredient")
     suspend fun getAllIngredients(): List<DishIngredientEntity>
+
+    @Query("UPDATE dish SET useCount = useCount + 1 WHERE foodId = :foodId")
+    suspend fun countUse(foodId: Long)
+
+    @Query("UPDATE dish SET useCount = MAX(useCount - 1, 0) WHERE foodId = :foodId")
+    suspend fun uncountUse(foodId: Long)
+
+    /** V2.26: the dishes with their food, for Mes plats. */
+    @Query("SELECT food.*, dish.useCount AS useCount FROM food JOIN dish ON dish.foodId = food.id WHERE food.source = 'DISH'")
+    fun observeSummaries(): kotlinx.coroutines.flow.Flow<List<DishSummary>>
 }
+
+/** A dish in Mes plats (V2.26): its food (values, portion, pinned = favourite, last use) and how often it was added. */
+data class DishSummary(@androidx.room.Embedded val food: FoodEntity, val useCount: Int)

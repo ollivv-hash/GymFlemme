@@ -50,6 +50,8 @@ class QuickActionSmokeTest {
     @Test
     fun addMealOpensTheSearchOnTheCurrentMeal() {
         launch(QuickAction.ADD_MEAL).use {
+            waitFor("Mes plats") // V2.26: the dishes first
+            rule.foodsTab()
             waitFor("Rechercher un aliment")
         }
     }

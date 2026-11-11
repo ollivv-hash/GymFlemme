@@ -16,6 +16,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.olivier.forme.MainActivity
 import fr.olivier.forme.feature.nutrition.ui.ADD_INGREDIENT_TAG
@@ -97,11 +99,23 @@ class DishSmokeTest {
         rule.waitUntilAtLeastOneExists(hasContentDescription("Ajouter à Déjeuner"), 15_000)
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasContentDescription("Ajouter à Déjeuner"))
         rule.onNode(hasContentDescription("Ajouter à Déjeuner")).performClick()
-        rule.waitUntilAtLeastOneExists(hasText("Poulet du dimanche") and hasClickAction(), 15_000)
+        // V2.26: Mes plats opens first; one tap adds one portion (100 g) at once.
+        rule.waitUntilAtLeastOneExists(hasText("Poulet du dimanche"), 15_000)
+        waitFor("par portion (100 g)")
+        shot("di4-my-dishes")
         rule.onNode(hasText("Poulet du dimanche") and hasClickAction()).performClick()
-        waitFor("100 g")
-        rule.onNode(hasText("Ajouter") and hasClickAction()).performClick()
         waitFor("ajouté à déjeuner")
+        // Long press: pinned (= favourite).
+        rule.onNode(hasText("Poulet du dimanche") and hasClickAction()).performTouchInput { longClick() }
+        rule.waitUntilAtLeastOneExists(hasContentDescription("Désépingler"), 15_000)
+        // Aliments: no dish in the lists, but a dish matching the search shows apart at the top.
+        rule.onNode(hasText("Aliments") and hasClickAction()).performClick()
+        rule.waitUntilAtLeastOneExists(hasText("Récents"), 15_000)
+        rule.onNode(hasText("Poulet du dimanche")).assertDoesNotExist()
+        rule.mainClock.autoAdvance = false
+        rule.onNode(hasSetTextAction() and hasText("Rechercher un aliment", substring = true)).performTextInput("dimanche")
+        pump { exists("Poulet du dimanche") && exists("Mes plats") }
+        rule.mainClock.autoAdvance = true
 
         // The journal: one line for the dish, and its meal saved as a new dish.
         rule.onNode(hasContentDescription("Retour")).performClick()

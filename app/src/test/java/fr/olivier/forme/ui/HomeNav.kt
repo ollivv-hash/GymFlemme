@@ -19,6 +19,13 @@ fun ComposeTestRule.tab(label: String) = onNode(hasContentDescription(label) and
 /** Réglages (the former Config), from its tab. */
 fun ComposeTestRule.openSettings() = onNode(hasContentDescription("Réglages") and hasClickAction()).performClick()
 
+/** Nutrition → Ajouter (V2.26): the Aliments tab (Mes plats opens first). */
+@OptIn(ExperimentalTestApi::class)
+fun ComposeTestRule.foodsTab() {
+    waitUntilAtLeastOneExists(androidx.compose.ui.test.hasText("Aliments") and hasClickAction(), 15_000)
+    onNode(androidx.compose.ui.test.hasText("Aliments") and hasClickAction()).performClick()
+}
+
 /** The choice of a session ("Nouvelle séance" sheet), from the session tile. */
 fun ComposeTestRule.openSessionChoice() = onNodeWithTag(SESSION_TILE_TAG).performClick()
 

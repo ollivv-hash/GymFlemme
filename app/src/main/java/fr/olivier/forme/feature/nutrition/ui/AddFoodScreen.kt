@@ -1,5 +1,22 @@
 package fr.olivier.forme.feature.nutrition.ui
 
+import fr.olivier.forme.feature.sport.domain.Fmt
+import fr.olivier.forme.feature.nutrition.domain.NutritionMath
+import fr.olivier.forme.R
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import fr.olivier.forme.feature.nutrition.domain.DishItem
+import fr.olivier.forme.feature.nutrition.domain.DishList
+import fr.olivier.forme.feature.nutrition.domain.DishSort
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import fr.olivier.forme.ui.components.ConfirmDialog
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,6 +83,7 @@ class AddFoodViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: NutritionRepository,
     private val badges: BadgeRepository,
+    private val settings: fr.olivier.forme.core.settings.SettingsRepository,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<AddFoodRoute>()
     val date: LocalDate = LocalDate.ofEpochDay(route.epochDay)
@@ -73,10 +91,56 @@ class AddFoodViewModel @Inject constructor(
 
     private val _query = MutableStateFlow("")
     val query = _query.asStateFlow()
-    val results = _query.debounce(250).mapLatest { repository.search(it) }
+    private val allResults = _query.debounce(250).mapLatest { repository.search(it) }
+
+    /** Aliments (V2.26): no dish, except those matching the search, shown apart at the top ([dishResults]). */
+    val results = allResults.map { list -> list.filterNot { it.isDish() } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    val favorites = repository.favorites().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    val recents = repository.recents().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val dishResults = allResults.map { list -> list.filter { it.isDish() }.map { (it as FoodChoice.Mine).food } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val favorites = repository.favorites().map { it.filterNot(FoodEntity::isDish) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val recents = repository.recents().map { it.filterNot(FoodEntity::isDish) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Mes plats (V2.26), the tab opened first. */
+    private val _tab = MutableStateFlow(AddFoodTab.DISHES)
+    val tab = _tab.asStateFlow()
+    private val _dishQuery = MutableStateFlow("")
+    val dishQuery = _dishQuery.asStateFlow()
+    val dishSort = settings.dishSort.stateIn(viewModelScope, SharingStarted.Eagerly, DishSort.MOST_USED)
+    val dishes = combine(repository.dishes(), _dishQuery, settings.dishSort) { list, q, sort ->
+        DishList.arrange(list, sort, q) { DishItem(it.food.id, it.food.name, it.food.favorite, it.useCount, it.food.lastUsedAt) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun setTab(tab: AddFoodTab) {
+        _tab.value = tab
+    }
+
+    fun setDishQuery(text: String) {
+        _dishQuery.value = text
+    }
+
+    fun setDishSort(sort: DishSort) = viewModelScope.launch { settings.setDishSort(sort) }
+
+    /** Long press or the pin: a pinned dish is a favourite (one marker for both). */
+    fun togglePin(food: FoodEntity) = viewModelScope.launch { repository.setFavorite(food, !food.favorite) }
+
+    /** One tap: one portion of the dish, at once; "Annuler" in the message. */
+    fun quickAdd(food: FoodEntity) = viewModelScope.launch {
+        val grams = food.defaultPortionG ?: 100.0
+        val entryId = repository.addFood(food, date, meal, grams)
+        runCatching { badges.evaluate() }
+        _added.send(Added("${food.name} ajouté à ${meal.label.lowercase()}", entryId, food))
+    }
+
+    fun undo(added: Added) = viewModelScope.launch { repository.undoAdd(added.entryId, added.food) }
+
+    /** A dish added in one tap, for "Annuler". */
+    data class Added(val text: String, val entryId: Long, val food: FoodEntity)
+
+    private val _added = Channel<Added>(Channel.BUFFERED)
+    val added = _added.receiveAsFlow()
 
     private val _selected = MutableStateFlow<FoodEntity?>(null)
     val selected = _selected.asStateFlow()
@@ -136,15 +200,31 @@ fun AddFoodScreen(
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
 
+    val tab by viewModel.tab.collectAsStateWithLifecycle()
+    val dishResults by viewModel.dishResults.collectAsStateWithLifecycle()
+    val resources = androidx.compose.ui.platform.LocalContext.current.resources
+    LaunchedEffect(Unit) {
+        viewModel.added.collect { added ->
+            val result = snackbar.showSnackbar(added.text, actionLabel = resources.getString(R.string.dishes_undo), duration = SnackbarDuration.Short)
+            if (result == SnackbarResult.ActionPerformed) viewModel.undo(added)
+        }
+    }
+
     Scaffold(
-        topBar = {
-            FormeTopBar(viewModel.meal.label, onBack) {
-                TextButton(onClick = { onScan(viewModel.date, viewModel.meal) }) { Text("Scanner") }
-            }
-        },
+        topBar = { FormeTopBar(viewModel.meal.label, onBack) },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Column(Modifier.padding(padding)) {
+            // V2.26: Mes plats (first), Aliments, Scanner.
+            TabRow(selectedTabIndex = tab.ordinal) {
+                Tab(selected = tab == AddFoodTab.DISHES, onClick = { viewModel.setTab(AddFoodTab.DISHES) }, text = { Text(stringResource(R.string.tab_my_dishes)) })
+                Tab(selected = tab == AddFoodTab.FOODS, onClick = { viewModel.setTab(AddFoodTab.FOODS) }, text = { Text(stringResource(R.string.tab_foods)) })
+                Tab(selected = false, onClick = { onScan(viewModel.date, viewModel.meal) }, text = { Text(stringResource(R.string.tab_scanner)) })
+            }
+            if (tab == AddFoodTab.DISHES) {
+                DishesTab(viewModel, onCreateDish, onEdit = { viewModel.select(it) })
+                return@Column
+            }
             OutlinedTextField(
                 value = query,
                 onValueChange = viewModel::setQuery,
@@ -153,10 +233,18 @@ fun AddFoodScreen(
                 trailingIcon = {
                     if (query.isNotEmpty()) IconButton(onClick = { viewModel.setQuery("") }) { Icon(Icons.Filled.Clear, "Effacer") }
                 },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             )
             LazyColumn {
                 if (query.trim().length >= 2) {
+                    // A dish whose name matches: apart, at the top.
+                    if (dishResults.isNotEmpty()) {
+                        item { SectionTitle(stringResource(R.string.tab_my_dishes), Modifier.padding(horizontal = 16.dp)) }
+                        items(dishResults, key = { "d${it.id}" }) { food ->
+                            FoodRow(food.name, food.brand, food.per100(), favorite = food.favorite) { viewModel.select(food) }
+                        }
+                        item { SectionTitle(stringResource(R.string.tab_foods), Modifier.padding(horizontal = 16.dp)) }
+                    }
                     if (results.isEmpty()) item { Text("Aucun résultat.", Modifier.padding(16.dp)) }
                     items(results, key = { it.key() }) { choice ->
                         FoodRow(choice.name, choice.detail, choice.per100, favorite = (choice as? FoodChoice.Mine)?.food?.favorite == true) {
@@ -179,7 +267,6 @@ fun AddFoodScreen(
                 item {
                     Row(Modifier.padding(8.dp)) {
                         TextButton(onClick = onCreateFood) { Text("Créer un aliment perso") }
-                        TextButton(onClick = onCreateDish) { Text("Créer un plat") }
                     }
                 }
             }
@@ -256,3 +343,96 @@ fun FoodRow(name: String, detail: String?, per100: Per100?, favorite: Boolean, o
     )
 }
 
+
+/** The tabs of Ajouter (V2.26): Scanner opens the scanner. */
+enum class AddFoodTab { DISHES, FOODS }
+
+private fun FoodEntity.isDish() = source == fr.olivier.forme.feature.nutrition.domain.FoodSource.DISH
+private fun FoodChoice.isDish() = (this as? FoodChoice.Mine)?.food?.isDish() == true
+
+const val DISH_ROW_TAG = "dish_row"
+
+/**
+ * Mes plats (V2.26): search among one's dishes, pinned ones (= favourites) first, then most used / recent / A → Z.
+ * A tap adds one portion at once ("Annuler" in the message), the pencil opens the quantity, a long press pins.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun DishesTab(viewModel: AddFoodViewModel, onCreateDish: () -> Unit, onEdit: (FoodEntity) -> Unit) {
+    val query by viewModel.dishQuery.collectAsStateWithLifecycle()
+    val sort by viewModel.dishSort.collectAsStateWithLifecycle()
+    val dishes by viewModel.dishes.collectAsStateWithLifecycle()
+    OutlinedTextField(
+        value = query,
+        onValueChange = viewModel::setDishQuery,
+        label = { Text(stringResource(R.string.dishes_search)) },
+        singleLine = true,
+        trailingIcon = {
+            if (query.isNotEmpty()) IconButton(onClick = { viewModel.setDishQuery("") }) { Icon(Icons.Filled.Clear, "Effacer") }
+        },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+    androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(horizontal = 16.dp),
+    ) {
+        listOf(DishSort.MOST_USED to R.string.dishes_sort_used, DishSort.RECENT to R.string.dishes_sort_recent, DishSort.ALPHABETICAL to R.string.dishes_sort_alpha)
+            .forEach { (s, label) -> FilterChip(selected = sort == s, onClick = { viewModel.setDishSort(s) }, label = { Text(stringResource(label)) }) }
+    }
+    val list = dishes ?: return
+    LazyColumn {
+        if (list.isEmpty()) {
+            item {
+                Text(
+                    stringResource(if (query.isBlank()) R.string.dishes_empty else R.string.dishes_none_found),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+        }
+        items(list, key = { "dish${it.food.id}" }) { dish ->
+            val food = dish.food
+            val portion = food.defaultPortionG ?: 100.0
+            val m = NutritionMath.forQuantity(food.per100(), portion)
+            val pinLabel = stringResource(if (food.favorite) R.string.dishes_unpin else R.string.dishes_pin)
+            ListItem(
+                headlineContent = { Text(food.name) },
+                supportingContent = {
+                    Text(
+                        stringResource(
+                            R.string.dishes_portion,
+                            m.kcal?.let { Fmt.number(it, 0) } ?: "—",
+                            Fmt.number(m.proteinG, 0),
+                            Fmt.number(portion, 0),
+                        ),
+                    )
+                },
+                leadingContent = {
+                    IconButton(onClick = { viewModel.togglePin(food) }) {
+                        Icon(
+                            painterResource(if (food.favorite) R.drawable.ic_pin_filled else R.drawable.ic_pin),
+                            contentDescription = pinLabel,
+                            tint = if (food.favorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
+                trailingContent = {
+                    IconButton(onClick = { onEdit(food) }) {
+                        Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.dishes_quantity, food.name))
+                    }
+                },
+                modifier = Modifier
+                    .testTag(DISH_ROW_TAG)
+                    .combinedClickable(
+                        onClickLabel = stringResource(R.string.dishes_add_one),
+                        onLongClickLabel = pinLabel,
+                        onLongClick = { viewModel.togglePin(food) },
+                        onClick = { viewModel.quickAdd(food) },
+                    ),
+            )
+        }
+        item {
+            TextButton(onClick = onCreateDish, modifier = Modifier.padding(8.dp)) { Text(stringResource(R.string.dishes_create)) }
+        }
+    }
+}

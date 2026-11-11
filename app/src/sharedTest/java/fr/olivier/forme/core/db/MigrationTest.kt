@@ -292,9 +292,36 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate1To13() {
+    fun migrate13To14CountsTheDishesFromTheMeals() {
+        helper.createDatabase(dbName, 13).apply {
+            // Two dishes and a food; the dish 1 eaten twice, last on 1 740 000 000 000; the dish 2 never.
+            execSQL("INSERT INTO food (id, source, name, proteinPer100g, favorite, lastUsedAt) VALUES (1, 'DISH', 'Chili', 8, 0, 1700000000000), (2, 'DISH', 'Bol', 5, 1, NULL), (3, 'CUSTOM', 'Skyr', 10, 0, 1750000000000)")
+            execSQL("INSERT INTO dish (foodId, servings) VALUES (1, 2), (2, 1)")
+            execSQL(
+                "INSERT INTO meal_entry (date, mealType, foodId, name, quantityG, proteinG, isWhey, eatenAt) VALUES " +
+                    "(20000, 'LUNCH', 1, 'Chili', 300, 24, 0, 1730000000000), (20001, 'DINNER', 1, 'Chili', 300, 24, 0, 1740000000000), " +
+                    "(20001, 'LUNCH', 3, 'Skyr', 150, 15, 0, 1740000000000)",
+            )
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 14, true, Migrations.MIGRATION_13_14).apply {
+            query("SELECT foodId, useCount FROM dish ORDER BY foodId").use {
+                it.moveToFirst(); assertEquals(2, it.getInt(1))
+                it.moveToNext(); assertEquals(0, it.getInt(1))
+            }
+            query("SELECT id, lastUsedAt FROM food ORDER BY id").use {
+                it.moveToFirst(); assertEquals(1740000000000, it.getLong(1)) // from its last meal
+                it.moveToNext(); assertTrue(it.isNull(1)) // never eaten
+                it.moveToNext(); assertEquals(1750000000000, it.getLong(1)) // not a dish: untouched
+            }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To14() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, 13, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 14, true, *Migrations.ALL).close()
     }
 
     @Test

@@ -88,6 +88,7 @@ class NutritionSmokeTest {
             // The journal is a lazy list: bring the lunch header in before tapping (V2.15 added lines above it).
             rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasContentDescription("Ajouter à Déjeuner"))
             rule.onNode(hasContentDescription("Ajouter à Déjeuner")).performClick()
+            rule.foodsTab()
             rule.waitUntilAtLeastOneExists(hasText("Rechercher un aliment", substring = true), 10_000)
             rule.mainClock.autoAdvance = false
             rule.onNode(hasSetTextAction()).performTextInput("poulet filet grill")
