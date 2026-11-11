@@ -43,7 +43,7 @@ fun BentoHomeContent(
             .padding(start = BentoDims.screenMargin, end = BentoDims.screenMargin, top = 26.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(BentoDims.gap),
     ) {
-        HomeHeader(hello, greeting, null, {}, {}, Modifier.padding(bottom = 6.dp))
+        HomeHeader(hello, greeting, null, {}, Modifier.padding(bottom = 6.dp))
         SessionTile(session, "C'est parti", {}, {})
         TileRow(
             left = calories?.let { s -> { m: Modifier -> CaloriesTile(s, {}, m) } },
@@ -93,10 +93,11 @@ private fun DarkEmpty() = Sample(dark = true, withData = false)
 private fun NavBarPreview() = CompositionLocalProvider(LocalBento provides LightBento) {
     fr.olivier.forme.ui.navigation.FloatingNavBar(
         listOf(
-            fr.olivier.forme.ui.navigation.NavEntry("Accueil", fr.olivier.forme.R.drawable.ic_bento_home, true) {},
-            fr.olivier.forme.ui.navigation.NavEntry("Séances", fr.olivier.forme.R.drawable.ic_bento_sessions, false) {},
-            fr.olivier.forme.ui.navigation.NavEntry("Nutrition", fr.olivier.forme.R.drawable.ic_bento_nutrition, false) {},
-            fr.olivier.forme.ui.navigation.NavEntry("Badges", fr.olivier.forme.R.drawable.ic_bento_badges, false) {},
+            fr.olivier.forme.ui.navigation.NavEntry("Accueil", fr.olivier.forme.R.drawable.ic_nav_home, true) {},
+            fr.olivier.forme.ui.navigation.NavEntry("Séances", fr.olivier.forme.R.drawable.ic_nav_sessions, false) {},
+            fr.olivier.forme.ui.navigation.NavEntry("Nutrition", fr.olivier.forme.R.drawable.ic_nav_nutrition, false) {},
+            fr.olivier.forme.ui.navigation.NavEntry("Badges", fr.olivier.forme.R.drawable.ic_nav_badges, false) {},
+            fr.olivier.forme.ui.navigation.NavEntry("Réglages", fr.olivier.forme.R.drawable.ic_nav_settings, false) {},
         ),
     )
 }

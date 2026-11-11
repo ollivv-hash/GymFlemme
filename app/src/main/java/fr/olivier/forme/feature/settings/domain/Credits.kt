@@ -1,6 +1,6 @@
 package fr.olivier.forme.feature.settings.domain
 
-/** A data source or software component shipped in the app, with its licence (Config → Sources et licences). */
+/** A data source or software component shipped in the app, with its licence (Réglages → À propos). */
 data class Credit(
     val title: String,
     val author: String,
@@ -78,6 +78,14 @@ object Credits {
             license = "SIL Open Font License 1.1",
             licenseUrl = "https://openfontlicense.org/open-font-license-official-text/",
             url = "https://github.com/floriankarsten/space-grotesk",
+        ),
+        Credit(
+            title = "Material Symbols",
+            author = "Google",
+            usage = "Icônes de la barre de navigation et du bouton d'analyse IA (V2.23), embarquées sans modification.",
+            license = "Apache 2.0",
+            licenseUrl = "https://www.apache.org/licenses/LICENSE-2.0",
+            url = "https://github.com/google/material-design-icons",
         ),
         Credit(
             title = "Reorderable",

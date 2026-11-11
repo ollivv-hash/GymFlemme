@@ -46,8 +46,8 @@ conservées.
 ## Premier lancement
 
 L'app démarre avec des **exemples** : trois modèles de séance (A, B, C) et les machines de l'auteur avec ses charges.
-Adaptez-les à votre salle (⚙ → Catalogue des exercices, Modèles de séance, Rotation) et renseignez votre profil
-(⚙ → Profil) pour que les calculs de calories et de protéines vous correspondent.
+Adaptez-les à votre salle (onglet Réglages → Catalogue des exercices, Modèles de séance, Rotation) et renseignez votre profil
+(Réglages → Profil) pour que les calculs de calories et de protéines vous correspondent.
 
 ## Vie privée
 
@@ -58,7 +58,7 @@ Adaptez-les à votre salle (⚙ → Catalogue des exercices, Modèles de séance
 
 ## Sauvegarder ses données
 
-⚙ → Réglages et sauvegarde : exporte tout dans un fichier JSON que vous pouvez ranger où vous voulez (Google Drive, par
+Réglages → Préférences et sauvegarde : exporte tout dans un fichier JSON que vous pouvez ranger où vous voulez (Google Drive, par
 exemple). La sauvegarde automatique réécrit ce fichier après chaque séance. Sur un nouveau téléphone, installez l'app
 puis importez ce fichier.
 

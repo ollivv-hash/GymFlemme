@@ -44,14 +44,13 @@ internal fun grouped(value: Int): String = "%,d".format(Locale.FRANCE, value).re
 
 // --- Header ---------------------------------------------------------------------------------------------------
 
-/** "Salut {prénom}", the greeting (or welcome back) of the humour catalogue, the AI and settings buttons. */
+/** "Salut {prénom}", the greeting (or welcome back) of the humour catalogue, the AI button (settings: nav bar, V2.23). */
 @Composable
 fun HomeHeader(
     hello: String?,
     greeting: String?,
     missedGoal: String?,
     onAnalyse: () -> Unit,
-    onSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = LocalBento.current
@@ -61,8 +60,7 @@ fun HomeHeader(
             Text(greeting.orEmpty(), style = BentoType.greeting, color = c.text)
             missedGoal?.let { Text(it, style = BentoType.body, color = c.textSecondary, modifier = Modifier.padding(top = 2.dp)) }
         }
-        SquareIconButton(fr.olivier.forme.R.drawable.ic_bento_ai, "Analyse IA du jour", onAnalyse, Modifier.padding(start = 8.dp))
-        SquareIconButton(fr.olivier.forme.R.drawable.ic_bento_settings, "Réglages", onSettings, Modifier.padding(start = 8.dp))
+        SquareIconButton(fr.olivier.forme.R.drawable.ic_auto_awesome, "Analyse IA du jour", onAnalyse, Modifier.padding(start = 8.dp))
     }
 }
 

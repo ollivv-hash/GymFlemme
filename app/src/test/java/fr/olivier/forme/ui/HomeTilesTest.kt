@@ -72,10 +72,11 @@ class HomeTilesTest {
                     )
                     FloatingNavBar(
                         listOf(
-                            NavEntry("Accueil", R.drawable.ic_bento_home, true) {},
-                            NavEntry("Séances", R.drawable.ic_bento_sessions, false) {},
-                            NavEntry("Nutrition", R.drawable.ic_bento_nutrition, false) {},
-                            NavEntry("Badges", R.drawable.ic_bento_badges, false) {},
+                            NavEntry("Accueil", R.drawable.ic_nav_home, true) {},
+                            NavEntry("Séances", R.drawable.ic_nav_sessions, false) {},
+                            NavEntry("Nutrition", R.drawable.ic_nav_nutrition, false) {},
+                            NavEntry("Badges", R.drawable.ic_nav_badges, false) {},
+                            NavEntry("Réglages", R.drawable.ic_nav_settings, false) {},
                         ),
                         Modifier.align(Alignment.BottomCenter),
                     )
@@ -97,6 +98,7 @@ class HomeTilesTest {
         rule.onNodeWithText("12 jours d'affilée", substring = true).assertExists()
         rule.onNodeWithText("62 / 100", substring = true).assertExists()
         rule.onNode(hasContentDescription("Badges")).assertExists()
+        rule.onNode(hasContentDescription("Réglages")).assertExists()
         shot("bento-light")
     }
 
@@ -156,24 +158,26 @@ class HomeTilesTest {
     }
 
     @Test
-    fun theLevelOpensTheBadgesAndTheHeaderTheSettings() {
+    fun theLevelOpensTheBadgesAndTheHeaderTheAnalysis() {
         var badges = 0
-        var settings = 0
+        var analyse = 0
         var started = 0
         var chose = 0
         rule.setContent {
             CompositionLocalProvider(LocalBento provides LightBento) {
                 androidx.compose.foundation.layout.Column {
-                    HomeHeader("Salut Olivier", "On bouge un peu ?", null, {}, { settings++ })
+                    HomeHeader("Salut Olivier", "On bouge un peu ?", null, { analyse++ })
                     SessionTile(SessionTileState(title = "B · Dos"), "C'est parti", { started++ }, { chose++ })
                     LevelTile(BentoSamples.level, { badges++ })
                 }
             }
         }
         rule.onNodeWithTag(LEVEL_TILE_TAG).performClick()
-        rule.onNodeWithContentDescription("Réglages").performClick()
+        rule.onNodeWithContentDescription("Analyse IA du jour").performClick()
+        // V2.23: settings left the header for the navigation bar.
+        rule.onNodeWithContentDescription("Réglages").assertDoesNotExist()
         rule.onNodeWithTag(SESSION_START_TAG).performClick()
         rule.onNodeWithText("B · Dos").performClick()
-        assertEquals(listOf(1, 1, 1, 1), listOf(badges, settings, started, chose))
+        assertEquals(listOf(1, 1, 1, 1), listOf(badges, analyse, started, chose))
     }
 }

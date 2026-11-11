@@ -61,7 +61,7 @@ class HumorSmokeTest {
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
 
             rule.openSettings()
-            rule.onNode(hasText("Réglages et sauvegarde") and hasClickAction()).performScrollTo().performClick()
+            rule.onNode(hasText("Préférences et sauvegarde") and hasClickAction()).performScrollTo().performClick()
             rule.onNode(hasText("Mode sérieux", substring = true) and hasClickAction()).performScrollTo().performClick()
             shot("q3-serious-mode")
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }

@@ -11,11 +11,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import fr.olivier.forme.R
 import fr.olivier.forme.ui.components.FormeTopBar
 
 @Composable
 fun ConfigScreen(
-    onBack: (() -> Unit)? = null,
     onCatalog: () -> Unit,
     onLibrary: () -> Unit,
     onTemplates: () -> Unit,
@@ -28,7 +29,8 @@ fun ConfigScreen(
     onAi: () -> Unit,
     onSources: () -> Unit,
 ) {
-    Scaffold(topBar = { FormeTopBar("Configuration", onBack) }) { padding ->
+    // The "Réglages" tab (V2.23): no back arrow, as the other tabs.
+    Scaffold(topBar = { FormeTopBar(stringResource(R.string.settings_title)) }) { padding ->
         // Scrolls: the entries no longer fit a phone screen since the library entry (2.10.1).
         Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
             Entry("Catalogue des exercices", "Machines, réglages, photos, archivage", onCatalog)
@@ -40,8 +42,8 @@ fun ConfigScreen(
             Entry("Compléments", "Créatine, oméga-3, vitamines… : actifs, quantité, rappels", onSupplements)
             Entry("Montre cardio", "Choisir la montre, tester la FC en direct et Health Connect", onWatch)
             Entry("Analyse IA", "App IA par défaut (Claude, ChatGPT…), test du partage", onAi)
-            Entry("Réglages et sauvegarde", "Repos, thème, sauvegarde auto (Drive), export / import", onSettings)
-            Entry("Sources et licences", "Bibliothèque d'exercices, Ciqual, Open Food Facts, logiciels", onSources)
+            Entry(stringResource(R.string.preferences_title), "Repos, thème, sauvegarde auto (Drive), export / import", onSettings)
+            Entry(stringResource(R.string.about_title), stringResource(R.string.about_subtitle), onSources)
         }
     }
 }

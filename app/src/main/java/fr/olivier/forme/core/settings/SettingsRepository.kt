@@ -147,6 +147,13 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
     /** Semaine tab: volume shown per library muscle rather than per group (V2.12), remembered between visits. */
     val volumeByMuscle: Flow<Boolean> = dataStore.data.map { prefs -> prefs[VOLUME_BY_MUSCLE] ?: false }
 
+    /** Developer mode (V2.23): 7 taps on the version in À propos; shows the Bluetooth log. Not backed up. */
+    val developerMode: Flow<Boolean> = dataStore.data.map { it[DEVELOPER_MODE] == true }
+
+    suspend fun setDeveloperMode(enabled: Boolean) {
+        dataStore.edit { it[DEVELOPER_MODE] = enabled }
+    }
+
     suspend fun setVolumeByMuscle(byMuscle: Boolean) {
         dataStore.edit { it[VOLUME_BY_MUSCLE] = byMuscle }
     }
@@ -217,5 +224,6 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         private val AI_APP = stringPreferencesKey("ai_app_package")
         private val AI_AS_TEXT = booleanPreferencesKey("ai_share_as_text")
         private val AI_PROMPT = stringPreferencesKey("ai_prompt")
+        private val DEVELOPER_MODE = booleanPreferencesKey("developer_mode")
     }
 }
