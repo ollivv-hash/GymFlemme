@@ -31,6 +31,13 @@ enum class NutritionGoal(val label: String, val adjustment: Double, val fatShare
     CUT("Sèche", -0.20, 0.25, "déficit de 20 % ; garde des protéines hautes pour préserver le muscle"),
 }
 
+/**
+ * Daily life without the workouts (V2.25): the factor applied to the basal metabolism. The sessions' calories are
+ * added separately, from their measure, so the classic factors (1.55+, sport included) would count them twice.
+ * Null in the profile = [MODERATE], the 1.4 used before V2.25.
+ */
+enum class ActivityLevel(val factor: Double) { SEDENTARY(1.2), LIGHT(1.3), MODERATE(1.4), ACTIVE(1.5), VERY_ACTIVE(1.6) }
+
 enum class FoodSource(val label: String) {
     CIQUAL("Ciqual"),
     OFF("Open Food Facts"),

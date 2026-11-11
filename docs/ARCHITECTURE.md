@@ -85,7 +85,7 @@ Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv`
 
 ---
 
-## Modèle de données (Room, version 12)
+## Modèle de données (Room, version 13)
 
 Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distances en mètres. `Instant` ↔ epoch millis, `LocalDate` ↔ epochDay. Les enums sont stockées en texte.
 
@@ -106,7 +106,7 @@ Tables Nutrition (V1.1, migration explicite 1 → 2) :
 
 | Table | Colonnes principales | Remarques |
 |---|---|---|
-| `profile` | id = 1, proteinTargetGPerKg (1,8), whey (prot./kcal/glucides/lipides pour 100 g, dose 30 g), FC (année de naissance, sexe, FC max), calories (taille, objectif, objectif repos personnalisé), prénom (v12, accueil) | Ligne absente = valeurs par défaut. Dose et rappel de la créatine dans `supplement` depuis la v10. |
+| `profile` | id = 1, proteinTargetGPerKg (1,8), whey (prot./kcal/glucides/lipides pour 100 g, dose 30 g), FC (année de naissance, sexe, FC max), calories (taille, objectif, objectif repos personnalisé), prénom (v12, accueil), niveau d'activité et cible de protéines en grammes (v13, null = modéré / g par kg) | Ligne absente = valeurs par défaut. Dose et rappel de la créatine dans `supplement` depuis la v10. |
 | `ciqual_food` + `ciqual_fts` | code, nom, groupe, kcal, protéines, glucides, lipides pour 100 g ; index plein texte | Référentiel ANSES en lecture seule, chargé depuis l'APK ; recherche insensible aux accents. **Non exporté.** |
 | `food` | id, source (CIQUAL / OFF / CUSTOM), sourceCode (code Ciqual ou code-barres), nom, marque, valeurs /100 g, portion, favori, dernière utilisation | « Mes aliments » : perso, cache Open Food Facts, aliments Ciqual déjà utilisés (récents / favoris). |
 | `meal_entry` | id, date, mealType, foodId?, nom, quantité (g), protéines, kcal, glucides, lipides, isWhey, heure | **Copie des valeurs** : modifier ou supprimer un aliment ne change jamais l'historique. |
@@ -460,9 +460,18 @@ Migration explicite **4 → 5** (V2.2) : `profile.heightCm`, `profile.nutritionG
 
 ### Objectif calories et conseil protéines (V2.2)
 
+- **V2.25 — niveau d'activité et cibles personnalisées** : le facteur 1,4 devient le niveau « Modéré » d'une **activité au
+  quotidien hors séances** : Sédentaire 1,2, Léger 1,3, Modéré 1,4 (défaut, et valeur des profils d'avant), Actif 1,5,
+  Très actif 1,6. Pas les facteurs classiques (1,55 à 1,9, sport compris) : la dépense des séances s'ajoute déjà à part.
+  Calories et protéines s'affichent « Calculée : … · Utilisée : … » avec un interrupteur **Cible personnalisée** ; une
+  cible personnalisée ne change jamais seule (changer d'objectif ne l'efface plus) ; sous le métabolisme de base, un
+  avertissement neutre (sans bloquer). Protéines : 1,8 g/kg × dernier poids, ou une valeur en grammes. **Moins de 16 ans**
+  (année de naissance) : ni cible de calories ni conseil whey, message vers un adulte ou un professionnel de santé.
+  Bornes de saisie : taille 100–250 cm, poids 30–300 kg, 13 à 100 ans.
+
 - **Objectif** (Profil → Objectif calories) : prise de masse (+10 %), maintien, sèche (−20 %) ; aucun objectif choisi = pas de suivi des calories.
 - **Jour de repos** = métabolisme de base Mifflin-St Jeor (poids, taille, âge, sexe) × 1,4 (vie quotidienne hors séances) × ajustement de l'objectif,
-  arrondi à 10 kcal. Valeur modifiable (± 50 kcal), « Revenir à la valeur conseillée » ; changer d'objectif efface la valeur personnalisée.
+  arrondi à 10 kcal. Valeur modifiable (± 50 kcal) ; depuis V2.25, × le niveau d'activité et cible personnalisée par interrupteur (voir plus haut).
 - **Jour d'entraînement** : objectif repos **+ calories des séances du jour**, métabolisme de base retiré (2.3.2) : l'estimation par
   la FC (Keytel) est une dépense brute, comparable aux « kcal totales » de Mi Fitness, alors que l'objectif repos contient déjà
   le métabolisme de base ; il est donc soustrait sur la durée mesurée (Mifflin-St Jeor, ou 24 kcal/kg/jour sans la taille).
@@ -482,6 +491,17 @@ Source des données de composition : *Anses. 2025. Table de composition nutritio
 [ciqual.anses.fr](https://ciqual.anses.fr/), Licence Ouverte / Etalab 2.0. Produits scannés : [Open Food Facts](https://world.openfoodfacts.org/) (ODbL).
 
 ---
+
+## Assistant du premier lancement (V2.25)
+
+Sur une **nouvelle installation** seulement (`Onboarding.shouldShow` : ni pesée, ni profil rempli, et pas déjà vu ; un
+utilisateur existant ne le voit jamais et complète les nouveaux champs dans Réglages → Profil). 4 écrans et un
+récapitulatif, barre de progression, **Passer** (efface les réponses de l'écran) et **Retour** sur chacun ; retour système
+sur le premier écran = fermé sans réponse, pas reproposé. Toi (prénom) · Ton corps (année de naissance, sexe, taille,
+poids → première pesée) · Ton objectif (objectif, activité avec une phrase d'explication) · Tes compléments (protéines
+par dose de whey, dose de 30 g ; créatine, **3 g par défaut** pour une nouvelle installation, 5 g avant et conservés) ·
+Récapitulatif (cibles calculées, remplaçables). Textes neutres. Préférence `onboarding_done` ; les tests JVM le sautent
+(propriété `gymflemme.skipOnboarding`, sauf `OnboardingSmokeTest`).
 
 ## Données initiales (seed au premier lancement)
 
@@ -545,7 +565,7 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
 - Format versionné : `{ "schemaVersion": 12, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "supplements", "supplementIntakes", "dishes", "dishIngredients" }, "badges": [ … ], "challenges": [ … ] }`.
-  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9, les compléments depuis la v10, les plats perso depuis la v11, le prénom depuis la v12, l'apparence (thème, accent, couleurs dynamiques) depuis la v13. Les fichiers **v1** à **v12** restent importables (sans apparence : celle du téléphone est gardée) (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8 ; créatine des fichiers v1 à v9 (profil + `creatine`) convertie en complément comme la migration 9 → 10). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
+  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9, les compléments depuis la v10, les plats perso depuis la v11, le prénom depuis la v12, l'apparence (thème, accent, couleurs dynamiques) depuis la v13, le niveau d'activité et la cible de protéines en grammes depuis la v14. Les fichiers **v1** à **v12** restent importables (sans apparence : celle du téléphone est gardée) (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8 ; créatine des fichiers v1 à v9 (profil + `creatine`) convertie en complément comme la migration 9 → 10). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 

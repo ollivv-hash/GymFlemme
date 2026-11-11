@@ -206,6 +206,13 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         dataStore.edit { it[DEVELOPER_MODE] = enabled }
     }
 
+    /** V2.25: the first-launch wizard was shown (finished or skipped), or was not needed (data already there). */
+    val onboardingDone: Flow<Boolean> = dataStore.data.map { it[ONBOARDING_DONE] == true }
+
+    suspend fun setOnboardingDone() {
+        dataStore.edit { it[ONBOARDING_DONE] = true }
+    }
+
     suspend fun setVolumeByMuscle(byMuscle: Boolean) {
         dataStore.edit { it[VOLUME_BY_MUSCLE] = byMuscle }
     }
@@ -280,5 +287,6 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         private val ACCENT = stringPreferencesKey("accent_color")
         private val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         private val THEME_DEFAULT_CHECKED = booleanPreferencesKey("theme_default_checked")
+        private val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
     }
 }

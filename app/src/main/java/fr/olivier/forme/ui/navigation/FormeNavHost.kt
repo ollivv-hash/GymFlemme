@@ -40,6 +40,7 @@ import fr.olivier.forme.feature.nutrition.ui.ScanScreen
 import fr.olivier.forme.feature.settings.ui.ConfigScreen
 import fr.olivier.forme.feature.settings.ui.SettingsScreen
 import fr.olivier.forme.feature.settings.ui.AboutScreen
+import fr.olivier.forme.feature.onboarding.OnboardingScreen
 import fr.olivier.forme.feature.settings.ui.AppearanceScreen
 import fr.olivier.forme.feature.heart.ui.WatchTestScreen
 import fr.olivier.forme.feature.library.ui.ExerciseSheetScreen
@@ -57,6 +58,8 @@ import fr.olivier.forme.feature.sport.ui.templates.TemplateEditScreen
 import fr.olivier.forme.feature.sport.ui.templates.TemplatesScreen
 import fr.olivier.forme.feature.ai.ui.AiSettingsScreen
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -75,6 +78,7 @@ private val topLevels = listOf(
 fun FormeNavHost(
     resumeOnStart: Boolean,
     hasActiveSession: suspend () -> Boolean,
+    shouldShowOnboarding: suspend () -> Boolean = { false },
     pendingAction: QuickAction? = null,
     startProposedSession: (then: () -> Unit) -> Unit = { it() },
     onActionHandled: () -> Unit = {},
@@ -85,6 +89,13 @@ fun FormeNavHost(
     val showBar = topLevels.any { top -> destination?.hasRoute(top.route::class) == true }
 
     LaunchedEffect(Unit) {
+        // V2.25: the first-launch wizard, over the home screen, on a new install only.
+        if (resumeOnStart && shouldShowOnboarding()) {
+            nav.currentBackStackEntryFlow.first()
+            // Back on the main thread whatever the data reads resumed on (navigation must run there).
+            withContext(Dispatchers.Main.immediate) { nav.navigate(OnboardingRoute) }
+            return@LaunchedEffect
+        }
         // A launch action (shortcut, widget) decides where to go instead.
         if (resumeOnStart && pendingAction == null && hasActiveSession()) {
             // The graph is set by NavHost on its first composition: wait for it before navigating.
@@ -272,6 +283,7 @@ fun FormeNavHost(
             composable<TemplateEditRoute> { TemplateEditScreen(onDone = { nav.popBackStack() }) }
             composable<RotationRoute> { RotationScreen(onBack = { nav.popBackStack() }) }
             composable<SettingsRoute> { SettingsScreen(onBack = { nav.popBackStack() }) }
+            composable<OnboardingRoute> { OnboardingScreen(onDone = { nav.popBackStack() }) }
             composable<AppearanceRoute> { AppearanceScreen(onBack = { nav.popBackStack() }) }
             composable<WatchTestRoute> { WatchTestScreen(onBack = { nav.popBackStack() }) }
             composable<AiSettingsRoute> { AiSettingsScreen(onBack = { nav.popBackStack() }) }

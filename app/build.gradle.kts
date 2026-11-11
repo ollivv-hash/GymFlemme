@@ -23,8 +23,8 @@ android {
         applicationId = "fr.olivier.forme"
         minSdk = 28
         targetSdk = 37
-        versionCode = 56
-        versionName = "2.24.0"
+        versionCode = 57
+        versionName = "2.25.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -89,6 +89,8 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // V2.25: the app tests start past the first-launch wizard (OnboardingSmokeTest turns it back on).
+        unitTests.all { it.systemProperty("gymflemme.skipOnboarding", "true") }
     }
 }
 

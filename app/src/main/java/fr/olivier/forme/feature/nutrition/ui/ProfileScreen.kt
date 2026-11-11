@@ -1,6 +1,14 @@
 package fr.olivier.forme.feature.nutrition.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.Switch
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import fr.olivier.forme.R
+import fr.olivier.forme.feature.nutrition.data.advisedRestDayKcal
+import fr.olivier.forme.feature.nutrition.domain.ActivityLevel
+import fr.olivier.forme.feature.nutrition.domain.ProfileBounds
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
@@ -119,14 +127,14 @@ class ProfileViewModel @Inject constructor(
         _height.value = text.filter(Char::isDigit).take(3)
     }
 
-    /** A plausible height in cm, else null. */
-    fun parsedHeight(): Int? = _height.value.toIntOrNull()?.takeIf { it in 120..230 }
+    /** A plausible height in cm (100 to 250, V2.25), else null. */
+    fun parsedHeight(): Int? = ProfileBounds.height(_height.value)
 
-    /** Changing the goal drops a personalised calorie target, which was set for the previous goal. */
-    fun setGoal(goal: NutritionGoal?) = update { it.copy(nutritionGoal = goal, kcalTargetOverride = null) }
+    /** V2.25: a personalised calorie target never changes by itself, not even with the goal. */
+    fun setGoal(goal: NutritionGoal?) = update { it.copy(nutritionGoal = goal) }
 
-    /** A plausible birth year (10 to 100 years old), else null. */
-    fun parsedBirthYear(): Int? = _birthYear.value.toIntOrNull()?.takeIf { it in currentYear - 100..currentYear - 10 }
+    /** A plausible birth year (13 to 100 years old, V2.25), else null. */
+    fun parsedBirthYear(): Int? = ProfileBounds.birthYear(_birthYear.value, currentYear)
 
     fun save(onDone: () -> Unit) = viewModelScope.launch {
         if (!_loaded.value) return@launch
@@ -185,6 +193,7 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
                     onValueChange = viewModel::updateBirthYear,
                     label = { Text("Année de naissance") },
                     singleLine = true,
+                    isError = birthYear.length == 4 && viewModel.parsedBirthYear() == null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                 )
@@ -194,6 +203,11 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
                         onClick = { viewModel.update { it.copy(sex = if (it.sex == sex) null else sex) } },
                         label = { Text(sex.label) },
                     )
+                }
+            }
+            if (birthYear.length == 4 && viewModel.parsedBirthYear() == null) {
+                ProfileBounds.birthYears(viewModel.currentYear).let { r ->
+                    Text(stringResource(R.string.birth_year_error, r.first, r.last), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
             }
             val age = viewModel.parsedBirthYear()?.let { HeartZones.age(it, viewModel.currentYear) }
@@ -234,11 +248,20 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
                 decimal = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Text(
-                NutritionMath.proteinTarget(weight, p.proteinTargetGPerKg)
-                    ?.let { "Soit ${it.roundToInt()} g par jour (dernier poids : ${Fmt.kg(weight!!)})" }
-                    ?: "Saisis une pesée pour calculer l'objectif du jour.",
-                style = MaterialTheme.typography.bodyMedium,
+            val proteinCalculated = NutritionMath.proteinTarget(weight, p.proteinTargetGPerKg)?.roundToInt()
+            if (proteinCalculated == null && p.proteinTargetOverrideG == null) {
+                Text("Saisis une pesée pour calculer l'objectif du jour.", style = MaterialTheme.typography.bodyMedium)
+            }
+            // V2.25: calculated, or personalised in grams.
+            CustomTarget(
+                calculated = proteinCalculated,
+                custom = p.proteinTargetOverrideG,
+                unit = "g",
+                range = ProfileBounds.PROTEIN_G,
+                step = 5,
+                fallback = 150,
+                tag = PROTEIN_CUSTOM_TAG,
+                onCustom = { v -> viewModel.update { it.copy(proteinTargetOverrideG = v) } },
             )
 
             SectionTitle("Objectif calories")
@@ -252,7 +275,10 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
                 }
             }
             val goal = p.nutritionGoal
-            if (goal == null) {
+            val minor = EnergyMath.isMinor(viewModel.parsedBirthYear(), viewModel.currentYear)
+            if (minor) {
+                Text(stringResource(R.string.minor_advice), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp))
+            } else if (goal == null) {
                 Text("Choisis un objectif pour suivre tes calories.", style = MaterialTheme.typography.bodyMedium)
             } else {
                 Text(goal.hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -261,34 +287,45 @@ fun ProfileScreen(onDone: () -> Unit, viewModel: ProfileViewModel = hiltViewMode
                     onValueChange = viewModel::updateHeight,
                     label = { Text("Taille (cm)") },
                     singleLine = true,
+                    isError = height.isNotEmpty() && viewModel.parsedHeight() == null,
+                    supportingText = if (height.isNotEmpty() && viewModel.parsedHeight() == null) {
+                        { Text(stringResource(R.string.height_error, ProfileBounds.HEIGHT_CM.first, ProfileBounds.HEIGHT_CM.last)) }
+                    } else null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
-                val advisedKcal = EnergyMath.advisedBase(weight, viewModel.parsedHeight(), age, p.sex, goal)
-                val kcal = p.kcalTargetOverride ?: advisedKcal
-                Stepper(
-                    label = "Jour de repos (kcal)",
-                    valueText = kcal?.let { Fmt.number(it.toDouble(), 0) } ?: "—",
-                    onMinus = { (kcal ?: 2000).let { v -> viewModel.update { it.copy(kcalTargetOverride = (v - 50).coerceIn(1000, 6000)) } } },
-                    onPlus = { (kcal ?: 2000).let { v -> viewModel.update { it.copy(kcalTargetOverride = (v + 50).coerceIn(1000, 6000)) } } },
-                    onValueEntered = { t -> t.toIntOrNull()?.let { v -> viewModel.update { it.copy(kcalTargetOverride = v.coerceIn(1000, 6000)) } } },
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
+                ActivityChips(p.activityLevel ?: ActivityLevel.MODERATE) { level -> viewModel.update { it.copy(activityLevel = level) } }
+                val profileNow = p.copy(birthYear = viewModel.parsedBirthYear(), heightCm = viewModel.parsedHeight())
+                val advisedKcal = profileNow.advisedRestDayKcal(weight, viewModel.currentYear)
+                if (advisedKcal == null) {
+                    Text("Renseigne année de naissance, sexe, taille et une pesée pour la valeur calculée.", style = MaterialTheme.typography.bodyMedium)
+                }
+                CustomTarget(
+                    calculated = advisedKcal,
+                    custom = p.kcalTargetOverride,
+                    unit = "kcal",
+                    range = ProfileBounds.KCAL,
+                    step = 50,
+                    fallback = 2000,
+                    tag = KCAL_CUSTOM_TAG,
+                    onCustom = { v -> viewModel.update { it.copy(kcalTargetOverride = v) } },
                 )
-                Text(
-                    when {
-                        advisedKcal == null -> "Renseigne année de naissance, sexe, taille et une pesée pour la valeur conseillée."
-                        p.kcalTargetOverride == null -> "Valeur conseillée (Mifflin-St Jeor × 1,4, ${goal.label.lowercase()})."
-                        else -> "Valeur personnalisée · conseillée : ${Fmt.number(advisedKcal.toDouble(), 0)} kcal."
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                if (p.kcalTargetOverride != null && advisedKcal != null) {
-                    TextButton(onClick = { viewModel.update { it.copy(kcalTargetOverride = null) } }) { Text("Revenir à la valeur conseillée") }
+                val bmr = age?.let { a -> p.sex?.let { s -> viewModel.parsedHeight()?.let { h -> weight?.let { w -> EnergyMath.bmr(w, h, a, s) } } } }
+                if (EnergyMath.belowBmr(p.kcalTargetOverride, bmr)) {
+                    Text(
+                        stringResource(R.string.below_bmr_warning),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 4.dp).testTag(BELOW_BMR_TAG),
+                    )
                 }
                 Text(
-                    "Les jours d'entraînement, la dépense mesurée des séances s'ajoute à cet objectif.",
+                    "Objectif d'un jour de repos (Mifflin-St Jeor × activité, ${goal.label.lowercase()}). Les jours d'entraînement, " +
+                        "la dépense mesurée des séances s'y ajoute.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
                 )
             }
 
@@ -332,3 +369,84 @@ fun NumberField(label: String, value: String, modifier: Modifier = Modifier, onC
         modifier = modifier,
     )
 }
+
+const val KCAL_CUSTOM_TAG = "custom_kcal"
+const val PROTEIN_CUSTOM_TAG = "custom_protein"
+const val BELOW_BMR_TAG = "below_bmr"
+
+/**
+ * A target calculated by the app that can be replaced by one's own (V2.25): "Calculée : 2 137 kcal · Utilisée :
+ * 2 000 kcal". The switch off returns to the calculation; a personalised value never changes by itself.
+ */
+@Composable
+fun CustomTarget(
+    calculated: Int?,
+    custom: Int?,
+    unit: String,
+    range: IntRange,
+    step: Int,
+    fallback: Int,
+    tag: String,
+    onCustom: (Int?) -> Unit,
+) {
+    val used = custom ?: calculated
+    Text(
+        stringResource(
+            R.string.target_calculated_used,
+            calculated?.let { "${Fmt.number(it.toDouble(), 0)} $unit" } ?: "—",
+            used?.let { "${Fmt.number(it.toDouble(), 0)} $unit" } ?: "—",
+        ),
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(top = 8.dp),
+    )
+    ListItem(
+        headlineContent = { Text(stringResource(R.string.target_custom)) },
+        trailingContent = {
+            Switch(
+                checked = custom != null,
+                onCheckedChange = { on -> onCustom(if (on) (calculated ?: fallback).coerceIn(range) else null) },
+                modifier = Modifier.testTag(tag),
+            )
+        },
+    )
+    if (custom != null) {
+        Stepper(
+            label = stringResource(R.string.target_custom_value, unit),
+            valueText = Fmt.number(custom.toDouble(), 0),
+            onMinus = { onCustom((custom - step).coerceIn(range)) },
+            onPlus = { onCustom((custom + step).coerceIn(range)) },
+            onValueEntered = { t -> t.toIntOrNull()?.let { onCustom(it.coerceIn(range)) } },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/** Daily life outside the workouts (V2.25), with a sentence for the level chosen. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun ActivityChips(selected: ActivityLevel, onSelect: (ActivityLevel) -> Unit) {
+    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ActivityLevel.entries.forEach { level ->
+            FilterChip(selected = selected == level, onClick = { onSelect(level) }, label = { Text(stringResource(level.labelRes)) })
+        }
+    }
+    Text(stringResource(selected.hintRes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+val ActivityLevel.labelRes: Int
+    get() = when (this) {
+        ActivityLevel.SEDENTARY -> R.string.activity_sedentary
+        ActivityLevel.LIGHT -> R.string.activity_light
+        ActivityLevel.MODERATE -> R.string.activity_moderate
+        ActivityLevel.ACTIVE -> R.string.activity_active
+        ActivityLevel.VERY_ACTIVE -> R.string.activity_very_active
+    }
+
+val ActivityLevel.hintRes: Int
+    get() = when (this) {
+        ActivityLevel.SEDENTARY -> R.string.activity_sedentary_hint
+        ActivityLevel.LIGHT -> R.string.activity_light_hint
+        ActivityLevel.MODERATE -> R.string.activity_moderate_hint
+        ActivityLevel.ACTIVE -> R.string.activity_active_hint
+        ActivityLevel.VERY_ACTIVE -> R.string.activity_very_active_hint
+    }

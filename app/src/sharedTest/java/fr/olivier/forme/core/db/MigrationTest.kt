@@ -274,9 +274,27 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate1To12() {
+    fun migrate12To13AddsTheActivityAndTheProteinTarget() {
+        helper.createDatabase(dbName, 12).apply {
+            execSQL("INSERT INTO profile (id, proteinTargetGPerKg, wheyScoopG, birthYear, heightCm, nutritionGoal, kcalTargetOverride, firstName) VALUES (1, 1.8, 30, 1980, 178, 'BULK', 2700, 'Olivier')")
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 13, true, Migrations.MIGRATION_12_13).apply {
+            query("SELECT birthYear, heightCm, nutritionGoal, kcalTargetOverride, firstName, activityLevel, proteinTargetOverrideG FROM profile").use {
+                it.moveToFirst()
+                assertEquals(1980, it.getInt(0)); assertEquals(178, it.getInt(1)); assertEquals("BULK", it.getString(2))
+                assertEquals(2700, it.getInt(3)); assertEquals("Olivier", it.getString(4))
+                // Nothing chosen: moderate activity (the 1.4 of before) and g/kg, as before.
+                assertTrue(it.isNull(5)); assertTrue(it.isNull(6))
+            }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To13() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, 12, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 13, true, *Migrations.ALL).close()
     }
 
     @Test

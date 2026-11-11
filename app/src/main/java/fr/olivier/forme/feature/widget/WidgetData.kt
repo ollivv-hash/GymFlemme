@@ -1,5 +1,6 @@
 package fr.olivier.forme.feature.widget
 
+import fr.olivier.forme.feature.nutrition.data.proteinTargetG
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
 import fr.olivier.forme.feature.heart.data.HeartRepository
@@ -78,7 +79,7 @@ class WidgetDataSource @Inject constructor(
             val base = profile.restDayKcal(weight, today.year)
             (if (base == null) flowOf(null) else heart.observeDay(today).map { it.netKcal(bmr) }).map { sessionKcal ->
                 val totals = NutritionMath.dayTotals(entries.map { it.macros() })
-                Triple(totals, EnergyMath.target(base, sessionKcal)?.totalKcal, NutritionMath.proteinTarget(weight, profile.proteinTargetGPerKg))
+                Triple(totals, EnergyMath.target(base, sessionKcal)?.totalKcal, profile.proteinTargetG(weight))
             }
         }
         return combine(sport, food) { (title, running, week), (totals, kcalTarget, proteinTarget) ->

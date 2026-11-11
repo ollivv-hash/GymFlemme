@@ -42,7 +42,7 @@ class NutritionWeekSource @Inject constructor(
             today = LocalDate.now(clock),
             intakes = intakes,
             creatineDates = creatine,
-            proteinTargetG = NutritionMath.proteinTarget(weight, profile.proteinTargetGPerKg),
+            proteinTargetG = profile.proteinTargetG(weight),
             kcalTargetOf = base?.let { b -> { d: LocalDate -> EnergyMath.target(b, sessionKcal[d])!!.totalKcal } },
         )
     }

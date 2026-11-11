@@ -8,6 +8,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -116,10 +117,11 @@ class NutritionAdviceSmokeTest {
 
             rule.onNode(hasText("Profil") and hasClickAction()).performClick()
             // The profile opens once loaded: wait for its form before scrolling (raced the navigation on CI).
-            waitFor("Jour de repos (kcal)")
+            // V2.25: the personalised target is shown with the calculated one.
+            waitFor("Activité au quotidien")
             rule.onNodeWithText("Objectif calories").performScrollTo()
-            rule.onNodeWithText("Jour de repos (kcal)").performScrollTo()
-            waitFor("Valeur conseillée")
+            rule.onNodeWithTag(fr.olivier.forme.feature.nutrition.ui.KCAL_CUSTOM_TAG).performScrollTo()
+            waitFor("Calculée :")
             shot("n7-profile-calories")
             it.onActivity { a -> a.onBackPressedDispatcher.onBackPressed() }
 

@@ -50,4 +50,59 @@
     <string name="accent_lime">Citron vert</string>
     <string name="accent_lavender">Lavande</string>
     <string name="accent_coral">Corail</string>
+
+    <!-- Profile (V2.25): neutral texts. -->
+    <string name="minor_advice">Demande conseil à un adulte ou à un professionnel de santé pour tes objectifs nutritionnels.</string>
+    <string name="below_bmr_warning">Cette cible est inférieure à ton métabolisme de base. Demande conseil à un professionnel de santé avant de la conserver.</string>
+    <string name="target_calculated_used">Calculée : %1$s · Utilisée : %2$s</string>
+    <string name="target_custom">Cible personnalisée</string>
+    <string name="target_custom_value">Ma cible (%1$s)</string>
+    <string name="height_error">Taille entre %1$d et %2$d cm.</string>
+    <string name="weight_error">Poids entre %1$d et %2$d kg.</string>
+    <string name="birth_year_error">Année de naissance entre %1$d et %2$d (13 à 100 ans).</string>
+    <string name="activity_title">Activité au quotidien (hors séances)</string>
+    <string name="activity_sedentary">Sédentaire</string>
+    <string name="activity_light">Léger</string>
+    <string name="activity_moderate">Modéré</string>
+    <string name="activity_active">Actif</string>
+    <string name="activity_very_active">Très actif</string>
+    <string name="activity_sedentary_hint">Travail assis, peu de marche dans la journée.</string>
+    <string name="activity_light_hint">Travail assis, un peu de marche ou de vélo chaque jour.</string>
+    <string name="activity_moderate_hint">Debout une partie de la journée, ou beaucoup de marche.</string>
+    <string name="activity_active_hint">Debout ou en mouvement la plus grande partie de la journée.</string>
+    <string name="activity_very_active_hint">Travail physique (chantier, manutention…). Les séances se comptent à part.</string>
+
+    <!-- First-launch wizard (V2.25): neutral texts. -->
+    <string name="onboarding_step">Étape %1$d sur %2$d</string>
+    <string name="onboarding_summary_step">Récapitulatif</string>
+    <string name="onboarding_back">Retour</string>
+    <string name="onboarding_skip">Passer</string>
+    <string name="onboarding_next">Suivant</string>
+    <string name="onboarding_validate">Valider</string>
+    <string name="onboarding_you_title">Toi</string>
+    <string name="onboarding_you_intro">Ton prénom s\'affiche sur l\'écran d\'accueil.</string>
+    <string name="onboarding_first_name">Prénom</string>
+    <string name="onboarding_body_title">Ton corps</string>
+    <string name="onboarding_body_intro">Ces mesures servent au calcul de tes objectifs et des calories des séances. Elles restent sur le téléphone.</string>
+    <string name="onboarding_birth_year">Année de naissance</string>
+    <string name="onboarding_sex">Sexe</string>
+    <string name="onboarding_height">Taille (cm)</string>
+    <string name="onboarding_weight">Poids (kg)</string>
+    <string name="onboarding_goal_title">Ton objectif</string>
+    <string name="onboarding_goal_intro">Il fixe ta cible de calories. Tu pourras le changer dans Réglages → Profil.</string>
+    <string name="onboarding_supplements_title">Tes compléments</string>
+    <string name="onboarding_supplements_intro">Facultatif. Laisse vide ce que tu ne prends pas.</string>
+    <string name="onboarding_whey">Protéines par dose de whey (g)</string>
+    <string name="onboarding_whey_error">Entre 1 et 60 g.</string>
+    <string name="onboarding_creatine">Créatine par jour (g)</string>
+    <string name="onboarding_creatine_error">Entre 0,5 et 20 g.</string>
+    <string name="onboarding_summary_title">Tes objectifs</string>
+    <string name="onboarding_summary_intro">Calculés d\'après tes réponses. Tu peux les remplacer par les tiens.</string>
+    <string name="onboarding_summary_age">%1$d ans</string>
+    <string name="onboarding_kcal">Calories d\'un jour de repos</string>
+    <string name="onboarding_kcal_no_goal">Sans objectif, pas de cible de calories.</string>
+    <string name="onboarding_kcal_missing">Année de naissance, sexe, taille et poids sont nécessaires pour la calculer.</string>
+    <string name="onboarding_protein">Protéines par jour</string>
+    <string name="onboarding_protein_missing">Le poids est nécessaire pour la calculer (1,8 g par kg).</string>
+    <string name="onboarding_summary_later">Tout se modifie ensuite dans Réglages → Profil.</string>
 </resources>

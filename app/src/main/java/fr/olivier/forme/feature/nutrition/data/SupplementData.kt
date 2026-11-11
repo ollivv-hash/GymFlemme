@@ -76,8 +76,17 @@ fun SupplementEntity.dose(): String {
 
 /** The supplements offered from the start: creatine on (as before 2.20), the others off. */
 object SupplementDefaults {
+    /** V2.25: 3 g a day for a new install (5 g before, kept by those who had it). */
+    const val CREATINE_DEFAULT_G = 3.0
+
+    /** The default creatine dose before V2.25: what the migration 9 → 10 and the backups before v10 assume. */
+    const val LEGACY_CREATINE_G = 5.0
+
+    /** [all] as they were before V2.25, for the older data converted (migration 9 → 10, backups before v10). */
+    val legacy get() = all.map { if (it.isCreatine) it.copy(amount = LEGACY_CREATINE_G) else it }
+
     val all: List<SupplementEntity> = listOf(
-        SupplementEntity(name = "Créatine", code = SupplementEntity.CREATINE, amount = 5.0, unit = SupplementUnit.G, active = true, sortOrder = 0, reminderEnabled = true),
+        SupplementEntity(name = "Créatine", code = SupplementEntity.CREATINE, amount = CREATINE_DEFAULT_G, unit = SupplementUnit.G, active = true, sortOrder = 0, reminderEnabled = true),
         SupplementEntity(name = "Oméga-3", code = "omega3", amount = 1.0, unit = SupplementUnit.G, active = false, sortOrder = 1),
         SupplementEntity(name = "Vitamine D", code = "vitamin_d", amount = 1000.0, unit = SupplementUnit.IU, active = false, sortOrder = 2),
         SupplementEntity(name = "Magnésium", code = "magnesium", amount = 300.0, unit = SupplementUnit.MG, active = false, sortOrder = 3),

@@ -1,5 +1,7 @@
 package fr.olivier.forme.feature.nutrition.ui
 
+import fr.olivier.forme.feature.nutrition.domain.EnergyMath
+import fr.olivier.forme.feature.nutrition.data.proteinTargetG
 import fr.olivier.forme.feature.badges.data.BadgeRepository
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -97,7 +99,7 @@ class JournalViewModel @Inject constructor(
                 isToday = d == repository.today(),
                 entries = entries,
                 totals = NutritionMath.dayTotals(entries.map { it.macros() }),
-                proteinTargetG = NutritionMath.proteinTarget(weight, profile.proteinTargetGPerKg),
+                proteinTargetG = profile.proteinTargetG(weight),
                 profile = profile,
                 wheyMoment = WheyAdvice.moment(entries.any { it.isWhey }, training),
                 creatineStreak = CreatineStreak.days(creatineDates, repository.today()),
@@ -114,7 +116,9 @@ class JournalViewModel @Inject constructor(
             val target = ui.proteinTargetG
             if (!ui.isToday || target == null) return@combine ui
             val upcoming = ProteinAdvice.upcoming(ui.entries.map { it.protein() }, usual, repository.now())
-            ui.copy(proteinPlan = ProteinAdvice.plan(ui.totals.proteinG, target, upcoming, ui.proteinPerDoseG, ui.wheyDoses))
+            // V2.25: no supplement advice under 16.
+            if (EnergyMath.isMinor(ui.profile.birthYear, ui.date.year)) ui
+            else ui.copy(proteinPlan = ProteinAdvice.plan(ui.totals.proteinG, target, upcoming, ui.proteinPerDoseG, ui.wheyDoses))
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUi(today, true))
 

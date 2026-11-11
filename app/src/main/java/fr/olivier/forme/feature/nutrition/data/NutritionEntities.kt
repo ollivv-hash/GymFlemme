@@ -1,5 +1,6 @@
 package fr.olivier.forme.feature.nutrition.data
 
+import fr.olivier.forme.feature.nutrition.domain.ActivityLevel
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Fts4
@@ -36,6 +37,10 @@ data class ProfileEntity(
     val kcalTargetOverride: Int? = null,
     /** V2.22: first name, for the home screen's "Salut …"; null = not given. */
     val firstName: String? = null,
+    /** V2.25: daily life outside the workouts; null = moderate (1.4, as before). */
+    val activityLevel: ActivityLevel? = null,
+    /** V2.25: protein target entered in grams a day; null = [proteinTargetGPerKg] × the last weight. */
+    val proteinTargetOverrideG: Int? = null,
 ) {
     companion object {
         const val DEFAULT_PROTEIN_G_PER_KG = 1.8

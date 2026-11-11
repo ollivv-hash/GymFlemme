@@ -13,7 +13,7 @@ object EnergyMath {
      * Daily life without the workouts (desk job, walking): sessions are added separately from their measured
      * calories, so the classic "moderately active" factors (1.55+) would count them twice.
      */
-    const val DAILY_LIFE_FACTOR = 1.4
+    const val DAILY_LIFE_FACTOR = 1.4 // = ActivityLevel.MODERATE, the default
 
     /** Basal metabolic rate, Mifflin-St Jeor (kcal/day). */
     fun bmr(weightKg: Double, heightCm: Int, age: Int, sex: Sex): Double {
@@ -22,11 +22,28 @@ object EnergyMath {
     }
 
     /** Rest-day target advised for [goal], rounded to 10 kcal; null when a measure is missing. */
-    fun advisedBase(weightKg: Double?, heightCm: Int?, age: Int?, sex: Sex?, goal: NutritionGoal?): Int? {
+    fun advisedBase(
+        weightKg: Double?,
+        heightCm: Int?,
+        age: Int?,
+        sex: Sex?,
+        goal: NutritionGoal?,
+        activity: ActivityLevel? = null,
+    ): Int? {
         if (weightKg == null || heightCm == null || age == null || sex == null || goal == null) return null
-        val kcal = bmr(weightKg, heightCm, age, sex) * DAILY_LIFE_FACTOR * (1 + goal.adjustment)
+        val factor = (activity ?: ActivityLevel.MODERATE).factor
+        val kcal = bmr(weightKg, heightCm, age, sex) * factor * (1 + goal.adjustment)
         return (kcal / 10).roundToInt() * 10
     }
+
+    /** Below this age (V2.25), no calorie target nor supplement advice: a health professional is the right adviser. */
+    const val MIN_AGE_FOR_TARGETS = 16
+
+    fun isMinor(birthYear: Int?, currentYear: Int): Boolean =
+        birthYear != null && currentYear - birthYear < MIN_AGE_FOR_TARGETS
+
+    /** A personalised target under the basal metabolism deserves a (neutral) warning. */
+    fun belowBmr(targetKcal: Int?, bmr: Double?): Boolean = targetKcal != null && bmr != null && targetKcal < bmr
 
     /** The day's target: the personalised or advised rest-day value plus the sessions' calories. */
     fun target(baseKcal: Int?, sessionKcal: Double?): KcalTarget? =

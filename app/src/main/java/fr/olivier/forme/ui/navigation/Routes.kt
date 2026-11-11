@@ -22,6 +22,8 @@ import kotlinx.serialization.Serializable
     val sourceSessionId: Long = 0,
 )
 @Serializable data object RotationRoute
+/** First launch (V2.25). */
+@Serializable data object OnboardingRoute
 @Serializable data object SettingsRoute
 /** Réglages → Apparence (V2.24). */
 @Serializable data object AppearanceRoute

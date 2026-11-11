@@ -1,5 +1,6 @@
 package fr.olivier.forme.core.backup
 
+import fr.olivier.forme.feature.nutrition.domain.ActivityLevel
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightEntity
 import fr.olivier.forme.feature.heart.data.SessionHeartEntity
 import fr.olivier.forme.feature.heart.domain.HeartSource
@@ -44,7 +45,8 @@ import java.time.LocalDate
  * (absent → none; the current month's is drawn again, identically), v10 the food supplements (V2.20; the creatine
  * of older files, in the profile and `creatine`, becomes the first supplement, the others are added switched off),
  * v11 the dishes of one's own (V2.21; absent → none), v12 the first name of the profile (V2.22; absent → none), v13 the appearance (V2.24: theme, accent, dynamic colours;
- * absent → the phone's settings are kept).
+ * absent → the phone's settings are kept), v14 the activity level and the protein target in grams of the profile (V2.25;
+ * absent → as before: moderate, g/kg).
  * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual and exercise library reference tables
  * (embedded in the APK) are not exported.
  */
@@ -152,6 +154,9 @@ data class ProfileDto(
     val kcalTargetOverride: Int? = null,
     /** V2.22 (backup v12). */
     val firstName: String? = null,
+    /** V2.25 (backup v14). */
+    val activityLevel: ActivityLevel? = null,
+    val proteinTargetOverrideG: Int? = null,
 )
 
 @Serializable
@@ -374,10 +379,12 @@ fun ProfileEntity.toDto() = ProfileDto(
     birthYear = birthYear, sex = sex, hrMaxOverride = hrMaxOverride, heightCm = heightCm, nutritionGoal = nutritionGoal,
     kcalTargetOverride = kcalTargetOverride,
     firstName = firstName,
+    activityLevel = activityLevel,
+    proteinTargetOverrideG = proteinTargetOverrideG,
 )
 fun ProfileDto.toEntity() = ProfileEntity(
     1, proteinTargetGPerKg, wheyProteinPer100g, wheyKcalPer100g, wheyCarbsPer100g, wheyFatPer100g, wheyScoopG,
-    birthYear, sex, hrMaxOverride, heightCm, nutritionGoal, kcalTargetOverride, firstName,
+    birthYear, sex, hrMaxOverride, heightCm, nutritionGoal, kcalTargetOverride, firstName, activityLevel, proteinTargetOverrideG,
 )
 
 fun FoodEntity.toDto() = FoodDto(
@@ -422,7 +429,7 @@ fun SupplementIntakeDto.toEntity() = SupplementIntakeEntity(id, supplementId, Lo
  */
 fun NutritionBackup.supplementsToRestore(schemaVersion: Int): Pair<List<SupplementEntity>, List<SupplementIntakeEntity>> {
     if (schemaVersion >= 10) return supplements.map { it.toEntity() } to supplementIntakes.map { it.toEntity() }
-    val defaults = SupplementDefaults.all.mapIndexed { index, it -> it.copy(id = index + 1L) }
+    val defaults = SupplementDefaults.legacy.mapIndexed { index, it -> it.copy(id = index + 1L) }
     val creatine = defaults.first { it.isCreatine }.let { c ->
         c.copy(
             amount = profile?.creatineDoseG ?: c.amount,
