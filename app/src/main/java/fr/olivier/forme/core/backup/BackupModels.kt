@@ -46,7 +46,7 @@ import java.time.LocalDate
  * of older files, in the profile and `creatine`, becomes the first supplement, the others are added switched off),
  * v11 the dishes of one's own (V2.21; absent → none), v12 the first name of the profile (V2.22; absent → none), v13 the appearance (V2.24: theme, accent, dynamic colours;
  * absent → the phone's settings are kept), v14 the activity level and the protein target in grams of the profile (V2.25;
- * absent → as before: moderate, g/kg).
+ * absent → as before: moderate, g/kg), v15 how often each dish was added (V2.26; absent → 0).
  * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual and exercise library reference tables
  * (embedded in the APK) are not exported.
  */
@@ -103,7 +103,7 @@ data class NutritionBackup(
 )
 
 @Serializable
-data class DishDto(val foodId: Long, val cookedWeightG: Double? = null, val servings: Int = 1)
+data class DishDto(val foodId: Long, val cookedWeightG: Double? = null, val servings: Int = 1, val useCount: Int = 0)
 
 @Serializable
 data class DishIngredientDto(
@@ -413,8 +413,8 @@ fun BadgeDto.toEntity(schemaVersion: Int): BadgeEntity {
     return BadgeEntity(newId, newTier, LocalDate.parse(earnedAt), seen)
 }
 
-fun DishEntity.toDto() = DishDto(foodId, cookedWeightG, servings)
-fun DishDto.toEntity() = DishEntity(foodId, cookedWeightG, servings)
+fun DishEntity.toDto() = DishDto(foodId, cookedWeightG, servings, useCount)
+fun DishDto.toEntity() = DishEntity(foodId, cookedWeightG, servings, useCount)
 fun DishIngredientEntity.toDto() = DishIngredientDto(id, dishId, position, name, grams, kcalPer100g, proteinPer100g, carbsPer100g, fatPer100g)
 fun DishIngredientDto.toEntity() = DishIngredientEntity(id, dishId, position, name, grams, kcalPer100g, proteinPer100g, carbsPer100g, fatPer100g)
 

@@ -121,9 +121,10 @@ class NutritionRepository @Inject constructor(
         return sessionDao.observeSessionCount(from, to).map { it > 0 }
     }
 
-    suspend fun addFood(food: FoodEntity, date: LocalDate, mealType: MealType, grams: Double) = db.withTransaction {
+    /** Returns the id of the meal entry (V2.26: "Annuler" after a dish added in one tap). */
+    suspend fun addFood(food: FoodEntity, date: LocalDate, mealType: MealType, grams: Double): Long = db.withTransaction {
         val macros = NutritionMath.forQuantity(food.per100(), grams)
-        mealDao.insert(
+        val entryId = mealDao.insert(
             MealEntryEntity(
                 date = date,
                 mealType = mealType,
@@ -138,7 +139,18 @@ class NutritionRepository @Inject constructor(
             ),
         )
         foodDao.update(food.copy(lastUsedAt = clock.instant()))
+        if (food.source == FoodSource.DISH) db.dishDao().countUse(food.id) // V2.26: "most used"
+        entryId
     }
+
+    /** "Annuler" right after a dish was added: the entry goes, and its use is not counted. */
+    suspend fun undoAdd(entryId: Long, food: FoodEntity) = db.withTransaction {
+        mealDao.delete(entryId)
+        if (food.source == FoodSource.DISH) db.dishDao().uncountUse(food.id)
+    }
+
+    /** V2.26: the dishes of Mes plats. */
+    fun dishes(): Flow<List<DishSummary>> = db.dishDao().observeSummaries()
 
     /** A Ciqual reference becomes one of "my" foods on first use (recents / favourites). */
     suspend fun adopt(ciqual: CiqualFoodEntity): FoodEntity {
@@ -295,7 +307,8 @@ class NutritionRepository @Inject constructor(
                 defaultPortionG = DishMath.portion(ingredients, cookedWeightG, servings).takeIf { it > 0 },
             ),
         )
-        db.dishDao().upsert(DishEntity(id, cookedWeightG?.takeIf { it > 0 }, servings.coerceAtLeast(1)))
+        val useCount = db.dishDao().get(id)?.useCount ?: 0 // an edit keeps the count
+        db.dishDao().upsert(DishEntity(id, cookedWeightG?.takeIf { it > 0 }, servings.coerceAtLeast(1), useCount))
         db.dishDao().deleteIngredients(id)
         db.dishDao().insertIngredients(ingredients.mapIndexed { i, it -> it.toEntity(id, i) })
         id

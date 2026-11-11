@@ -213,6 +213,16 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         dataStore.edit { it[ONBOARDING_DONE] = true }
     }
 
+    /** V2.26: order of Mes plats, kept from one meal to the next. */
+    val dishSort: Flow<fr.olivier.forme.feature.nutrition.domain.DishSort> = dataStore.data.map { prefs ->
+        prefs[DISH_SORT]?.let { n -> fr.olivier.forme.feature.nutrition.domain.DishSort.entries.firstOrNull { it.name == n } }
+            ?: fr.olivier.forme.feature.nutrition.domain.DishSort.MOST_USED
+    }
+
+    suspend fun setDishSort(sort: fr.olivier.forme.feature.nutrition.domain.DishSort) {
+        dataStore.edit { it[DISH_SORT] = sort.name }
+    }
+
     suspend fun setVolumeByMuscle(byMuscle: Boolean) {
         dataStore.edit { it[VOLUME_BY_MUSCLE] = byMuscle }
     }
@@ -283,6 +293,7 @@ class SettingsRepository @Inject constructor(private val dataStore: DataStore<Pr
         private val AI_APP = stringPreferencesKey("ai_app_package")
         private val AI_AS_TEXT = booleanPreferencesKey("ai_share_as_text")
         private val AI_PROMPT = stringPreferencesKey("ai_prompt")
+        private val DISH_SORT = stringPreferencesKey("dish_sort")
         private val DEVELOPER_MODE = booleanPreferencesKey("developer_mode")
         private val ACCENT = stringPreferencesKey("accent_color")
         private val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")

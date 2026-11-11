@@ -105,4 +105,22 @@
     <string name="onboarding_protein">Protéines par jour</string>
     <string name="onboarding_protein_missing">Le poids est nécessaire pour la calculer (1,8 g par kg).</string>
     <string name="onboarding_summary_later">Tout se modifie ensuite dans Réglages → Profil.</string>
+
+    <!-- Ajouter → Mes plats (V2.26). -->
+    <string name="tab_my_dishes">Mes plats</string>
+    <string name="tab_foods">Aliments</string>
+    <string name="tab_scanner">Scanner</string>
+    <string name="dishes_search">Rechercher un plat</string>
+    <string name="dishes_sort_used">Les plus utilisés</string>
+    <string name="dishes_sort_recent">Récents</string>
+    <string name="dishes_sort_alpha">A → Z</string>
+    <string name="dishes_empty">Aucun plat enregistré. Crée ton premier plat à partir des aliments que tu manges souvent.</string>
+    <string name="dishes_none_found">Aucun plat ne correspond.</string>
+    <string name="dishes_portion">%1$s kcal · %2$s g de protéines par portion (%3$s g)</string>
+    <string name="dishes_pin">Épingler</string>
+    <string name="dishes_unpin">Désépingler</string>
+    <string name="dishes_quantity">Choisir la quantité de %1$s</string>
+    <string name="dishes_add_one">Ajouter une portion</string>
+    <string name="dishes_create">Créer un plat</string>
+    <string name="dishes_undo">Annuler</string>
 </resources>

@@ -81,6 +81,7 @@ class FoodEditSmokeTest {
         rule.waitUntilAtLeastOneExists(hasContentDescription("Ajouter à Déjeuner"), 15_000)
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasContentDescription("Ajouter à Déjeuner"))
         rule.onNode(hasContentDescription("Ajouter à Déjeuner")).performClick()
+        rule.foodsTab()
         // "Récents" shows before the recent foods load: wait for the food itself.
         rule.waitUntilAtLeastOneExists(hasText("Arancini Gorgonzola") and hasClickAction(), 15_000)
         rule.onNode(hasText("Arancini Gorgonzola") and hasClickAction()).performClick()

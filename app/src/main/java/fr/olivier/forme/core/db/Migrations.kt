@@ -252,6 +252,22 @@ object Migrations {
         }
     }
 
+    /**
+     * V2.26: how often each dish was added, and its last use, counted from the meals already entered (a meal keeps
+     * its dish's id until the dish is deleted).
+     */
+    val MIGRATION_13_14 = object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `dish` ADD COLUMN `useCount` INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("UPDATE dish SET useCount = (SELECT COUNT(*) FROM meal_entry WHERE meal_entry.foodId = dish.foodId)")
+            db.execSQL(
+                """UPDATE food SET lastUsedAt = (SELECT MAX(eatenAt) FROM meal_entry WHERE meal_entry.foodId = food.id)
+                   WHERE source = 'DISH' AND EXISTS (SELECT 1 FROM meal_entry WHERE meal_entry.foodId = food.id)
+                     AND (lastUsedAt IS NULL OR lastUsedAt < (SELECT MAX(eatenAt) FROM meal_entry WHERE meal_entry.foodId = food.id))""",
+            )
+        }
+    }
+
     internal fun SupplementEntity.toValues() = ContentValues().apply {
         put("name", name)
         put("code", code)
@@ -265,6 +281,6 @@ object Migrations {
 
     val ALL: Array<Migration> = arrayOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
+        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
     )
 }
