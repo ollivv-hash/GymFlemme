@@ -23,7 +23,7 @@ class HealthPermissionsRationaleActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            FormeTheme(ThemeMode.SYSTEM) {
+            FormeTheme(fr.olivier.forme.core.settings.Appearance(mode = ThemeMode.SYSTEM)) {
                 Scaffold(topBar = { FormeTopBar("Données de santé", onBack = ::finish) }) { padding ->
                     Column(Modifier.padding(padding).padding(16.dp).verticalScroll(rememberScrollState())) {
                         Text(RATIONALE, style = MaterialTheme.typography.bodyLarge)

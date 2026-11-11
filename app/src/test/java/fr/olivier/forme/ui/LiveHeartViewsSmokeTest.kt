@@ -39,7 +39,7 @@ class LiveHeartViewsSmokeTest {
     fun states() {
         val now = System.currentTimeMillis()
         rule.setContent {
-            FormeTheme(ThemeMode.DARK) {
+            FormeTheme(fr.olivier.forme.core.settings.Appearance(mode = ThemeMode.DARK)) {
                 Surface {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 12.dp)) {
                         LiveHeartStrip(LiveHeart(LiveHeartStatus.CONNECTED, bpm = 142, atMillis = now, hrMax = 176), {}, {})

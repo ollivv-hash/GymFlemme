@@ -7,7 +7,12 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import fr.olivier.forme.core.settings.Appearance
 import fr.olivier.forme.core.settings.ThemeMode
+import android.os.Build
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 
 /*
  * Electric blue + orange.
@@ -74,19 +79,31 @@ private val LightColors = lightColorScheme(
     outlineVariant = Color(0xFFC1C7CE),
 )
 
+/** Material You (Android 12+): the dynamic accent can be offered. */
+val dynamicColorAvailable: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
 @Composable
-fun FormeTheme(mode: ThemeMode, content: @Composable () -> Unit) {
-    val dark = when (mode) {
+fun FormeTheme(appearance: Appearance, content: @Composable () -> Unit) {
+    val dark = when (appearance.mode) {
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
+    val context = LocalContext.current
+    // V2.24: the accent of the bento design, from Réglages → Apparence or (Material You) from the wallpaper: its pale
+    // tone and the text Material designs for it, in both themes, as the 6 accents.
+    val accent = if (appearance.dynamicColor && dynamicColorAvailable) {
+        dynamicLightColorScheme(context).let { AccentPair(it.primaryContainer, it.onPrimaryContainer) }
+    } else {
+        appearance.accent.pair()
+    }
+    val bento = remember(dark, accent) { (if (dark) DarkBento else LightBento).withAccent(accent, dark) }
     MaterialTheme(
         colorScheme = if (dark) DarkColors else LightColors,
         typography = Typography(),
     ) {
         // V2.22: the bento tokens of the home screen follow the same theme.
-        androidx.compose.runtime.CompositionLocalProvider(LocalBento provides if (dark) DarkBento else LightBento, content = content)
+        androidx.compose.runtime.CompositionLocalProvider(LocalBento provides bento, content = content)
     }
 }
 

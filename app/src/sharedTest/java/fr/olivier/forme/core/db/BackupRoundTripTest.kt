@@ -23,6 +23,11 @@ import fr.olivier.forme.feature.sport.data.CardioEntryEntity
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.SetEntryEntity
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.flow.first
+import fr.olivier.forme.core.settings.AccentColor
+import fr.olivier.forme.core.settings.Appearance
+import fr.olivier.forme.core.settings.SettingsRepository
+import fr.olivier.forme.core.settings.ThemeMode
 import fr.olivier.forme.feature.nutrition.domain.DishIngredient
 import fr.olivier.forme.feature.nutrition.domain.Per100
 import org.junit.Assert.assertEquals
@@ -72,12 +77,18 @@ class BackupRoundTripTest {
         // V2.19: the challenge of the month is drawn by the evaluation; a past one, met, is kept too.
         source.badgeDao().insertChallenges(listOf(ChallengeEntity("2026-09", "CURIOUS", LocalDate.of(2026, 9, 20), seen = true)))
 
-        val exported = BackupRepository(source, context(), clock).snapshot()
+        // V2.24 (backup v13): the appearance travels too, into a phone with other settings.
+        val sourceSettings = SettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "source.preferences_pb") })
+        sourceSettings.setAppearance(Appearance(ThemeMode.LIGHT, AccentColor.ORANGE, dynamicColor = false))
+        val targetSettings = SettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "target.preferences_pb") })
+        targetSettings.setAccent(AccentColor.LIME)
+
+        val exported = BackupRepository(source, context(), clock, sourceSettings).snapshot()
         val text = BackupCodec.encode(exported)
 
         // Target starts with its own (different) seed content, which must be fully replaced.
         val target = testDatabase(TestClock(Instant.parse("2027-01-01T00:00:00Z")))
-        val targetBackup = BackupRepository(target, context(), clock)
+        val targetBackup = BackupRepository(target, context(), clock, targetSettings)
         targetBackup.restore(BackupCodec.decode(text))
         val reimported = targetBackup.snapshot()
 
@@ -91,6 +102,7 @@ class BackupRoundTripTest {
         assertEquals(listOf("2026-09", "2026-10"), exported.challenges.map { it.month })
         assertEquals(listOf(2), exported.nutrition.dishes.map { it.servings })
         assertEquals(listOf("Riz"), exported.nutrition.dishIngredients.map { it.name })
+        assertEquals(Appearance(ThemeMode.LIGHT, AccentColor.ORANGE, false), targetSettings.appearance.first())
         assertEquals(exported, reimported)
         assertEquals(text, BackupCodec.encode(reimported))
         source.close()
@@ -101,12 +113,13 @@ class BackupRoundTripTest {
     fun badgesOfAFormat7BackupAreConvertedIntoTiers() = runTest {
         val clock = TestClock()
         val source = testDatabase(clock)
-        val v7 = BackupRepository(source, context(), clock).snapshot().copy(
+        val settings = SettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "s.preferences_pb") })
+        val v7 = BackupRepository(source, context(), clock, settings).snapshot().copy(
             schemaVersion = 7,
             badges = listOf(BadgeDto("PILLAR", "2026-05-01", true), BadgeDto("CREATINE_LOYAL", "2026-06-01", false), BadgeDto("NOT_DEAD", "2026-01-01", true)),
         )
         val target = testDatabase(clock)
-        BackupRepository(target, context(), clock).restore(BackupCodec.decode(BackupCodec.encode(v7)))
+        BackupRepository(target, context(), clock, settings).restore(BackupCodec.decode(BackupCodec.encode(v7)))
         assertEquals(
             listOf(
                 BadgeEntity("CREATINE_LOYAL", 2, LocalDate.of(2026, 6, 1), false),

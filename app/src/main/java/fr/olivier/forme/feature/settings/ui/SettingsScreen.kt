@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -48,7 +47,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import fr.olivier.forme.core.settings.SettingsRepository
-import fr.olivier.forme.core.settings.ThemeMode
 import fr.olivier.forme.core.humor.QuipRepository
 import fr.olivier.forme.R
 import androidx.compose.foundation.selection.toggleable
@@ -89,7 +87,6 @@ class SettingsViewModel @Inject constructor(
         challengeReminder.reschedule()
     }
     val restSec = settings.defaultRestSec.stateIn(viewModelScope, SharingStarted.Eagerly, SettingsRepository.DEFAULT_REST_SEC)
-    val theme = settings.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.DARK)
     val autoBackup = settings.autoBackup
         .mapLatest { state -> AutoBackupUi(state, state.targetUri?.let { autoBackupManager.targetName(it) }) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, AutoBackupUi(AutoBackupState(), null))
@@ -100,7 +97,6 @@ class SettingsViewModel @Inject constructor(
     val messages = _messages.receiveAsFlow()
 
     fun setRest(seconds: Int) = viewModelScope.launch { settings.setDefaultRestSec(seconds) }
-    fun setTheme(mode: ThemeMode) = viewModelScope.launch { settings.setThemeMode(mode) }
     fun setSeriousMode(serious: Boolean) = viewModelScope.launch { quips.setSeriousMode(serious) }
     fun suggestedFileName() = backup.suggestedFileName()
 
@@ -154,7 +150,6 @@ class SettingsViewModel @Inject constructor(
 @Composable
 fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val rest by viewModel.restSec.collectAsStateWithLifecycle()
-    val theme by viewModel.theme.collectAsStateWithLifecycle()
     val seriousMode by viewModel.seriousMode.collectAsStateWithLifecycle()
     val challengeNotification by viewModel.challengeNotification.collectAsStateWithLifecycle()
     val autoBackup by viewModel.autoBackup.collectAsStateWithLifecycle()
@@ -191,12 +186,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMo
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            SectionTitle("Thème")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ThemeMode.entries.forEach { mode ->
-                    FilterChip(selected = theme == mode, onClick = { viewModel.setTheme(mode) }, label = { Text(mode.label) })
-                }
-            }
+            // V2.24: the theme moved to Réglages → Apparence.
 
             SectionTitle("Ton")
             ListItem(

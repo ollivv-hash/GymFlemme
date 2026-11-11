@@ -30,4 +30,24 @@
         <item quantity="other">Encore %d appuis pour activer le mode développeur</item>
     </plurals>
     <string name="bluetooth_log_title">Journal Bluetooth</string>
+
+    <!-- Réglages → Apparence (V2.24). -->
+    <string name="appearance_title">Apparence</string>
+    <string name="appearance_subtitle">Thème clair ou sombre, couleur d\'accent</string>
+    <string name="appearance_mode">Mode</string>
+    <string name="theme_light">Clair</string>
+    <string name="theme_dark">Sombre</string>
+    <string name="theme_system">Suivre le système</string>
+    <string name="appearance_accent">Couleur d\'accent</string>
+    <string name="appearance_accent_hint">Tuile de la séance, onglet actif, objectif atteint, barres de progression.</string>
+    <string name="appearance_accent_selected">%1$s, sélectionnée</string>
+    <string name="dynamic_color">Couleurs dynamiques</string>
+    <string name="dynamic_color_hint">L\'accent vient du fond d\'écran (Android 12 et plus).</string>
+    <string name="dynamic_color_active">Couleurs dynamiques activées : l\'accent vient du fond d\'écran.</string>
+    <string name="accent_green">Vert</string>
+    <string name="accent_blue">Bleu</string>
+    <string name="accent_orange">Orange</string>
+    <string name="accent_lime">Citron vert</string>
+    <string name="accent_lavender">Lavande</string>
+    <string name="accent_coral">Corail</string>
 </resources>

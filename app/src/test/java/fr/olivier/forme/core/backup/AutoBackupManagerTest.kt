@@ -37,7 +37,7 @@ class AutoBackupManagerTest {
     private fun TestScope.manager(): Pair<AutoBackupManager, SettingsRepository> {
         val store = PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "settings.preferences_pb") }
         val settings = SettingsRepository(store)
-        return AutoBackupManager(context(), BackupRepository(db, context(), clock), settings, clock) to settings
+        return AutoBackupManager(context(), BackupRepository(db, context(), clock, settings), settings, clock) to settings
     }
 
     @Test
@@ -101,8 +101,8 @@ class AutoBackupManagerTest {
 
     @Test
     fun readBackIsCheckedBeforeCallingABackupGood() = runTest {
-        val (manager, _) = manager()
-        val good = BackupCodec.encode(BackupRepository(db, context(), clock).snapshot()).toByteArray()
+        val (manager, settings) = manager()
+        val good = BackupCodec.encode(BackupRepository(db, context(), clock, settings).snapshot()).toByteArray()
         assertNull(BackupVerifier.check(good, good.copyOf()))
         assertTrue(BackupVerifier.check(good, null)!!.contains("vide"))
         // Truncated upload, or a provider that kept an older version.
