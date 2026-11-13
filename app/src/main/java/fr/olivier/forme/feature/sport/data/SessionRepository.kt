@@ -43,6 +43,7 @@ class SessionRepository @Inject constructor(
     private val templateDao: TemplateDao,
     private val exerciseDao: ExerciseDao,
     private val clock: Clock,
+    private val listener: SessionListener = SessionListener.NONE,
 ) {
     fun observeActive(): Flow<SessionEntity?> = dao.observeActiveSession()
     fun observeSession(id: Long): Flow<SessionEntity?> = dao.observeSession(id)
@@ -71,7 +72,13 @@ class SessionRepository @Inject constructor(
         PlateauDetector.detect(dao.getExerciseHistory(exerciseId, currentSessionId).toSessionSets(), loadIncrementKg)
 
     /** Starts a session from a template (null = free session); resumes the running one if any. */
-    suspend fun start(templateId: Long?): Long = db.withTransaction {
+    suspend fun start(templateId: Long?): Long {
+        val id = startInTransaction(templateId)
+        dao.getSession(id)?.let { runCatching { listener.onSessionStarted(it.startedAt) } }
+        return id
+    }
+
+    private suspend fun startInTransaction(templateId: Long?): Long = db.withTransaction {
         dao.getActiveSession()?.let { return@withTransaction it.id }
         val template = templateId?.let { templateDao.getById(it) }
         val sessionId = dao.insertSession(
@@ -230,6 +237,14 @@ class SessionRepository @Inject constructor(
     }
 
     suspend fun delete(sessionId: Long) = dao.deleteSession(sessionId)
+
+    /** The running session abandoned: deleted with its sets (V2.29: the listener may withdraw the session bonus). */
+    suspend fun abandon(sessionId: Long) {
+        val session = dao.getSession(sessionId) ?: return
+        val hadSets = dao.getSets(sessionId).isNotEmpty() || dao.getCardio(sessionId).isNotEmpty()
+        dao.deleteSession(sessionId)
+        runCatching { listener.onSessionAbandoned(session.startedAt, hadSets) }
+    }
 
     suspend fun buildReport(sessionId: Long): SessionReport? {
         val session = dao.getSession(sessionId) ?: return null

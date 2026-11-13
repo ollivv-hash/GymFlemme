@@ -8,6 +8,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import fr.olivier.forme.core.db.TestClock
 import fr.olivier.forme.core.db.context
 import fr.olivier.forme.core.db.testDatabase
+import fr.olivier.forme.feature.hydration.data.HydrationSettingsRepository
 import fr.olivier.forme.core.settings.AutoBackupState
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
@@ -34,10 +35,13 @@ class AutoBackupManagerTest {
     private val clock = TestClock()
     private val db = testDatabase(clock)
 
+    private fun TestScope.waterSettings(name: String) =
+        HydrationSettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "$name.preferences_pb") })
+
     private fun TestScope.manager(): Pair<AutoBackupManager, SettingsRepository> {
         val store = PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "settings.preferences_pb") }
         val settings = SettingsRepository(store)
-        return AutoBackupManager(context(), BackupRepository(db, context(), clock, settings), settings, clock) to settings
+        return AutoBackupManager(context(), BackupRepository(db, context(), clock, settings, HydrationSettingsRepository(store)), settings, clock) to settings
     }
 
     @Test
@@ -102,7 +106,7 @@ class AutoBackupManagerTest {
     @Test
     fun readBackIsCheckedBeforeCallingABackupGood() = runTest {
         val (manager, settings) = manager()
-        val good = BackupCodec.encode(BackupRepository(db, context(), clock, settings).snapshot()).toByteArray()
+        val good = BackupCodec.encode(BackupRepository(db, context(), clock, settings, waterSettings("w2")).snapshot()).toByteArray()
         assertNull(BackupVerifier.check(good, good.copyOf()))
         assertTrue(BackupVerifier.check(good, null)!!.contains("vide"))
         // Truncated upload, or a provider that kept an older version.

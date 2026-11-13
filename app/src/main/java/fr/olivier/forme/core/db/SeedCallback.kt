@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import fr.olivier.forme.feature.hydration.data.HydrationDefaults
 import fr.olivier.forme.feature.nutrition.data.SupplementDefaults
 import fr.olivier.forme.feature.sport.data.ExerciseEntity
 import fr.olivier.forme.feature.sport.data.SessionEntity
@@ -32,6 +33,9 @@ class SeedCallback(private val clock: Clock) : RoomDatabase.Callback() {
             SeedData.seedSets(now).forEach { db.insertOrThrow("set_entry", it.toValues()) }
             // V2.20: creatine on, the other supplements offered switched off.
             SupplementDefaults.all.forEach { db.insertOrThrow("supplement", with(Migrations) { it.toValues() }) }
+            // V2.29: drinks and containers offered from the start.
+            HydrationDefaults.drinks.forEach { db.insertOrThrow("drink", with(HydrationDefaults) { it.toValues() }) }
+            HydrationDefaults.containers.forEach { db.insertOrThrow("container", with(HydrationDefaults) { it.toValues() }) }
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()

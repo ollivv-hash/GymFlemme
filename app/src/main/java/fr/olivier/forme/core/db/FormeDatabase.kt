@@ -7,6 +7,11 @@ import fr.olivier.forme.feature.bodyweight.data.BodyWeightDao
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightEntity
 import fr.olivier.forme.feature.heart.data.SessionHeartDao
 import fr.olivier.forme.feature.heart.data.SessionHeartEntity
+import fr.olivier.forme.feature.hydration.data.ContainerEntity
+import fr.olivier.forme.feature.hydration.data.DrinkEntity
+import fr.olivier.forme.feature.hydration.data.HydrationDao
+import fr.olivier.forme.feature.hydration.data.WaterDayEntity
+import fr.olivier.forme.feature.hydration.data.WaterIntakeEntity
 import fr.olivier.forme.feature.library.data.LibraryDao
 import fr.olivier.forme.feature.library.data.LibraryExerciseEntity
 import fr.olivier.forme.feature.nutrition.data.CiqualDao
@@ -61,6 +66,10 @@ import fr.olivier.forme.feature.sport.data.WorkoutTemplateEntity
         SupplementIntakeEntity::class,
         DishEntity::class,
         DishIngredientEntity::class,
+        DrinkEntity::class,
+        ContainerEntity::class,
+        WaterIntakeEntity::class,
+        WaterDayEntity::class,
     ],
     version = FormeDatabase.VERSION,
     exportSchema = true,
@@ -80,9 +89,10 @@ abstract class FormeDatabase : RoomDatabase() {
     abstract fun sessionHeartDao(): SessionHeartDao
     abstract fun libraryDao(): LibraryDao
     abstract fun badgeDao(): BadgeDao
+    abstract fun hydrationDao(): HydrationDao
 
     companion object {
-        const val VERSION = 14
+        const val VERSION = 15
         const val NAME = "forme.db"
     }
 }

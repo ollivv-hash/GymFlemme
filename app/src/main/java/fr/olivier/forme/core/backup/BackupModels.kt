@@ -46,7 +46,8 @@ import java.time.LocalDate
  * of older files, in the profile and `creatine`, becomes the first supplement, the others are added switched off),
  * v11 the dishes of one's own (V2.21; absent → none), v12 the first name of the profile (V2.22; absent → none), v13 the appearance (V2.24: theme, accent, dynamic colours;
  * absent → the phone's settings are kept), v14 the activity level and the protein target in grams of the profile (V2.25;
- * absent → as before: moderate, g/kg), v15 how often each dish was added (V2.26; absent → 0).
+ * absent → as before: moderate, g/kg), v15 how often each dish was added (V2.26; absent → 0), v16 the hydration
+ * (V2.29, [HydrationBackup]; absent → the drinks and containers offered from the start, no intake).
  * Instants are epoch milliseconds, dates are ISO-8601 strings. The Ciqual and exercise library reference tables
  * (embedded in the APK) are not exported.
  */
@@ -64,6 +65,8 @@ data class BackupFile(
     val challenges: List<ChallengeDto> = emptyList(),
     /** V2.24 (backup v13): Réglages → Apparence; absent in older files (the current one is kept). */
     val appearance: AppearanceDto? = null,
+    /** V2.29 (backup v16): hydration; absent in older files. */
+    val hydration: HydrationBackup? = null,
 )
 
 /** Names of [fr.olivier.forme.core.settings.ThemeMode] and [fr.olivier.forme.core.settings.AccentColor]. */
