@@ -139,6 +139,8 @@ object BentoDims {
     val tilePadding = 16.dp
     val sessionPadding = 20.dp
     val touch = 44.dp
+    /** Touch zone of the controls added since V2.29 (CLAUDE.md: 48 dp at least). */
+    val touchMin = 48.dp
     val navHeight = 64.dp
     val navBottom = 16.dp
     val tileHeight = 170.dp

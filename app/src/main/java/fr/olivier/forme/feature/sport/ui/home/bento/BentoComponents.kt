@@ -125,5 +125,14 @@ fun TileRow(left: (@Composable (Modifier) -> Unit)?, right: (@Composable (Modifi
     }
 }
 
+/**
+ * Half-width tiles (V2.29: water, supplements, challenge), two by two in this order; one left alone takes the whole
+ * width. Missing tiles (null) are skipped.
+ */
+@Composable
+fun HalfTiles(vararg tiles: (@Composable (Modifier) -> Unit)?) {
+    tiles.filterNotNull().chunked(2).forEach { pair -> TileRow(left = pair[0], right = pair.getOrNull(1)) }
+}
+
 /** Keeps a tile's padding inside a fixed width column (previews). */
 internal val PreviewWidth = Modifier.width(390.dp).padding(BentoDims.screenMargin)

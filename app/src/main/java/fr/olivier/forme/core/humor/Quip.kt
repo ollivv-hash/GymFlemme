@@ -44,6 +44,21 @@ enum class Quip(
     MISSED_GOAL(R.array.humor_missed_goal, R.string.neutral_missed_goal),
     /** V2.18: %1$d = level, %2$s = its title (feminine agreement already applied). */
     LEVEL_UP(R.array.humor_level_up, R.string.neutral_level_up),
+    /** V2.29, hydration. %1$s = still to drink today. */
+    WATER_REMINDER(R.array.humor_water_reminder, R.string.neutral_water_reminder),
+    /** %1$s = counted today, %2$s = goal. */
+    WATER_NOTED(R.array.humor_water_noted, R.string.neutral_water_noted),
+    WATER_TILE_EMPTY(R.array.humor_water_tile_empty, R.string.neutral_water_tile_empty),
+    /** Home tile, %1$s = counted, %2$s = goal, %3$s = left (the three tile entries take the same arguments). */
+    WATER_TILE_LOW(R.array.humor_water_tile_low, R.string.neutral_water_tile_low),
+    WATER_TILE_HIGH(R.array.humor_water_tile_high, R.string.neutral_water_tile_high),
+    WATER_TILE_REACHED(R.array.humor_water_tile_reached, R.string.neutral_water_tile_reached),
+    /** %1$s = goal. */
+    WATER_GOAL_REACHED(R.array.humor_water_goal_reached, R.string.neutral_water_goal_reached, humorFeminine = R.array.humor_water_goal_reached_f),
+    WATER_EMPTY(R.array.humor_water_empty, R.string.neutral_water_empty),
+    /** %1$d = bonus in ml. */
+    WATER_BONUS(R.array.humor_water_bonus, R.string.neutral_water_bonus),
+    WATER_INTRO_TITLE(R.array.humor_water_intro_title, R.string.neutral_water_intro_title),
     ;
 
     companion object {

@@ -28,6 +28,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import fr.olivier.forme.R
+import fr.olivier.forme.feature.hydration.domain.HydrationMath
 import fr.olivier.forme.feature.sport.domain.Fmt
 import fr.olivier.forme.ui.theme.BentoDims
 import fr.olivier.forme.ui.theme.BentoType
@@ -317,6 +324,85 @@ fun SupplementsTile(state: SupplementsTileState, onToggle: (SupplementItem, Bool
                 modifier = Modifier.heightIn(min = BentoDims.touch).clickable(role = Role.Button, onClick = onMore).padding(top = 12.dp),
             )
         }
+    }
+}
+
+// --- Water (V2.29) ------------------------------------------------------------------------------------------------
+
+const val WATER_TILE_TAG = "bento_water"
+const val WATER_ADD_TAG = "bento_water_add"
+
+/**
+ * Today's water: [countedMl] / [goalMl], [bonusMl] of the session when it applies, [line] the secondary line of the
+ * humour catalogue; the "+" adds [defaultMl] of [defaultDrink] (the default container).
+ */
+data class WaterTileState(
+    val countedMl: Int,
+    val goalMl: Int,
+    val bonusMl: Int = 0,
+    val line: String? = null,
+    val defaultMl: Int? = null,
+    val defaultDrink: String? = null,
+)
+
+/** Half-width tile: tap opens the water screen; "+" adds the default container, a long press opens the choice. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+fun WaterTile(state: WaterTileState, onOpen: () -> Unit, onAdd: () -> Unit, onChoose: () -> Unit, modifier: Modifier = Modifier) {
+    val c = LocalBento.current
+    val res = androidx.compose.ui.platform.LocalResources.current
+    val counted = HydrationMath.litersNumber(state.countedMl)
+    val goal = HydrationMath.litersNumber(state.goalMl)
+    val description = listOfNotNull(
+        res.getString(R.string.water_tile_description, HydrationMath.litersSpoken(state.countedMl), goal),
+        state.bonusMl.takeIf { it > 0 }?.let { res.getString(R.string.water_tile_bonus_spoken, it) },
+        state.line,
+    ).joinToString(", ")
+    BentoTile(
+        color = c.tile,
+        modifier = modifier.heightIn(min = BentoDims.tileHeight).testTag(WATER_TILE_TAG),
+        description = description,
+        onClick = onOpen,
+        onClickLabel = res.getString(R.string.water_open),
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Text(res.getString(R.string.water_title), style = BentoType.label, color = c.textSecondary)
+                if (state.bonusMl > 0) {
+                    Text(res.getString(R.string.water_tile_bonus, state.bonusMl), style = BentoType.label, color = c.textSecondary, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+            val addLabel = state.defaultMl?.let { res.getString(R.string.water_add_default, it, state.defaultDrink.orEmpty()) } ?: res.getString(R.string.water_add)
+            Box(
+                Modifier
+                    .size(BentoDims.touchMin)
+                    .clip(RoundedCornerShape(50))
+                    .background(c.accent)
+                    .combinedClickable(
+                        role = Role.Button,
+                        onClickLabel = addLabel,
+                        onLongClickLabel = res.getString(R.string.water_add_choose),
+                        onLongClick = onChoose,
+                        onClick = onAdd,
+                    )
+                    .semantics { contentDescription = addLabel }
+                    .testTag(WATER_ADD_TAG),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(painterResource(R.drawable.ic_add), contentDescription = null, tint = c.onAccent, modifier = Modifier.size(24.dp))
+            }
+        }
+        Spacer(Modifier.weight(1f).defaultMinSize(minHeight = 8.dp))
+        Text(
+            buildAnnotatedString {
+                withStyle(BentoType.number.toSpanStyle()) { append(counted) }
+                withStyle(BentoType.bodyStrong.toSpanStyle()) { append(" / $goal L") }
+            },
+            color = c.text,
+        )
+        state.line?.let { Text(it, style = BentoType.label, color = c.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp)) }
+        Spacer(Modifier.weight(1f).defaultMinSize(minHeight = 8.dp))
+        ProgressTrack(if (state.goalMl > 0) state.countedMl.toFloat() / state.goalMl else 0f, c.track, c.accent)
     }
 }
 

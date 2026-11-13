@@ -1,6 +1,7 @@
 package fr.olivier.forme.ui.navigation
 
 import fr.olivier.forme.core.update.LocalUpdateFeature
+import fr.olivier.forme.feature.hydration.ui.WaterScreen
 import fr.olivier.forme.feature.badges.ui.BadgeAnnouncer
 import fr.olivier.forme.feature.badges.ui.BadgesScreen
 import androidx.compose.foundation.layout.padding
@@ -162,8 +163,10 @@ fun FormeNavHost(
                     onOpenNutrition = { nav.switchTab(NutritionRoute(tab = 0)) },
                     onOpenBadges = { tab -> nav.switchTab(BadgesRoute(tab)) },
                     onOpenUpdate = { updates?.open(nav) },
+                    onOpenWater = { nav.navigate(WaterRoute) },
                 )
             }
+            composable<WaterRoute> { WaterScreen(onBack = { nav.popBackStack() }) }
             composable<BadgesRoute> { BadgesScreen(onBack = { nav.popBackStack() }, initialTab = it.toRoute<BadgesRoute>().tab) }
             composable<HistoryRoute> {
                 HistoryScreen(
@@ -178,6 +181,7 @@ fun FormeNavHost(
                     onSaveAsDish = { date, meal -> nav.navigate(DishEditRoute(epochDay = date.toEpochDay(), meal = meal.name)) },
                     onScan = { date, meal -> nav.navigate(ScanRoute(date.toEpochDay(), meal.name)) },
                     onProfile = { nav.navigate(ProfileRoute) },
+                    onOpenWater = { nav.navigate(WaterRoute) },
                 )
             }
             composable<AddFoodRoute> {

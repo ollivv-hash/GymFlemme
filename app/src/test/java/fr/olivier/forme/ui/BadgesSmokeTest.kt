@@ -10,6 +10,7 @@ import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.room.Room
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -95,7 +96,8 @@ class BadgesSmokeTest {
             waitFor("10 / 30")
             waitFor("Défi d") // V2.19: the challenge of the month (V2.22: its tile)
             shot("bg2-home-level")
-            rule.onNodeWithTag(fr.olivier.forme.feature.sport.ui.home.bento.LEVEL_TILE_TAG).performClick()
+            // V2.29: the water tile pushed the level tile further down.
+            rule.onNodeWithTag(fr.olivier.forme.feature.sport.ui.home.bento.LEVEL_TILE_TAG).performScrollTo().performClick()
 
             waitFor("Prochain palier : Bronze")
             waitFor("1 / 10 séances")

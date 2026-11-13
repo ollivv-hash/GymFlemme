@@ -96,7 +96,8 @@ class DishSmokeTest {
         // Nutrition → Ajouter: the dish is among the recent foods, one serving proposed.
         rule.onNode(hasContentDescription("Retour")).performClick()
         rule.tab("Nutrition")
-        rule.waitUntilAtLeastOneExists(hasContentDescription("Ajouter à Déjeuner"), 15_000)
+        // V2.29: the "Eau" entry heads the journal, the meals may be further down.
+        rule.waitUntilAtLeastOneExists(hasScrollToIndexAction(), 15_000)
         rule.onNode(hasScrollToIndexAction()).performScrollToNode(hasContentDescription("Ajouter à Déjeuner"))
         rule.onNode(hasContentDescription("Ajouter à Déjeuner")).performClick()
         // V2.26: Mes plats opens first; one tap adds one portion (100 g) at once.

@@ -37,7 +37,7 @@ class HydrationRepository @Inject constructor(
 ) {
     fun today(): LocalDate = LocalDate.now(clock)
 
-    fun dateOf(instant: Instant): LocalDate = LocalDate.ofInstant(instant, clock.zone)
+    fun dateOf(instant: Instant): LocalDate = instant.atZone(clock.zone).toLocalDate() // LocalDate.ofInstant: API 34
 
     // --- Drinks and containers ---
 

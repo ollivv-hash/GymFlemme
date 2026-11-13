@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import fr.olivier.forme.feature.hydration.ui.WaterJournalEntry
 import fr.olivier.forme.feature.bodyweight.ui.WeightScreen
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
 import fr.olivier.forme.feature.nutrition.data.dose
@@ -71,6 +72,7 @@ fun NutritionScreen(
     onSaveAsDish: (LocalDate, MealType) -> Unit = { _, _ -> },
     onScan: (LocalDate, MealType) -> Unit,
     onProfile: () -> Unit,
+    onOpenWater: () -> Unit = {},
 ) {
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
     Scaffold(topBar = { FormeTopBar("Nutrition") { TextButton(onClick = onProfile) { Text("Profil") } } }) { padding ->
@@ -79,7 +81,7 @@ fun NutritionScreen(
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Journal") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Poids") })
             }
-            if (tab == 0) JournalContent(onAddFood, onSaveAsDish, onScan, onProfile) else WeightScreen(showTopBar = false)
+            if (tab == 0) JournalContent(onAddFood, onSaveAsDish, onScan, onProfile, onOpenWater) else WeightScreen(showTopBar = false)
         }
     }
 }
@@ -90,6 +92,7 @@ private fun JournalContent(
     onSaveAsDish: (LocalDate, MealType) -> Unit,
     onScan: (LocalDate, MealType) -> Unit,
     onProfile: () -> Unit,
+    onOpenWater: () -> Unit,
     viewModel: JournalViewModel = hiltViewModel(),
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
@@ -97,6 +100,8 @@ private fun JournalContent(
     var editing by remember { mutableStateOf<MealEntryEntity?>(null) }
 
     LazyColumn(Modifier.padding(horizontal = 12.dp)) {
+        // V2.29: the water of the day first.
+        item(key = "water") { WaterJournalEntry(onOpen = onOpenWater, modifier = Modifier.padding(top = 8.dp)) }
         item {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 IconButton(onClick = { viewModel.shiftDay(-1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Jour précédent") }

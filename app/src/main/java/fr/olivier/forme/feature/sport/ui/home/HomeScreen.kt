@@ -2,6 +2,13 @@ package fr.olivier.forme.feature.sport.ui.home
 
 import fr.olivier.forme.core.update.LocalUpdateFeature
 import fr.olivier.forme.R
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import fr.olivier.forme.feature.hydration.data.IntakeSource
+import fr.olivier.forme.feature.hydration.domain.HydrationMath
+import fr.olivier.forme.feature.hydration.ui.AddDrinkSheet
+import fr.olivier.forme.feature.hydration.ui.WaterSnackbarEffect
+import fr.olivier.forme.feature.hydration.ui.WaterViewModel
 import kotlin.math.roundToInt
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
@@ -266,9 +273,11 @@ fun HomeScreen(
     onOpenNutrition: () -> Unit,
     onOpenBadges: (tab: Int) -> Unit = {},
     onOpenUpdate: () -> Unit = {},
+    onOpenWater: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     journal: JournalViewModel = hiltViewModel(),
     level: LevelViewModel = hiltViewModel(),
+    water: WaterViewModel = hiltViewModel(),
 ) {
     val nutrition by journal.ui.collectAsStateWithLifecycle()
     val sessionKcal by journal.sessionKcal.collectAsStateWithLifecycle()
@@ -282,6 +291,12 @@ fun HomeScreen(
     val nudge by viewModel.nudge.collectAsStateWithLifecycle()
     val board by level.board.collectAsStateWithLifecycle()
     var choosingSession by remember { mutableStateOf(false) }
+    val waterToday by water.today.collectAsStateWithLifecycle()
+    val drinks by water.drinks.collectAsStateWithLifecycle()
+    val containers by water.containers.collectAsStateWithLifecycle()
+    var choosingDrink by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    WaterSnackbarEffect(water.events, snackbar, water::undo)
     val c = LocalBento.current
     val resources = LocalContext.current.resources
     val quipStyle = rememberQuipStyle()
@@ -335,6 +350,19 @@ fun HomeScreen(
         )
     }
 
+    val waterTile = waterToday?.let { today ->
+        val default = containers.firstOrNull { it.isDefault } ?: containers.firstOrNull()
+        val args = arrayOf<Any>(HydrationMath.liters(today.countedMl), HydrationMath.liters(today.goal.totalMl), HydrationMath.liters(today.remainingMl))
+        WaterTileState(
+            countedMl = today.countedMl,
+            goalMl = today.goal.totalMl,
+            bonusMl = today.goal.bonusMl,
+            line = rememberQuip(waterTileQuip(today.countedMl, today.goal.totalMl), *args),
+            defaultMl = default?.volumeMl,
+            defaultDrink = drinks.firstOrNull { it.id == default?.defaultDrinkId }?.name,
+        )
+    }
+
     Box(Modifier.fillMaxSize().background(c.background)) {
         Column(
             Modifier
@@ -373,9 +401,11 @@ fun HomeScreen(
                 left = { m -> CaloriesTile(calories, onOpenNutrition, m) },
                 right = { m -> ProteinTile(proteins, onOpenNutrition, m) },
             )
-            TileRow(
-                left = challenge?.let { state -> { m: Modifier -> ChallengeTile(state, { onOpenBadges(2) }, m) } },
-                right = supplements?.let { state ->
+            // V2.29: the half-width tiles go by pairs in this order (water, supplements, challenge); one left alone
+            // takes the whole width.
+            HalfTiles(
+                waterTile?.let { state -> { m: Modifier -> WaterTile(state, onOpen = onOpenWater, onAdd = water::addDefault, onChoose = { choosingDrink = true }, modifier = m) } },
+                supplements?.let { state ->
                     { m: Modifier ->
                         SupplementsTile(
                             state,
@@ -385,7 +415,9 @@ fun HomeScreen(
                         )
                     }
                 },
+                challenge?.let { state -> { m: Modifier -> ChallengeTile(state, { onOpenBadges(2) }, m) } },
             )
+
             board?.level?.let { lv ->
                 LevelTile(
                     LevelTileState(lv.number, BadgeWording.levelDisplay(resources, lv.number, quipStyle), lv.points, lv.floor, lv.next),
@@ -393,6 +425,16 @@ fun HomeScreen(
                 )
             }
         }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+    }
+
+    if (choosingDrink) {
+        AddDrinkSheet(
+            drinks = drinks,
+            containers = containers,
+            onAdd = { id, ml -> water.add(id, ml, IntakeSource.HOME_TILE) },
+            onDismiss = { choosingDrink = false },
+        )
     }
 
     if (choosingSession) {
@@ -407,6 +449,14 @@ fun HomeScreen(
             onDismiss = { choosingSession = false },
         )
     }
+}
+
+/** Secondary line of the water tile (V2.29): nothing yet, under half, over half, goal reached. */
+internal fun waterTileQuip(countedMl: Int, goalMl: Int): Quip = when {
+    countedMl <= 0 -> Quip.WATER_TILE_EMPTY
+    countedMl >= goalMl -> Quip.WATER_TILE_REACHED
+    countedMl * 2 < goalMl -> Quip.WATER_TILE_LOW
+    else -> Quip.WATER_TILE_HIGH
 }
 
 /** Supplement boxes shown on the home tile; the others are in Nutrition. */
