@@ -10,7 +10,7 @@ fonctionnement réel (certaines valeurs ont changé depuis, par exemple la cible
 |---|---|---|
 | [textes-humour.md](textes-humour.md) | Catalogue des textes d'humour et version neutre (mode sérieux) | V2.15 (`humor.xml`) |
 | [badges-defis.md](badges-defis.md) | Badges à paliers, ponctuels, secrets, défis mensuels, niveaux, règles de calcul | V2.18 – V2.19 |
-| [textes-hydratation.md](textes-hydratation.md) | Textes du suivi de l'hydratation (rappels, tuile, badges, défi) | À venir |
+| [textes-hydratation.md](textes-hydratation.md) | Textes du suivi de l'hydratation (rappels, tuile, badges, défi) | V2.29 |
 
 ## Prompts de chantier
 
@@ -20,4 +20,4 @@ fonctionnement réel (certaines valeurs ont changé depuis, par exemple la cible
 | [prompts/bibliotheque-exercices.md](prompts/bibliotheque-exercices.md) | Bibliothèque Open Exercise Illustrations | V2.8 – V2.11 |
 | [prompts/accueil-bento.md](prompts/accueil-bento.md) | Refonte de l'accueil en tuiles | V2.22 |
 | [prompts/maj-globale.md](prompts/maj-globale.md) | Barre à 5 onglets, thème, assistant de profil, Mes plats, partage, mise à jour GitHub | V2.23 – V2.28 |
-| [prompts/hydratation.md](prompts/hydratation.md) | Suivi de l'hydratation | À venir |
+| [prompts/hydratation.md](prompts/hydratation.md) | Suivi de l'hydratation | V2.29 |

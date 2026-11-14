@@ -43,6 +43,7 @@ import kotlinx.serialization.Serializable
 /** V2.29: hydration. */
 @Serializable data object WaterRoute
 @Serializable data class DrinkFoodRoute(val drinkId: Long)
+@Serializable data object HydrationSettingsRoute
 
 /** V2.21: a dish to create (0) or edit; with [epochDay] and [meal], filled in from that meal of the journal. */
 @Serializable data class DishEditRoute(val foodId: Long = 0, val epochDay: Long = 0, val meal: String = "")

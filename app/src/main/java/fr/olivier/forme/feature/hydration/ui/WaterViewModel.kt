@@ -8,6 +8,9 @@ import fr.olivier.forme.feature.hydration.data.AddedIntake
 import fr.olivier.forme.feature.hydration.data.ContainerEntity
 import fr.olivier.forme.feature.hydration.data.DrinkEntity
 import fr.olivier.forme.feature.hydration.data.HydrationRepository
+import fr.olivier.forme.feature.hydration.data.HydrationSettings
+import fr.olivier.forme.feature.hydration.data.HydrationSettingsRepository
+import fr.olivier.forme.feature.hydration.reminder.HydrationReminder
 import fr.olivier.forme.feature.hydration.data.IntakeSource
 import fr.olivier.forme.feature.hydration.data.IntakeWithDrink
 import fr.olivier.forme.feature.hydration.data.WaterToday
@@ -47,6 +50,8 @@ private data class PendingIntake(val drinkId: Long, val volumeMl: Int, val sourc
 class WaterViewModel @Inject constructor(
     private val repository: HydrationRepository,
     private val badges: BadgeRepository,
+    private val settings: HydrationSettingsRepository,
+    private val reminder: HydrationReminder,
     clock: Clock,
 ) : ViewModel() {
     private fun <T> Flow<T>.state(initial: T): StateFlow<T> = stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial)
@@ -55,6 +60,21 @@ class WaterViewModel @Inject constructor(
     val zone: ZoneId = clock.zone
 
     val today: StateFlow<WaterToday?> = repository.observeToday(date).state(null)
+
+    /** Hydration settings; null until read (the first-use card waits for them). */
+    val hydrationSettings: StateFlow<HydrationSettings?> = settings.settings.state(null)
+
+    /** First-use card: "C'est parti", reminders on or off as ticked; the reminders start (or stay off). */
+    fun introStart(remindersOn: Boolean) = viewModelScope.launch {
+        settings.setIntroSeen(remindersOn)
+        reminder.reschedule()
+    }
+
+    /** "Plus tard": the card goes, no reminder (they can be switched on in Réglages › Hydratation). */
+    fun introLater() = viewModelScope.launch {
+        settings.setIntroSeen(remindersOn = false)
+        reminder.reschedule()
+    }
     val intakes: StateFlow<List<IntakeWithDrink>> = repository.observeIntakes(date).state(emptyList())
     val drinks: StateFlow<List<DrinkEntity>> = repository.drinks.map { all -> all.filterNot { it.archived } }.state(emptyList())
 

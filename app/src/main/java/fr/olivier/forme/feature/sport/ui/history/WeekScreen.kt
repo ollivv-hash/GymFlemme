@@ -56,6 +56,9 @@ import java.time.format.DateTimeFormatter
 import fr.olivier.forme.feature.heart.data.HeartRepository
 import fr.olivier.forme.feature.nutrition.data.NutritionWeekSource
 import fr.olivier.forme.feature.nutrition.domain.NutritionWeek
+import fr.olivier.forme.feature.hydration.domain.HydrationMath
+import fr.olivier.forme.R
+import androidx.compose.ui.res.stringResource
 import fr.olivier.forme.feature.heart.domain.HeartWeek
 import fr.olivier.forme.feature.heart.domain.SessionHeartLine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -450,4 +453,11 @@ private fun NutritionWeekCard(food: NutritionWeek) {
         "Whey ${food.wheyDays}/${food.elapsedDays} · créatine ${food.creatineDays}/${food.elapsedDays}",
         style = MaterialTheme.typography.bodyMedium,
     )
+    // V2.29: water, average of the days recorded and days with that day's goal reached.
+    food.avgWaterMl?.let { avg ->
+        Text(
+            stringResource(R.string.water_week_summary, HydrationMath.liters(avg), food.waterGoalDays, food.waterDays),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
 }

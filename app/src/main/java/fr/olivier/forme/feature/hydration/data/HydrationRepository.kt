@@ -87,6 +87,9 @@ class HydrationRepository @Inject constructor(
 
     suspend fun dailyTotals(from: LocalDate, to: LocalDate): List<DailyWater> = dao.dailyTotals(from, to)
 
+    /** Each day with an intake from [from] to [to], with its frozen goal (Week tab; statistics to come). */
+    fun observeDaysWithGoal(from: LocalDate, to: LocalDate): Flow<List<WaterDayTotal>> = dao.observeDaysWithGoal(from, to)
+
     /** Frozen goals of the days from [from] to [to] (today's follows the settings). */
     fun observeDays(from: LocalDate, to: LocalDate): Flow<List<WaterDayEntity>> = dao.observeDays(from, to)
 
@@ -144,6 +147,12 @@ class HydrationRepository @Inject constructor(
     suspend fun linkFood(drinkId: Long, foodId: Long) {
         val drink = dao.getDrink(drinkId) ?: return
         dao.updateDrink(drink.copy(linkedFoodId = foodId, isCaloric = true))
+    }
+
+    /** Réglages › Mes boissons, "Délier": the next intake asks for a product again (past entries stay). */
+    suspend fun unlinkFood(drinkId: Long) {
+        val drink = dao.getDrink(drinkId) ?: return
+        dao.updateDrink(drink.copy(linkedFoodId = null))
     }
 
     /** "Ne pas compter les calories": the drink is no longer caloric (it can be again in Réglages › Hydratation). */
