@@ -10,6 +10,13 @@ import fr.olivier.forme.core.backup.BackupCodec
 import fr.olivier.forme.core.backup.BackupRepository
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
 import fr.olivier.forme.feature.heart.data.HeartRepository
+import fr.olivier.forme.feature.hydration.data.DrinkEntity
+import fr.olivier.forme.feature.hydration.data.HydrationDefaults
+import fr.olivier.forme.feature.hydration.data.HydrationRepository
+import fr.olivier.forme.feature.hydration.data.HydrationSettingsRepository
+import fr.olivier.forme.feature.hydration.data.IntakeSource
+import fr.olivier.forme.feature.hydration.data.ReminderSettings
+import fr.olivier.forme.feature.hydration.domain.GoalSettings
 import fr.olivier.forme.feature.heart.domain.HeartSource
 import fr.olivier.forme.feature.heart.domain.Sex
 import fr.olivier.forme.feature.nutrition.data.FoodEntity
@@ -44,6 +51,9 @@ import java.time.LocalDate
 class BackupRoundTripTest {
     @get:Rule
     val tmp = TemporaryFolder()
+
+    private fun kotlinx.coroutines.test.TestScope.waterSettings(name: String) =
+        HydrationSettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "$name.preferences_pb") })
 
     @Test
     fun exportThenImportIntoAnotherDatabaseIsLossless() = runTest {
@@ -83,12 +93,21 @@ class BackupRoundTripTest {
         val targetSettings = SettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "target.preferences_pb") })
         targetSettings.setAccent(AccentColor.LIME)
 
-        val exported = BackupRepository(source, context(), clock, sourceSettings).snapshot()
+        // V2.29 (backup v16): hydration, its settings, a drink of one's own, the frozen goal of the day.
+        val sourceWater = waterSettings("ws")
+        sourceWater.setGoal(GoalSettings(customEnabled = true, customMl = 2800, bonusEnabled = true, bonusMl = 750))
+        sourceWater.setReminders(ReminderSettings(intervalMinutes = 120, action1Ml = 300))
+        val hydration = HydrationRepository(source, source.hydrationDao(), sourceWater, clock)
+        val kombucha = hydration.saveDrink(DrinkEntity(name = "Kombucha", icon = "local_drink", hydrationCoefficient = 0.9, isCaloric = true, sortOrder = 0))
+        hydration.add(kombucha, 330, IntakeSource.WATER_SCREEN)
+        hydration.addDefault(IntakeSource.HOME_TILE)
+        val exported = BackupRepository(source, context(), clock, sourceSettings, sourceWater).snapshot()
         val text = BackupCodec.encode(exported)
 
         // Target starts with its own (different) seed content, which must be fully replaced.
         val target = testDatabase(TestClock(Instant.parse("2027-01-01T00:00:00Z")))
-        val targetBackup = BackupRepository(target, context(), clock, targetSettings)
+        val targetWater = waterSettings("wt")
+        val targetBackup = BackupRepository(target, context(), clock, targetSettings, targetWater)
         targetBackup.restore(BackupCodec.decode(text))
         val reimported = targetBackup.snapshot()
 
@@ -105,8 +124,32 @@ class BackupRoundTripTest {
         assertEquals(listOf(2), exported.nutrition.dishes.map { it.servings })
         assertEquals(listOf("Riz"), exported.nutrition.dishIngredients.map { it.name })
         assertEquals(Appearance(ThemeMode.LIGHT, AccentColor.ORANGE, false), targetSettings.appearance.first())
+        assertEquals(11, exported.hydration!!.drinks.size)
+        assertEquals(listOf(330, 750), exported.hydration!!.intakes.map { it.volumeMl })
+        assertEquals(listOf(0.9, 1.0), exported.hydration!!.intakes.map { it.coefficientApplied })
+        assertEquals(1, exported.hydration!!.days.size)
+        assertEquals(GoalSettings(true, 2800, true, 750), targetWater.current().goal)
+        assertEquals(120, targetWater.current().reminders.intervalMinutes)
+        assertEquals(300, targetWater.current().reminders.action1Ml)
         assertEquals(exported, reimported)
         assertEquals(text, BackupCodec.encode(reimported))
+        source.close()
+        target.close()
+    }
+
+    @Test
+    fun aBackupWithoutHydrationRestoresTheDrinksOfferedFromTheStart() = runTest {
+        val clock = TestClock()
+        val source = testDatabase(clock)
+        val settings = SettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "old.preferences_pb") })
+        val v15 = BackupRepository(source, context(), clock, settings, waterSettings("old1")).snapshot().copy(schemaVersion = 15, hydration = null)
+        val target = testDatabase(clock)
+        val targetWater = waterSettings("old2")
+        HydrationRepository(target, target.hydrationDao(), targetWater, clock).addDefault(IntakeSource.HOME_TILE)
+        BackupRepository(target, context(), clock, settings, targetWater).restore(BackupCodec.decode(BackupCodec.encode(v15)))
+        assertEquals(HydrationDefaults.drinks, target.hydrationDao().getDrinks())
+        assertEquals(HydrationDefaults.containers, target.hydrationDao().getContainers())
+        assertEquals(emptyList<Any>(), target.hydrationDao().getAllIntakes())
         source.close()
         target.close()
     }
@@ -116,12 +159,12 @@ class BackupRoundTripTest {
         val clock = TestClock()
         val source = testDatabase(clock)
         val settings = SettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "s.preferences_pb") })
-        val v7 = BackupRepository(source, context(), clock, settings).snapshot().copy(
+        val v7 = BackupRepository(source, context(), clock, settings, waterSettings("w1")).snapshot().copy(
             schemaVersion = 7,
             badges = listOf(BadgeDto("PILLAR", "2026-05-01", true), BadgeDto("CREATINE_LOYAL", "2026-06-01", false), BadgeDto("NOT_DEAD", "2026-01-01", true)),
         )
         val target = testDatabase(clock)
-        BackupRepository(target, context(), clock, settings).restore(BackupCodec.decode(BackupCodec.encode(v7)))
+        BackupRepository(target, context(), clock, settings, waterSettings("w2")).restore(BackupCodec.decode(BackupCodec.encode(v7)))
         assertEquals(
             listOf(
                 BadgeEntity("CREATINE_LOYAL", 2, LocalDate.of(2026, 6, 1), false),

@@ -6,6 +6,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import fr.olivier.forme.feature.badges.domain.BadgeMigration
 import fr.olivier.forme.feature.library.data.ExerciseLibraryLinks
+import fr.olivier.forme.feature.hydration.data.HydrationDefaults
 import fr.olivier.forme.feature.nutrition.data.SupplementDefaults
 import fr.olivier.forme.feature.nutrition.data.SupplementEntity
 
@@ -268,6 +269,46 @@ object Migrations {
         }
     }
 
+    /**
+     * V2.29: hydration (drinks, containers, intakes, frozen goal of each day). The drinks and containers offered
+     * from the start are written here; nothing else changes.
+     */
+    val MIGRATION_14_15 = object : Migration(14, 15) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `drink` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `code` TEXT, `name` TEXT NOT NULL, " +
+                    "`icon` TEXT NOT NULL, `hydrationCoefficient` REAL NOT NULL, `linkedFoodId` INTEGER, `isCaloric` INTEGER NOT NULL, " +
+                    "`archived` INTEGER NOT NULL, `sortOrder` INTEGER NOT NULL, " +
+                    "FOREIGN KEY(`linkedFoodId`) REFERENCES `food`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+            )
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_drink_code` ON `drink` (`code`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_drink_linkedFoodId` ON `drink` (`linkedFoodId`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `container` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, " +
+                    "`volumeMl` INTEGER NOT NULL, `defaultDrinkId` INTEGER NOT NULL, `isDefault` INTEGER NOT NULL, `archived` INTEGER NOT NULL, " +
+                    "`sortOrder` INTEGER NOT NULL, " +
+                    "FOREIGN KEY(`defaultDrinkId`) REFERENCES `drink`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_container_defaultDrinkId` ON `container` (`defaultDrinkId`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `water_intake` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, " +
+                    "`date` INTEGER NOT NULL, `drinkId` INTEGER NOT NULL, `volumeMl` INTEGER NOT NULL, `coefficientApplied` REAL NOT NULL, " +
+                    "`linkedMealEntryId` INTEGER, `source` TEXT NOT NULL, " +
+                    "FOREIGN KEY(`drinkId`) REFERENCES `drink`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT , " +
+                    "FOREIGN KEY(`linkedMealEntryId`) REFERENCES `meal_entry`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_water_intake_date` ON `water_intake` (`date`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_water_intake_drinkId` ON `water_intake` (`drinkId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_water_intake_linkedMealEntryId` ON `water_intake` (`linkedMealEntryId`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `water_day` (`date` INTEGER NOT NULL, `baseGoalMl` INTEGER NOT NULL, `customGoalMl` INTEGER, " +
+                    "`bonusMl` INTEGER NOT NULL, `sessionDay` INTEGER NOT NULL, PRIMARY KEY(`date`))",
+            )
+            HydrationDefaults.drinks.forEach { db.insert("drink", SQLiteDatabase.CONFLICT_ABORT, with(HydrationDefaults) { it.toValues() }) }
+            HydrationDefaults.containers.forEach { db.insert("container", SQLiteDatabase.CONFLICT_ABORT, with(HydrationDefaults) { it.toValues() }) }
+        }
+    }
+
     internal fun SupplementEntity.toValues() = ContentValues().apply {
         put("name", name)
         put("code", code)
@@ -281,6 +322,6 @@ object Migrations {
 
     val ALL: Array<Migration> = arrayOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
+        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15,
     )
 }

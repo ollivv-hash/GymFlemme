@@ -22,6 +22,7 @@ object BentoSamples {
     val challenge = ChallengeTileState("Défi de novembre", "Douze coups", 5.0, 12.0, "5", "12", "séances", done = false)
     val creatine = SupplementsTileState("Créatine", "12 jours d'affilée", listOf(SupplementItem(1, "3 g pris", true)))
     val level = LevelTileState(2, "Flemmard repenti", 62, 30, 100)
+    val water = WaterTileState(1_800, 3_400, bonusMl = 500, line = "On avance, gorgée par gorgée.", defaultMl = 750, defaultDrink = "Eau")
 }
 
 /** The tiles of the home screen as they are laid out, without view models. */
@@ -33,6 +34,7 @@ fun BentoHomeContent(
     challenge: ChallengeTileState?,
     supplements: SupplementsTileState?,
     level: LevelTileState?,
+    water: WaterTileState? = null,
     hello: String? = "Salut Olivier",
     greeting: String = "On bouge un peu ?",
     modifier: Modifier = Modifier,
@@ -49,9 +51,10 @@ fun BentoHomeContent(
             left = calories?.let { s -> { m: Modifier -> CaloriesTile(s, {}, m) } },
             right = proteins?.let { s -> { m: Modifier -> ProteinTile(s, {}, m) } },
         )
-        TileRow(
-            left = challenge?.let { s -> { m: Modifier -> ChallengeTile(s, {}, m) } },
-            right = supplements?.let { s -> { m: Modifier -> SupplementsTile(s, { _, _ -> }, {}, m) } },
+        HalfTiles(
+            water?.let { s -> { m: Modifier -> WaterTile(s, {}, {}, {}, m) } },
+            supplements?.let { s -> { m: Modifier -> SupplementsTile(s, { _, _ -> }, {}, m) } },
+            challenge?.let { s -> { m: Modifier -> ChallengeTile(s, {}, m) } },
         )
         level?.let { LevelTile(it, {}) }
     }
@@ -61,12 +64,13 @@ fun BentoHomeContent(
 private fun Sample(dark: Boolean, withData: Boolean) {
     CompositionLocalProvider(LocalBento provides if (dark) DarkBento else LightBento) {
         if (withData) {
-            BentoHomeContent(BentoSamples.session, BentoSamples.calories, BentoSamples.proteins, BentoSamples.challenge, BentoSamples.creatine, BentoSamples.level)
+            BentoHomeContent(BentoSamples.session, BentoSamples.calories, BentoSamples.proteins, BentoSamples.challenge, BentoSamples.creatine, BentoSamples.level, BentoSamples.water)
         } else {
             BentoHomeContent(
                 SessionTileState(), CaloriesTileState(), ProteinTileState(), challenge = null,
                 supplements = BentoSamples.creatine.copy(streak = "Série à lancer", items = listOf(SupplementItem(1, "5 g pris", false))),
-                level = LevelTileState(1, "Flemmard débutant", 0, 0, 30), hello = null,
+                level = LevelTileState(1, "Flemmard débutant", 0, 0, 30),
+                water = WaterTileState(0, 2_000, line = "Le désert, pour l'instant.", defaultMl = 750, defaultDrink = "Eau"), hello = null,
             )
         }
     }

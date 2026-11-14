@@ -39,6 +39,11 @@ class QuipCatalogueTest {
         Quip.MISSED_GOAL -> arrayOf("A · Poussée")
         Quip.PROTEIN_MISSING, Quip.PROTEIN_ALMOST, Quip.CREATINE_STREAK -> arrayOf(25)
         Quip.LEVEL_UP -> arrayOf(3, "Habitué")
+        Quip.WATER_REMINDER -> arrayOf("1,6 L")
+        Quip.WATER_NOTED -> arrayOf("1,8 L", "3,4 L")
+        Quip.WATER_TILE_EMPTY, Quip.WATER_TILE_LOW, Quip.WATER_TILE_HIGH, Quip.WATER_TILE_REACHED -> arrayOf("1,8 L", "3,4 L", "1,6 L")
+        Quip.WATER_GOAL_REACHED -> arrayOf("3,4 L")
+        Quip.WATER_BONUS -> arrayOf(500)
         else -> emptyArray()
     }
 
@@ -73,6 +78,9 @@ class QuipCatalogueTest {
         assertEquals("Prête à monter d'un cran ? +2,5 kg.", Quips.text(resources, Quip.PROGRESSION, 3, QuipStyle(feminine = true), "2,5"))
         assertEquals("Augmentation de charge suggérée : +2,5 kg", Quips.text(resources, Quip.PROGRESSION, 3, QuipStyle(serious = true), "2,5"))
         assertEquals("Prête pour ta séance ?", Quips.text(resources, Quip.START, 0, QuipStyle(serious = true, feminine = true)))
+        assertEquals("Bien hydratée. La flemme n'a pas eu soif, elle.", Quips.text(resources, Quip.WATER_GOAL_REACHED, 2, QuipStyle(feminine = true), "3,4 L"))
+        assertEquals("Petite pause hydratation ? Tes muscles sont à 75 % d'eau, eux.", Quips.text(resources, Quip.WATER_REMINDER, 1, QuipStyle(), "1,6 L"))
+        assertEquals("Plus que 1,6 L. Presque !", Quips.text(resources, Quip.WATER_TILE_HIGH, 0, QuipStyle(), "1,8 L", "3,4 L", "1,6 L"))
     }
 
     @Test

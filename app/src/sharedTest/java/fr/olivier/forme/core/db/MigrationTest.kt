@@ -319,9 +319,37 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate1To14() {
+    fun migrate14To15CreatesTheHydrationTablesWithTheDrinksOfferedAndKeepsTheMeals() {
+        helper.createDatabase(dbName, 14).apply {
+            execSQL("INSERT INTO meal_entry (id, date, mealType, name, quantityG, proteinG, isWhey, eatenAt) VALUES (1, 20000, 'LUNCH', 'Skyr', 150, 15, 0, 0)")
+            execSQL("INSERT INTO food (id, source, name, proteinPer100g, favorite) VALUES (1, 'CUSTOM', 'Jus', 0.5, 0)")
+            close()
+        }
+        helper.runMigrationsAndValidate(dbName, 15, true, Migrations.MIGRATION_14_15).apply {
+            query("SELECT COUNT(*) FROM meal_entry").use { it.moveToFirst(); assertEquals(1, it.getInt(0)) }
+            query("SELECT code, name, icon, hydrationCoefficient, isCaloric FROM drink ORDER BY sortOrder").use {
+                assertEquals(10, it.count)
+                it.moveToFirst(); assertEquals("water", it.getString(0)); assertEquals("water_full", it.getString(2)); assertEquals(1.0, it.getDouble(3), 0.0)
+                it.moveToPosition(8); assertEquals("Bière", it.getString(1)); assertEquals(0.0, it.getDouble(3), 0.0); assertEquals(1, it.getInt(4))
+            }
+            query("SELECT name, volumeMl, defaultDrinkId FROM container WHERE isDefault = 1").use {
+                assertEquals(1, it.count)
+                it.moveToFirst(); assertEquals("Gourde", it.getString(0)); assertEquals(750, it.getInt(1)); assertEquals(1, it.getInt(2))
+            }
+            query("SELECT COUNT(*) FROM water_intake").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+            // An intake linked to a meal goes with it.
+            execSQL("INSERT INTO water_intake (timestamp, date, drinkId, volumeMl, coefficientApplied, linkedMealEntryId, source) VALUES (0, 20000, 5, 200, 1.0, 1, 'WATER_SCREEN')")
+            execSQL("PRAGMA foreign_keys = ON")
+            execSQL("DELETE FROM meal_entry WHERE id = 1")
+            query("SELECT COUNT(*) FROM water_intake").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+            close()
+        }
+    }
+
+    @Test
+    fun migrate1To15() {
         helper.createDatabase(dbName, 1).close()
-        helper.runMigrationsAndValidate(dbName, 14, true, *Migrations.ALL).close()
+        helper.runMigrationsAndValidate(dbName, 15, true, *Migrations.ALL).close()
     }
 
     @Test
@@ -337,6 +365,7 @@ class MigrationTest {
         runBlocking {
             assertEquals(81.5, db.bodyWeightDao().getLatest()!!.weightKg, 0.0)
             assertNull(db.profileDao().get())
+            assertEquals(10, db.hydrationDao().getDrinks().size)
         }
         db.close()
     }

@@ -383,7 +383,7 @@ class ActiveSessionViewModel @Inject constructor(
         val id = session.first()?.id ?: return@launch
         restTimer.cancel()
         heartRecorder.stop(id, save = false)
-        sessions.delete(id)
+        sessions.abandon(id)
         then()
     }
 }

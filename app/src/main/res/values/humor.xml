@@ -255,6 +255,77 @@
     </string-array>
     <string name="neutral_missed_goal">Prochaine séance : %1$s</string>
 
+    <!-- V2.29, hydration (docs/specs/textes-hydratation.md). Never a joke on alcohol, the body or the plate. -->
+    <!-- Reminder notification (title "Hydratation", fixed); %1$s = still to drink today ("1,6 L") -->
+    <string-array name="humor_water_reminder">
+        <item>Ta gourde se sent seule. Une gorgée ?</item>
+        <item>Petite pause hydratation ? Tes muscles sont à 75 %% d\'eau, eux.</item>
+        <item>Encore %1$s à boire aujourd\'hui. On s\'y met ?</item>
+        <item>Ton verre d\'eau t\'attend. Il est très patient, mais quand même.</item>
+        <item>Une gorgée maintenant, c\'est toujours ça de pris.</item>
+        <item>La flemme de boire, ça existe aussi. On la bat ?</item>
+        <item>Ça fait un moment… Un verre d\'eau, ça te dit ?</item>
+    </string-array>
+    <string name="neutral_water_reminder">Pense à boire un peu d\'eau.</string>
+
+    <!-- After an action of the notification; %1$s = counted today, %2$s = goal ("1,8 L", "3,4 L") -->
+    <string-array name="humor_water_noted">
+        <item>Noté ! %1$s / %2$s</item>
+        <item>Glou glou, c\'est noté. %1$s / %2$s</item>
+    </string-array>
+    <string name="neutral_water_noted">Enregistré : %1$s / %2$s</string>
+
+    <!-- Home tile, secondary line ("{bu} / {objectif}" stays shown above); %1$s = counted, %2$s = goal, %3$s = left -->
+    <string-array name="humor_water_tile_empty">
+        <item>Le désert, pour l\'instant.</item>
+    </string-array>
+    <string name="neutral_water_tile_empty">Aucune boisson enregistrée</string>
+    <string-array name="humor_water_tile_low">
+        <item>On avance, gorgée par gorgée.</item>
+    </string-array>
+    <string name="neutral_water_tile_low">%1$s / %2$s</string>
+    <string-array name="humor_water_tile_high">
+        <item>Plus que %3$s. Presque !</item>
+    </string-array>
+    <string name="neutral_water_tile_high">%1$s / %2$s</string>
+    <string-array name="humor_water_tile_reached">
+        <item>Objectif atteint. Tu es une éponge.</item>
+    </string-array>
+    <string name="neutral_water_tile_reached">Objectif atteint</string>
+
+    <!-- Goal reached, once a day; %1$s = goal ("3,4 L") -->
+    <string-array name="humor_water_goal_reached">
+        <item>Objectif eau atteint ! Tes reins t\'envoient un mot de remerciement.</item>
+        <item>%1$s bus. Le chameau en toi est impressionné.</item>
+        <item>Bien hydraté. La flemme n\'a pas eu soif, elle.</item>
+        <item>Et voilà, réservoir plein !</item>
+    </string-array>
+    <string-array name="humor_water_goal_reached_f">
+        <item>Objectif eau atteint ! Tes reins t\'envoient un mot de remerciement.</item>
+        <item>%1$s bus. Le chameau en toi est impressionné.</item>
+        <item>Bien hydratée. La flemme n\'a pas eu soif, elle.</item>
+        <item>Et voilà, réservoir plein !</item>
+    </string-array>
+    <string name="neutral_water_goal_reached">Objectif d\'hydratation atteint</string>
+
+    <!-- Water screen: nothing drunk today -->
+    <string-array name="humor_water_empty">
+        <item>Rien bu pour l\'instant. Ta gourde commence à s\'inquiéter.</item>
+    </string-array>
+    <string name="neutral_water_empty">Aucune boisson enregistrée aujourd\'hui</string>
+
+    <!-- Water screen: session bonus; %1$d = ml -->
+    <string-array name="humor_water_bonus">
+        <item>Séance du jour : +%1$d ml, tu l\'as bien mérité.</item>
+    </string-array>
+    <string name="neutral_water_bonus">Bonus séance : +%1$d ml</string>
+
+    <!-- First-use card, title (the rest is in strings.xml, the same in both modes) -->
+    <string-array name="humor_water_intro_title">
+        <item>On parle eau ?</item>
+    </string-array>
+    <string name="neutral_water_intro_title">Suivi de l\'hydratation</string>
+
     <!-- Settings -->
     <string name="serious_mode">Mode sérieux (pour les jours sans)</string>
     <string name="serious_mode_description">Remplace les petites touches d\'humour par des messages neutres.</string>

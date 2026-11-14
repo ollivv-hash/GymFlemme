@@ -6,6 +6,8 @@ import androidx.room.withTransaction
 import dagger.hilt.android.qualifiers.ApplicationContext
 import fr.olivier.forme.core.db.FormeDatabase
 import fr.olivier.forme.core.settings.SettingsRepository
+import fr.olivier.forme.feature.hydration.data.HydrationDefaults
+import fr.olivier.forme.feature.hydration.data.HydrationSettingsRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,9 +26,12 @@ class BackupRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val clock: Clock,
     private val settings: SettingsRepository,
+    private val hydrationSettings: HydrationSettingsRepository,
 ) {
     suspend fun snapshot(): BackupFile {
         val appearance = AppearanceDto.of(settings.appearance.first())
+        val water = HydrationSettingsDto.of(hydrationSettings.current())
+        val hydration = db.hydrationDao()
         val exercises = db.exerciseDao()
         val templates = db.templateDao()
         val sessions = db.sessionDao()
@@ -57,6 +62,13 @@ class BackupRepository @Inject constructor(
                 badges = db.badgeDao().getAll().sortedWith(compareBy({ it.id }, { it.tier })).map { it.toDto() },
                 challenges = db.badgeDao().getChallenges().map { it.toDto() },
                 appearance = appearance,
+                hydration = HydrationBackup(
+                    drinks = hydration.getDrinks().sortedBy { it.id }.map { it.toDto() },
+                    containers = hydration.getContainers().sortedBy { it.id }.map { it.toDto() },
+                    intakes = hydration.getAllIntakes().sortedBy { it.id }.map { it.toDto() },
+                    days = hydration.getAllDays().map { it.toDto() },
+                    settings = water,
+                ),
             )
         }
     }
@@ -64,6 +76,12 @@ class BackupRepository @Inject constructor(
     /** Replaces the whole database content with [file], atomically (all or nothing). Ciqual is left untouched. */
     suspend fun restore(file: BackupFile) {
         db.withTransaction {
+            // V2.29: hydration first (its intakes point at meals, its drinks at foods).
+            val hydration = db.hydrationDao()
+            hydration.deleteAllIntakes()
+            hydration.deleteAllDays()
+            hydration.deleteAllContainers()
+            hydration.deleteAllDrinks()
             db.sessionDao().deleteAllSessions() // cascades to session lines, sets, cardio and heart rate
             db.templateDao().deleteAll() // cascades to template lines
             db.exerciseDao().deleteAll()
@@ -96,8 +114,24 @@ class BackupRepository @Inject constructor(
             db.supplementDao().insertIntakes(intakes)
             db.badgeDao().insertAll(file.badges.map { it.toEntity(file.schemaVersion) })
             db.badgeDao().insertChallenges(file.challenges.map { it.toEntity() })
+            val water = file.hydration
+            if (water == null || water.drinks.isEmpty()) {
+                hydration.insertDrinks(HydrationDefaults.drinks)
+                hydration.insertContainers(HydrationDefaults.containers)
+            } else {
+                hydration.insertDrinks(water.drinks.map { it.toEntity() })
+                hydration.insertContainers(water.containers.map { it.toEntity() })
+            }
+            water?.let {
+                hydration.insertIntakes(it.intakes.map { i -> i.toEntity() })
+                hydration.insertDays(it.days.map { d -> d.toEntity() })
+            }
         }
         file.appearance?.let { settings.setAppearance(it.toAppearance()) }
+        file.hydration?.settings?.let {
+            hydrationSettings.setGoal(it.goal())
+            hydrationSettings.setReminders(it.reminders())
+        }
     }
 
     suspend fun exportTo(uri: Uri) = withContext(Dispatchers.IO) {
