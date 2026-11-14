@@ -55,7 +55,7 @@ const val WATER_HISTORY_TAG = "water_history_"
  * bin to delete), the last 7 days.
  */
 @Composable
-fun WaterScreen(onBack: () -> Unit, viewModel: WaterViewModel = hiltViewModel()) {
+fun WaterScreen(onBack: () -> Unit, onNeedsFood: (drinkId: Long) -> Unit = {}, viewModel: WaterViewModel = hiltViewModel()) {
     val today by viewModel.today.collectAsStateWithLifecycle()
     val intakes by viewModel.intakes.collectAsStateWithLifecycle()
     val drinks by viewModel.drinks.collectAsStateWithLifecycle()
@@ -64,7 +64,7 @@ fun WaterScreen(onBack: () -> Unit, viewModel: WaterViewModel = hiltViewModel())
     val week by viewModel.week.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var editing by rememberSaveable { mutableStateOf<Long?>(null) }
-    WaterSnackbarEffect(viewModel.events, snackbar, viewModel::undo)
+    WaterSnackbarEffect(viewModel.events, snackbar, viewModel::undo, onNeedsFood, viewModel::resumePending)
 
     Scaffold(topBar = { FormeTopBar(stringResource(R.string.water_title), onBack) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
         LazyColumn(

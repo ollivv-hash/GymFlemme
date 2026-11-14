@@ -274,6 +274,7 @@ fun HomeScreen(
     onOpenBadges: (tab: Int) -> Unit = {},
     onOpenUpdate: () -> Unit = {},
     onOpenWater: () -> Unit = {},
+    onNeedsFood: (drinkId: Long) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     journal: JournalViewModel = hiltViewModel(),
     level: LevelViewModel = hiltViewModel(),
@@ -296,7 +297,7 @@ fun HomeScreen(
     val containers by water.containers.collectAsStateWithLifecycle()
     var choosingDrink by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
-    WaterSnackbarEffect(water.events, snackbar, water::undo)
+    WaterSnackbarEffect(water.events, snackbar, water::undo, onNeedsFood, water::resumePending)
     val c = LocalBento.current
     val resources = LocalContext.current.resources
     val quipStyle = rememberQuipStyle()

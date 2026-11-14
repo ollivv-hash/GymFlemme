@@ -204,4 +204,17 @@
     <string name="water_journal_entry_spoken">Eau, %1$s sur %2$s, ouvrir le suivi de l\'eau</string>
     <string name="water_error">Impossible d\'enregistrer la boisson</string>
     <string name="water_indicative">Valeurs indicatives, à adapter selon ta situation, ton activité et la chaleur.</string>
+
+    <!-- Hydration: the product of a caloric drink (V2.29). Neutral texts. -->
+    <string name="drink_food_title">Produit : %1$s</string>
+    <string name="drink_food_intro">Choisis le produit qui donne les calories de cette boisson. Chaque prise sera ajoutée au journal, au repas de l\'heure.</string>
+    <string name="drink_food_search">Rechercher un produit (Ciqual, mes aliments)</string>
+    <string name="drink_food_scan">Scanner le code-barres</string>
+    <string name="drink_food_skip">Ne pas compter les calories</string>
+    <string name="drink_food_recents">Récents</string>
+    <string name="drink_food_favorites">Favoris</string>
+    <string name="drink_food_none">Aucun résultat.</string>
+    <string name="drink_food_hint">Tape au moins 2 lettres pour chercher.</string>
+    <string name="drink_food_use">Utiliser ce produit</string>
+    <string name="drink_food_use_for">Utiliser « %1$s » pour %2$s ?</string>
 </resources>

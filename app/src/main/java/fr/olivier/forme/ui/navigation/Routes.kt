@@ -35,12 +35,14 @@ import kotlinx.serialization.Serializable
 /** [tab]: 0 = journal, 1 = body weight. */
 @Serializable data class NutritionRoute(val tab: Int = 0)
 @Serializable data class AddFoodRoute(val epochDay: Long, val meal: String)
-@Serializable data class ScanRoute(val epochDay: Long, val meal: String)
+/** [drinkId] (V2.29): the product scanned becomes that drink's product instead of being added to a meal. */
+@Serializable data class ScanRoute(val epochDay: Long, val meal: String, val drinkId: Long = 0)
 @Serializable data object FoodsRoute
 @Serializable data object SupplementsRoute
 
 /** V2.29: hydration. */
 @Serializable data object WaterRoute
+@Serializable data class DrinkFoodRoute(val drinkId: Long)
 
 /** V2.21: a dish to create (0) or edit; with [epochDay] and [meal], filled in from that meal of the journal. */
 @Serializable data class DishEditRoute(val foodId: Long = 0, val epochDay: Long = 0, val meal: String = "")

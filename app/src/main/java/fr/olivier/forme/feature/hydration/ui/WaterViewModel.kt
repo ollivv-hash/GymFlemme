@@ -33,7 +33,13 @@ sealed interface WaterEvent {
     /** [goalJustReached]: today's goal reached by this intake, the first time today. */
     data class Added(val id: Long, val volumeMl: Int, val goalJustReached: Boolean, val goalMl: Int) : WaterEvent
     data object Failed : WaterEvent
+
+    /** A caloric drink with no product yet: the screen opens the choice of its product (the intake waits). */
+    data class NeedsFood(val drinkId: Long) : WaterEvent
 }
+
+/** An intake waiting for the product of its drink. */
+private data class PendingIntake(val drinkId: Long, val volumeMl: Int, val source: IntakeSource)
 
 /** Water screen and home tile (V2.29). */
 @HiltViewModel
@@ -72,10 +78,33 @@ class WaterViewModel @Inject constructor(private val repository: HydrationReposi
         _events.emit(added?.let { WaterEvent.Added(it.id, it.volumeMl, it.goalJustReached, it.today.goal.totalMl) } ?: WaterEvent.Failed)
     }
 
-    fun add(drinkId: Long, volumeMl: Int, source: IntakeSource) = launchAdd { repository.add(drinkId, volumeMl, source) }
+    private var pending: PendingIntake? = null
+
+    /** Adds the intake, unless its drink is caloric with no product yet: its choice opens first ([WaterEvent.NeedsFood]). */
+    fun add(drinkId: Long, volumeMl: Int, source: IntakeSource) = viewModelScope.launch {
+        if (repository.needsFood(drinkId)) {
+            pending = PendingIntake(drinkId, volumeMl, source)
+            _events.emit(WaterEvent.NeedsFood(drinkId))
+        } else {
+            launchAdd { repository.add(drinkId, volumeMl, source) }
+        }
+    }
 
     /** "+" of the home tile: the default container with its drink. */
-    fun addDefault() = launchAdd { repository.addDefault(IntakeSource.HOME_TILE) }
+    fun addDefault() = viewModelScope.launch {
+        val (drinkId, ml) = repository.defaultChoice() ?: return@launch _events.emit(WaterEvent.Failed)
+        add(drinkId, ml, IntakeSource.HOME_TILE)
+    }
+
+    /**
+     * Back from the choice of a product: the waiting intake is added once its drink has a product (or no longer counts
+     * calories); left without a choice, it is dropped.
+     */
+    fun resumePending() = viewModelScope.launch {
+        val waiting = pending ?: return@launch
+        pending = null
+        if (!repository.needsFood(waiting.drinkId)) launchAdd { repository.add(waiting.drinkId, waiting.volumeMl, waiting.source) }
+    }
 
     fun update(id: Long, drinkId: Long, volumeMl: Int, at: Instant) = viewModelScope.launch { repository.update(id, drinkId, volumeMl, at) }
 
