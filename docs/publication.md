@@ -142,3 +142,19 @@ supprime un fichier qui ne correspond pas. Supprimer la release fautive et repub
 | `play` | par le store | **non** : la tâche `checkPlayReleaseNoInstallPermission` fait échouer le build si elle apparaît | compilée et testée, pas encore publiée |
 
 Les deux ont le même identifiant (`fr.olivier.forme`) : l'une remplace l'autre sur un téléphone, avec ses données.
+
+## Health Connect : déclaration Play Console
+
+À remplir dans **Play Console → Contenu de l'application → Health Connect** le jour où la variante `play` sera
+publiée. Chaque type de données doit être justifié par une fonction visible de l'app.
+
+| Permission | Accès | Justification à déclarer |
+|---|---|---|
+| `READ_HEART_RATE` | lecture | Afficher la courbe de fréquence cardiaque et les zones de chaque séance de musculation, depuis les données de la montre (V2.1). |
+| `READ_ACTIVE_CALORIES_BURNED`, `READ_TOTAL_CALORIES_BURNED` | lecture | Calculer les calories dépensées pendant une séance et l'objectif calories des jours d'entraînement (V2.1). |
+| `READ_HEALTH_DATA_IN_BACKGROUND` | lecture en arrière-plan | Rattacher la fréquence cardiaque à une séance quand la montre la synchronise après la fin de la séance (V2.1). |
+| `WRITE_HYDRATION` (V2.29) | écriture | Enregistrer dans Health Connect l'eau notée dans GymFlemme, uniquement si l'utilisateur active « Enregistrer l'hydratation dans Health Connect » (désactivé par défaut) dans Réglages › Hydratation. Chaque prise est écrite avec son volume compté (volume × coefficient de la boisson), puis modifiée ou supprimée en même temps que dans l'app. GymFlemme ne lit pas l'hydratation. |
+
+Aucune de ces données ne quitte le téléphone (pas de serveur, pas de publicité, pas d'analyse) ; elles sont seulement
+incluses dans les sauvegardes que l'utilisateur fait lui-même. L'écran d'explication demandé par Health Connect est
+`HealthPermissionsRationaleActivity` (texte à jour depuis la V2.29).

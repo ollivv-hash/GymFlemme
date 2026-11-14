@@ -45,6 +45,8 @@
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
+    <!-- V2.29: hydration written to Health Connect, only when switched on in Réglages › Hydratation. -->
+    <uses-permission android:name="android.permission.health.WRITE_HYDRATION" />
 
     <queries>
         <!-- Health Connect app on Android 13 and below. -->

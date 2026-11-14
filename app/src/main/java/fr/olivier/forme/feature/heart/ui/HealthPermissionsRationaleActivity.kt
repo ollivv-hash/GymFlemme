@@ -39,7 +39,9 @@ class HealthPermissionsRationaleActivity : ComponentActivity() {
                 "uniquement pour les rattacher à tes séances de musculation (courbe, zones, calories dépensées).\n\n" +
                 "Ces données restent sur ce téléphone : elles ne sont envoyées à aucun service. Elles sont incluses " +
                 "dans tes sauvegardes (export JSON et sauvegarde automatique vers l'emplacement que tu as choisi).\n\n" +
-                "GymFlemme n'écrit rien dans Health Connect. Tu peux retirer l'accès à tout moment dans " +
+                "Si tu l'actives dans Réglages → Hydratation, GymFlemme écrit dans Health Connect l'eau que tu notes " +
+                "(volume compté de chaque boisson), et la modifie ou la supprime en même temps que dans l'application. " +
+                "Rien d'autre n'y est écrit. Tu peux retirer l'accès à tout moment dans " +
                 "Paramètres → Health Connect → Autorisations des applications."
     }
 }

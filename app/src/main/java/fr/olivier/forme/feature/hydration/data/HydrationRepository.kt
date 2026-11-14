@@ -3,6 +3,7 @@ package fr.olivier.forme.feature.hydration.data
 import androidx.room.withTransaction
 import fr.olivier.forme.core.db.FormeDatabase
 import fr.olivier.forme.feature.hydration.domain.DailyGoal
+import fr.olivier.forme.feature.hydration.health.IntakeMirror
 import fr.olivier.forme.feature.hydration.domain.GoalSettings
 import fr.olivier.forme.feature.hydration.domain.HydrationMath
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
@@ -39,6 +40,10 @@ class HydrationRepository @Inject constructor(
     private val settings: HydrationSettingsRepository,
     private val clock: Clock,
 ) {
+    /** V2.29: Health Connect copy of the intakes (none in tests built by hand). */
+    @set:Inject
+    var mirror: IntakeMirror = IntakeMirror.NONE
+
     fun today(): LocalDate = LocalDate.now(clock)
 
     fun dateOf(instant: Instant): LocalDate = instant.atZone(clock.zone).toLocalDate() // LocalDate.ofInstant: API 34
@@ -124,6 +129,7 @@ class HydrationRepository @Inject constructor(
             freezeDay(date)
             id
         }
+        dao.getIntake(id)?.let(mirror::upsert)
         val after = todayState()
         val reached = !before.reached && after.reached && settings.markGoalAnnounced(after.date)
         return AddedIntake(id, ml, reached, after)
@@ -190,7 +196,12 @@ class HydrationRepository @Inject constructor(
      * Changes the drink, the volume or the time of an intake. A new drink brings its coefficient; the same drink
      * keeps the one copied at the time.
      */
-    suspend fun update(id: Long, drinkId: Long, volumeMl: Int, at: Instant) = db.withTransaction {
+    suspend fun update(id: Long, drinkId: Long, volumeMl: Int, at: Instant) {
+        updateInTransaction(id, drinkId, volumeMl, at)
+        dao.getIntake(id)?.let(mirror::upsert)
+    }
+
+    private suspend fun updateInTransaction(id: Long, drinkId: Long, volumeMl: Int, at: Instant) = db.withTransaction {
         val old = dao.getIntake(id) ?: return@withTransaction
         val ml = volumeMl.coerceIn(HydrationMath.FREE_MIN_ML, HydrationMath.FREE_MAX_ML)
         val drink = dao.getDrink(drinkId) ?: return@withTransaction
@@ -217,7 +228,7 @@ class HydrationRepository @Inject constructor(
         dao.deleteIntake(id)
         intake.linkedMealEntryId?.let { db.mealDao().delete(it) }
         intake
-    }
+    }?.also { mirror.delete(it.id) }
 
     // --- Goal of each day ---
 

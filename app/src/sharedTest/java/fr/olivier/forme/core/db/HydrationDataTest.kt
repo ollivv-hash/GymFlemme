@@ -7,6 +7,8 @@ import fr.olivier.forme.feature.hydration.data.HydrationRepository
 import fr.olivier.forme.feature.hydration.data.HydrationSessionListener
 import fr.olivier.forme.feature.hydration.data.HydrationSettingsRepository
 import fr.olivier.forme.feature.hydration.data.IntakeSource
+import fr.olivier.forme.feature.hydration.data.WaterIntakeEntity
+import fr.olivier.forme.feature.hydration.health.IntakeMirror
 import fr.olivier.forme.feature.hydration.domain.GoalSettings
 import fr.olivier.forme.feature.nutrition.data.FoodEntity
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
@@ -300,6 +302,30 @@ class HydrationDataTest {
         assertFalse(hydration.needsFood(milk))
         assertFalse(hydration.drink(milk)!!.isCaloric)
         assertNull(hydration.intake(hydration.add(milk, 200, IntakeSource.WATER_SCREEN).id)!!.linkedMealEntryId)
+    }
+
+    /** V2.29: every change of an intake is told to the Health Connect mirror, from the water screen or the journal. */
+    @Test
+    fun theHealthConnectMirrorFollowsEveryChange() = runTest {
+        val upserts = mutableListOf<Pair<Long, Int>>()
+        val deletes = mutableListOf<Long>()
+        val mirror = object : IntakeMirror {
+            override fun upsert(intake: WaterIntakeEntity) { upserts += intake.id to intake.volumeMl }
+            override fun delete(intakeId: Long) { deletes += intakeId }
+        }
+        val hydration = repo().also { it.mirror = mirror }
+        val juice = juiceLinked(hydration)
+        val id = hydration.add(juice, 200, IntakeSource.WATER_SCREEN).id
+        hydration.update(id, juice, 300, clock.instant())
+        val journal = nutrition().also { it.intakeMirror = mirror }
+        val meal = db.mealDao().get(hydration.intake(id)!!.linkedMealEntryId!!)!!
+        journal.updateQuantity(meal, 250.0)
+        assertEquals(listOf(id to 200, id to 300, id to 250), upserts)
+        journal.deleteEntry(meal.id)
+        assertEquals(listOf(id), deletes)
+        val other = hydration.add(1, 250, IntakeSource.WATER_SCREEN).id
+        hydration.delete(other)
+        assertEquals(listOf(id, other), deletes)
     }
 
     private fun nutrition() = NutritionRepository(
