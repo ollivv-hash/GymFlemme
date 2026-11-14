@@ -1,6 +1,7 @@
 package fr.olivier.forme.feature.nutrition.data
 
 import fr.olivier.forme.feature.hydration.domain.HydrationMath
+import fr.olivier.forme.feature.hydration.health.IntakeMirror
 import kotlin.math.roundToInt
 
 import androidx.room.withTransaction
@@ -99,6 +100,10 @@ class NutritionRepository @Inject constructor(
     private val off: OpenFoodFactsClient,
     private val clock: Clock,
 ) {
+    /** V2.29: Health Connect copy of the drinks linked to meal entries (none in tests built by hand). */
+    @set:Inject
+    var intakeMirror: IntakeMirror = IntakeMirror.NONE
+
     fun today(): LocalDate = LocalDate.now(clock)
 
     // --- Profile ---------------------------------------------------------------------------
@@ -181,7 +186,9 @@ class NutritionRepository @Inject constructor(
         val r = grams / entry.quantityG
         // V2.29: the entry of a drink brings its intake along (1 g = 1 ml, within 10 – 2 000 ml).
         db.hydrationDao().getIntakeByMeal(entry.id)?.let { intake ->
-            db.hydrationDao().updateIntake(intake.copy(volumeMl = grams.roundToInt().coerceIn(HydrationMath.FREE_MIN_ML, HydrationMath.FREE_MAX_ML)))
+            val moved = intake.copy(volumeMl = grams.roundToInt().coerceIn(HydrationMath.FREE_MIN_ML, HydrationMath.FREE_MAX_ML))
+            db.hydrationDao().updateIntake(moved)
+            intakeMirror.upsert(moved)
         }
         mealDao.update(
             entry.copy(
@@ -194,8 +201,12 @@ class NutritionRepository @Inject constructor(
         )
     }
 
-    /** V2.29: the intake of a drink linked to this entry goes with it (foreign key, cascade). */
-    suspend fun deleteEntry(id: Long) = mealDao.delete(id)
+    /** V2.29: the intake of a drink linked to this entry goes with it (foreign key, cascade), in Health Connect too. */
+    suspend fun deleteEntry(id: Long) {
+        val intake = db.hydrationDao().getIntakeByMeal(id)
+        mealDao.delete(id)
+        intake?.let { intakeMirror.delete(it.id) }
+    }
 
     /** One whey dose, from the label values of the profile; null if whey is not configured. */
     suspend fun addWheyDose(date: LocalDate, mealType: MealType): Long? {

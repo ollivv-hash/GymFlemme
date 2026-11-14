@@ -4,6 +4,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import fr.olivier.forme.feature.hydration.health.HydrationHealthMirror
+import fr.olivier.forme.feature.hydration.health.IntakeMirror
 import fr.olivier.forme.feature.sport.data.SessionListener
 import java.time.Instant
 
@@ -18,4 +20,8 @@ class HydrationSessionListener(private val hydration: HydrationRepository) : Ses
 object HydrationModule {
     @Provides
     fun provideSessionListener(hydration: HydrationRepository): SessionListener = HydrationSessionListener(hydration)
+
+    /** V2.29: intakes copied to Health Connect when the setting is on. */
+    @Provides
+    fun provideIntakeMirror(mirror: HydrationHealthMirror): IntakeMirror = mirror
 }
