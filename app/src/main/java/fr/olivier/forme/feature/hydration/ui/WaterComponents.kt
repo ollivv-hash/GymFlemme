@@ -28,6 +28,7 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -270,11 +271,23 @@ fun WaterRing(countedMl: Int, goalMl: Int, color: Color, track: Color, modifier:
 }
 
 /**
- * Shows "+250 ml · Annuler" for 5 s after each intake ("Annuler" deletes it, with its meal entry), then, once a
+ * Opens the choice of the product of a caloric drink that has none, then adds the intake waiting for it. Shows
+ * "+250 ml · Annuler" for 5 s after each intake ("Annuler" deletes it, with its meal entry), then, once a
  * day, the "goal reached" message.
  */
 @Composable
-fun WaterSnackbarEffect(events: SharedFlow<WaterEvent>, snackbar: SnackbarHostState, onUndo: (Long) -> Unit) {
+fun WaterSnackbarEffect(
+    events: SharedFlow<WaterEvent>,
+    snackbar: SnackbarHostState,
+    onUndo: (Long) -> Unit,
+    onNeedsFood: (drinkId: Long) -> Unit = {},
+    onResume: () -> Unit = {},
+) {
+    // Back from the choice of a product (V2.29): the intake waiting for it is added.
+    LifecycleResumeEffect(Unit) {
+        onResume()
+        onPauseOrDispose {}
+    }
     val resources = LocalResources.current
     val quips = LocalQuips.current
     val scope = rememberCoroutineScope()
@@ -299,6 +312,7 @@ fun WaterSnackbarEffect(events: SharedFlow<WaterEvent>, snackbar: SnackbarHostSt
                         snackbar.showSnackbar(text, duration = SnackbarDuration.Short)
                     }
                 }
+                is WaterEvent.NeedsFood -> onNeedsFood(event.drinkId)
                 WaterEvent.Failed -> scope.launch { snackbar.showSnackbar(resources.getString(R.string.water_error)) }
             }
         }

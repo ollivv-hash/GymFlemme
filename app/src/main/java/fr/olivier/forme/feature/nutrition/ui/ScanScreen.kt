@@ -1,5 +1,10 @@
 package fr.olivier.forme.feature.nutrition.ui
 
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.res.stringResource
+import fr.olivier.forme.R
+import fr.olivier.forme.feature.hydration.data.HydrationRepository
+
 import fr.olivier.forme.feature.badges.data.BadgeRepository
 import android.Manifest
 import android.content.pm.PackageManager
@@ -74,8 +79,12 @@ class ScanViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: NutritionRepository,
     private val badges: BadgeRepository,
+    private val hydration: HydrationRepository,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<ScanRoute>()
+
+    /** V2.29: scanning the product of a drink (0: adding to a meal). */
+    val drinkId: Long = route.drinkId
     val date: LocalDate = LocalDate.ofEpochDay(route.epochDay)
     val meal: MealType = MealType.valueOf(route.meal)
     private val _state = MutableStateFlow<ScanState>(ScanState.Scanning)
@@ -97,6 +106,12 @@ class ScanViewModel @Inject constructor(
 
     fun rescan() {
         _state.value = ScanState.Scanning
+    }
+
+    /** V2.29: the product found becomes the drink's product. */
+    fun link(food: FoodEntity, then: () -> Unit) = viewModelScope.launch {
+        hydration.linkFood(drinkId, food.id)
+        then()
     }
 
     fun add(food: FoodEntity, grams: Double, then: () -> Unit) = viewModelScope.launch {
@@ -126,7 +141,7 @@ fun ScanScreen(
 
     Scaffold(
         topBar = {
-            FormeTopBar("Scanner · ${viewModel.meal.label}", onBack) {
+            FormeTopBar(if (viewModel.drinkId != 0L) "Scanner" else "Scanner · ${viewModel.meal.label}", onBack) {
                 TextButton(onClick = {
                     torch = !torch
                     controller?.enableTorch(torch)
@@ -168,6 +183,17 @@ fun ScanScreen(
         }
     }
 
+    (state as? ScanState.Found)?.takeIf { viewModel.drinkId != 0L }?.let { found ->
+        // V2.29: the product of a drink, no quantity (each intake gives its own).
+        AlertDialog(
+            onDismissRequest = viewModel::rescan,
+            title = { Text(listOfNotNull(found.food.name, found.food.brand).joinToString(" · ")) },
+            text = { Text(stringResource(R.string.drink_food_intro)) },
+            confirmButton = { TextButton(onClick = { viewModel.link(found.food, onAdded) }) { Text(stringResource(R.string.drink_food_use)) } },
+            dismissButton = { TextButton(onClick = viewModel::rescan) { Text("Scanner un autre produit") } },
+        )
+        return
+    }
     (state as? ScanState.Found)?.let { found ->
         val food = found.food
         QuantityDialog(

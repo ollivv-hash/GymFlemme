@@ -1,6 +1,7 @@
 package fr.olivier.forme.ui.navigation
 
 import fr.olivier.forme.core.update.LocalUpdateFeature
+import fr.olivier.forme.feature.hydration.ui.DrinkFoodScreen
 import fr.olivier.forme.feature.hydration.ui.WaterScreen
 import fr.olivier.forme.feature.badges.ui.BadgeAnnouncer
 import fr.olivier.forme.feature.badges.ui.BadgesScreen
@@ -164,9 +165,16 @@ fun FormeNavHost(
                     onOpenBadges = { tab -> nav.switchTab(BadgesRoute(tab)) },
                     onOpenUpdate = { updates?.open(nav) },
                     onOpenWater = { nav.navigate(WaterRoute) },
+                    onNeedsFood = { nav.navigate(DrinkFoodRoute(it)) },
                 )
             }
-            composable<WaterRoute> { WaterScreen(onBack = { nav.popBackStack() }) }
+            composable<WaterRoute> { WaterScreen(onBack = { nav.popBackStack() }, onNeedsFood = { nav.navigate(DrinkFoodRoute(it)) }) }
+            composable<DrinkFoodRoute> {
+                DrinkFoodScreen(
+                    onDone = { nav.popBackStack() },
+                    onScan = { drinkId -> nav.navigate(ScanRoute(LocalDate.now().toEpochDay(), MealType.SNACK.name, drinkId)) },
+                )
+            }
             composable<BadgesRoute> { BadgesScreen(onBack = { nav.popBackStack() }, initialTab = it.toRoute<BadgesRoute>().tab) }
             composable<HistoryRoute> {
                 HistoryScreen(
@@ -193,13 +201,15 @@ fun FormeNavHost(
                     onEditFood = { food -> nav.navigate(if (food.source == FoodSource.DISH) DishEditRoute(food.id) else FoodEditRoute(foodId = food.id)) },
                 )
             }
-            composable<ScanRoute> {
+            composable<ScanRoute> { entry ->
+                val linking = entry.toRoute<ScanRoute>().drinkId != 0L
                 ScanScreen(
                     onBack = { nav.popBackStack() },
-                    onAdded = { nav.popBackStack() },
+                    // V2.29: the product of a drink chosen, back to the screen that asked for it.
+                    onAdded = { if (linking) nav.popBackStack<DrinkFoodRoute>(inclusive = true) else nav.popBackStack() },
                     onCreateFood = { barcode, name -> nav.navigate(FoodEditRoute(barcode = barcode, name = name)) },
                     onSearch = { date, meal ->
-                        nav.navigate(AddFoodRoute(date.toEpochDay(), meal.name)) { popUpTo<ScanRoute> { inclusive = true } }
+                        if (linking) nav.popBackStack() else nav.navigate(AddFoodRoute(date.toEpochDay(), meal.name)) { popUpTo<ScanRoute> { inclusive = true } }
                     },
                 )
             }

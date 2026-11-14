@@ -1,5 +1,8 @@
 package fr.olivier.forme.feature.nutrition.data
 
+import fr.olivier.forme.feature.hydration.domain.HydrationMath
+import kotlin.math.roundToInt
+
 import androidx.room.withTransaction
 import fr.olivier.forme.core.db.FormeDatabase
 import fr.olivier.forme.feature.heart.data.SessionHeartEntity
@@ -173,9 +176,13 @@ class NutritionRepository @Inject constructor(
     }
 
     /** Changes the quantity of an entry; values scale with the original snapshot. */
-    suspend fun updateQuantity(entry: MealEntryEntity, grams: Double) {
-        if (entry.quantityG <= 0 || grams <= 0) return
+    suspend fun updateQuantity(entry: MealEntryEntity, grams: Double) = db.withTransaction {
+        if (entry.quantityG <= 0 || grams <= 0) return@withTransaction
         val r = grams / entry.quantityG
+        // V2.29: the entry of a drink brings its intake along (1 g = 1 ml, within 10 – 2 000 ml).
+        db.hydrationDao().getIntakeByMeal(entry.id)?.let { intake ->
+            db.hydrationDao().updateIntake(intake.copy(volumeMl = grams.roundToInt().coerceIn(HydrationMath.FREE_MIN_ML, HydrationMath.FREE_MAX_ML)))
+        }
         mealDao.update(
             entry.copy(
                 quantityG = grams,
@@ -187,6 +194,7 @@ class NutritionRepository @Inject constructor(
         )
     }
 
+    /** V2.29: the intake of a drink linked to this entry goes with it (foreign key, cascade). */
     suspend fun deleteEntry(id: Long) = mealDao.delete(id)
 
     /** One whey dose, from the label values of the profile; null if whey is not configured. */

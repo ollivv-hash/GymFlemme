@@ -5,6 +5,10 @@ import fr.olivier.forme.core.db.FormeDatabase
 import fr.olivier.forme.feature.hydration.domain.DailyGoal
 import fr.olivier.forme.feature.hydration.domain.GoalSettings
 import fr.olivier.forme.feature.hydration.domain.HydrationMath
+import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
+import fr.olivier.forme.feature.nutrition.data.per100
+import fr.olivier.forme.feature.nutrition.domain.MealType
+import fr.olivier.forme.feature.nutrition.domain.NutritionMath
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -102,6 +106,7 @@ class HydrationRepository @Inject constructor(
     /** Records [volumeMl] of [drinkId] at [at] (now by default); the coefficient of the drink is copied. */
     suspend fun add(drinkId: Long, volumeMl: Int, source: IntakeSource, at: Instant = clock.instant()): AddedIntake {
         val before = todayState()
+        val ml = volumeMl.coerceIn(HydrationMath.FREE_MIN_ML, HydrationMath.FREE_MAX_ML)
         val id = db.withTransaction {
             val drink = dao.getDrink(drinkId) ?: error("Unknown drink $drinkId")
             val date = dateOf(at)
@@ -110,8 +115,9 @@ class HydrationRepository @Inject constructor(
                     timestamp = at,
                     date = date,
                     drinkId = drink.id,
-                    volumeMl = volumeMl.coerceIn(HydrationMath.FREE_MIN_ML, HydrationMath.FREE_MAX_ML),
+                    volumeMl = ml,
                     coefficientApplied = drink.hydrationCoefficient,
+                    linkedMealEntryId = mealEntryFor(drink, ml, at),
                     source = source,
                 ),
             )
@@ -120,15 +126,60 @@ class HydrationRepository @Inject constructor(
         }
         val after = todayState()
         val reached = !before.reached && after.reached && settings.markGoalAnnounced(after.date)
-        return AddedIntake(id, volumeMl, reached, after)
+        return AddedIntake(id, ml, reached, after)
     }
 
-    /** The default container with its drink ("+" of the home tile). Null without any container or drink left. */
-    suspend fun addDefault(source: IntakeSource): AddedIntake? {
+    // --- Link with the nutrition journal ---
+
+    /** A caloric drink with no product chosen yet: its first intake asks for one (or "Ne pas compter les calories"). */
+    suspend fun needsFood(drinkId: Long): Boolean = dao.getDrink(drinkId)?.let { it.isCaloric && it.linkedFoodId == null } == true
+
+    /** The product giving the calories of [drinkId]; the past intakes keep their meal entries. */
+    suspend fun linkFood(drinkId: Long, foodId: Long) {
+        val drink = dao.getDrink(drinkId) ?: return
+        dao.updateDrink(drink.copy(linkedFoodId = foodId, isCaloric = true))
+    }
+
+    /** "Ne pas compter les calories": the drink is no longer caloric (it can be again in Réglages › Hydratation). */
+    suspend fun dontCountCalories(drinkId: Long) {
+        val drink = dao.getDrink(drinkId) ?: return
+        dao.updateDrink(drink.copy(isCaloric = false, linkedFoodId = null))
+    }
+
+    /**
+     * The meal entry of an intake of a caloric drink linked to a product: [volumeMl] counted as grams (1 ml = 1 g),
+     * in the meal of that time (breakfast before 11:00…), values copied from the product. Null otherwise.
+     */
+    private suspend fun mealEntryFor(drink: DrinkEntity, volumeMl: Int, at: Instant): Long? {
+        if (!drink.isCaloric) return null
+        val food = drink.linkedFoodId?.let { db.foodDao().get(it) } ?: return null
+        val macros = NutritionMath.forQuantity(food.per100(), volumeMl.toDouble())
+        val time = at.atZone(clock.zone)
+        return db.mealDao().insert(
+            MealEntryEntity(
+                date = time.toLocalDate(),
+                mealType = MealType.at(time.toLocalTime()),
+                foodId = food.id,
+                name = food.brand?.let { "${food.name} ($it)" } ?: food.name,
+                quantityG = volumeMl.toDouble(),
+                proteinG = macros.proteinG,
+                kcal = macros.kcal,
+                carbsG = macros.carbsG,
+                fatG = macros.fatG,
+                eatenAt = at,
+            ),
+        )
+    }
+
+    /** The default container's drink and volume ("+" of the home tile). Null without any container or drink left. */
+    suspend fun defaultChoice(): Pair<Long, Int>? {
         val container = defaultContainer() ?: return null
         val drink = dao.getDrink(container.defaultDrinkId)?.takeIf { !it.archived } ?: water() ?: return null
-        return add(drink.id, container.volumeMl, source)
+        return drink.id to container.volumeMl
     }
+
+    /** The default container with its drink, at once (tests; the home tile goes through [needsFood] first). */
+    suspend fun addDefault(source: IntakeSource): AddedIntake? = defaultChoice()?.let { (drinkId, ml) -> add(drinkId, ml, source) }
 
     /** Water of the notification actions. */
     suspend fun addWater(volumeMl: Int, source: IntakeSource): AddedIntake? = water()?.let { add(it.id, volumeMl, source) }
@@ -141,17 +192,22 @@ class HydrationRepository @Inject constructor(
      */
     suspend fun update(id: Long, drinkId: Long, volumeMl: Int, at: Instant) = db.withTransaction {
         val old = dao.getIntake(id) ?: return@withTransaction
-        val coefficient = if (drinkId == old.drinkId) old.coefficientApplied else dao.getDrink(drinkId)?.hydrationCoefficient ?: old.coefficientApplied
+        val ml = volumeMl.coerceIn(HydrationMath.FREE_MIN_ML, HydrationMath.FREE_MAX_ML)
+        val drink = dao.getDrink(drinkId) ?: return@withTransaction
+        val coefficient = if (drinkId == old.drinkId) old.coefficientApplied else drink.hydrationCoefficient
         val date = dateOf(at)
-        dao.updateIntake(
-            old.copy(
-                drinkId = drinkId,
-                volumeMl = volumeMl.coerceIn(HydrationMath.FREE_MIN_ML, HydrationMath.FREE_MAX_ML),
-                timestamp = at,
-                date = date,
-                coefficientApplied = coefficient,
-            ),
-        )
+        // Its meal entry follows: same drink, the quantity and the time change; another drink, a new entry (or none).
+        val mealId = if (drinkId == old.drinkId) {
+            old.linkedMealEntryId?.also { mealId -> db.mealDao().get(mealId)?.let { db.mealDao().update(it.moved(ml, at, clock)) } }
+        } else {
+            // Unlinked first: deleting the entry would delete the intake with it (cascade).
+            old.linkedMealEntryId?.let { mealId ->
+                dao.updateIntake(old.copy(linkedMealEntryId = null))
+                db.mealDao().delete(mealId)
+            }
+            mealEntryFor(drink, ml, at)
+        }
+        dao.updateIntake(old.copy(drinkId = drinkId, volumeMl = ml, timestamp = at, date = date, coefficientApplied = coefficient, linkedMealEntryId = mealId))
         freezeDay(date)
     }
 
@@ -229,4 +285,18 @@ class HydrationRepository @Inject constructor(
     suspend fun lastIntakeAt(): Instant? = dao.lastIntakeAt()?.let(Instant::ofEpochMilli)
 
     private fun startOf(date: LocalDate): Long = date.atStartOfDay(clock.zone).toInstant().toEpochMilli()
+}
+
+/** The meal entry of an intake whose volume or time changed: values scaled, same meal, the intake's day and time. */
+internal fun MealEntryEntity.moved(volumeMl: Int, at: Instant, clock: Clock): MealEntryEntity {
+    val r = if (quantityG > 0) volumeMl / quantityG else 1.0
+    return copy(
+        quantityG = volumeMl.toDouble(),
+        proteinG = proteinG * r,
+        kcal = kcal?.times(r),
+        carbsG = carbsG?.times(r),
+        fatG = fatG?.times(r),
+        date = at.atZone(clock.zone).toLocalDate(),
+        eatenAt = at,
+    )
 }

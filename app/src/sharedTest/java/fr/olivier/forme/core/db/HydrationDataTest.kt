@@ -8,7 +8,11 @@ import fr.olivier.forme.feature.hydration.data.HydrationSessionListener
 import fr.olivier.forme.feature.hydration.data.HydrationSettingsRepository
 import fr.olivier.forme.feature.hydration.data.IntakeSource
 import fr.olivier.forme.feature.hydration.domain.GoalSettings
+import fr.olivier.forme.feature.nutrition.data.FoodEntity
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
+import fr.olivier.forme.feature.nutrition.data.NutritionRepository
+import fr.olivier.forme.feature.nutrition.data.OpenFoodFactsClient
+import fr.olivier.forme.feature.nutrition.domain.FoodSource
 import fr.olivier.forme.feature.nutrition.domain.MealType
 import fr.olivier.forme.feature.sport.data.SessionRepository
 import fr.olivier.forme.feature.sport.data.SetEntryEntity
@@ -220,4 +224,85 @@ class HydrationDataTest {
         assertEquals(listOf("Verre"), db.hydrationDao().getContainers().filter { it.isDefault }.map { it.name })
         assertEquals(250, hydration.addDefault(IntakeSource.HOME_TILE)!!.volumeMl)
     }
+
+    private suspend fun juiceLinked(hydration: HydrationRepository): Long {
+        val juice = db.hydrationDao().getDrinkByCode("juice")!!
+        val food = db.foodDao().insert(FoodEntity(source = FoodSource.CUSTOM, name = "Jus d'orange", kcalPer100g = 45.0, proteinPer100g = 0.7, carbsPer100g = 10.0, fatPer100g = 0.2))
+        assertTrue(hydration.needsFood(juice.id))
+        hydration.linkFood(juice.id, food)
+        assertFalse(hydration.needsFood(juice.id))
+        return juice.id
+    }
+
+    @Test
+    fun aLinkedCaloricDrinkAddsItsMealEntryInTheMealOfThatTime() = runTest {
+        val hydration = repo()
+        val juice = juiceLinked(hydration)
+        val id = hydration.add(juice, 200, IntakeSource.WATER_SCREEN).id
+        val meal = db.mealDao().get(hydration.intake(id)!!.linkedMealEntryId!!)!!
+        assertEquals(MealType.SNACK, meal.mealType) // 18:00 in Paris
+        assertEquals(today, meal.date)
+        assertEquals(200.0, meal.quantityG, 0.0)
+        assertEquals(90.0, meal.kcal!!, 1e-9)
+        assertEquals(1.4, meal.proteinG, 1e-9)
+        assertEquals("Jus d'orange", meal.name)
+        // Water and an unlinked caloric drink: no meal entry.
+        assertNull(hydration.intake(hydration.add(1, 250, IntakeSource.WATER_SCREEN).id)!!.linkedMealEntryId)
+        val soda = db.hydrationDao().getDrinkByCode("soda")!!.id
+        assertNull(hydration.intake(hydration.add(soda, 330, IntakeSource.WATER_SCREEN).id)!!.linkedMealEntryId)
+    }
+
+    @Test
+    fun editingTheIntakeEditsItsMealEntryAndTheOtherWayRound() = runTest {
+        val hydration = repo()
+        val juice = juiceLinked(hydration)
+        val id = hydration.add(juice, 200, IntakeSource.WATER_SCREEN).id
+        val mealId = hydration.intake(id)!!.linkedMealEntryId!!
+
+        // The intake: volume and time; the meal entry follows (same meal).
+        hydration.update(id, juice, 300, clock.instant().minus(Duration.ofDays(1)))
+        val moved = db.mealDao().get(mealId)!!
+        assertEquals(300.0, moved.quantityG, 0.0)
+        assertEquals(135.0, moved.kcal!!, 1e-9)
+        assertEquals(today.minusDays(1), moved.date)
+
+        // The meal entry: its quantity changes the intake.
+        nutrition().updateQuantity(moved, 250.0)
+        assertEquals(250, hydration.intake(id)!!.volumeMl)
+
+        // Another drink, not caloric: the meal entry goes.
+        hydration.update(id, 1, 250, clock.instant())
+        assertNull(db.mealDao().get(mealId))
+        assertNull(hydration.intake(id)!!.linkedMealEntryId)
+        // Back to the juice: a new entry.
+        hydration.update(id, juice, 250, clock.instant())
+        assertEquals(250.0, db.mealDao().get(hydration.intake(id)!!.linkedMealEntryId!!)!!.quantityG, 0.0)
+    }
+
+    @Test
+    fun undoingADrinkTakesItsMealEntryAndDeletingTheEntryTakesTheDrink() = runTest {
+        val hydration = repo()
+        val juice = juiceLinked(hydration)
+        val first = hydration.add(juice, 200, IntakeSource.HOME_TILE).id
+        hydration.delete(first) // "Annuler"
+        assertEquals(emptyList<MealEntryEntity>(), db.mealDao().getDay(today))
+        val second = hydration.add(juice, 200, IntakeSource.HOME_TILE).id
+        nutrition().deleteEntry(hydration.intake(second)!!.linkedMealEntryId!!)
+        assertNull(hydration.intake(second))
+    }
+
+    @Test
+    fun notCountingTheCaloriesMakesTheDrinkNonCaloric() = runTest {
+        val hydration = repo()
+        val milk = db.hydrationDao().getDrinkByCode("milk")!!.id
+        assertTrue(hydration.needsFood(milk))
+        hydration.dontCountCalories(milk)
+        assertFalse(hydration.needsFood(milk))
+        assertFalse(hydration.drink(milk)!!.isCaloric)
+        assertNull(hydration.intake(hydration.add(milk, 200, IntakeSource.WATER_SCREEN).id)!!.linkedMealEntryId)
+    }
+
+    private fun nutrition() = NutritionRepository(
+        db, db.profileDao(), db.ciqualDao(), db.foodDao(), db.mealDao(), db.supplementDao(), db.sessionDao(), OpenFoodFactsClient(), clock,
+    )
 }

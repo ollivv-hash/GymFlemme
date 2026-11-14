@@ -17,7 +17,9 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.olivier.forme.MainActivity
+import fr.olivier.forme.feature.hydration.ui.DRINK_FOOD_SKIP_TAG
 import fr.olivier.forme.feature.hydration.ui.WATER_CONTAINER_TAG
+import fr.olivier.forme.feature.hydration.ui.WATER_DRINK_TAG
 import fr.olivier.forme.feature.hydration.ui.WATER_JOURNAL_TAG
 import fr.olivier.forme.feature.sport.ui.home.bento.WATER_ADD_TAG
 import fr.olivier.forme.feature.sport.ui.home.bento.WATER_TILE_TAG
@@ -89,11 +91,21 @@ class WaterSmokeTest {
         rule.waitUntil(15_000) { rule.onAllNodes(hasContentDescription(", Café, 200 ml", substring = true)).fetchSemanticsNodes().isEmpty() }
 
         // (Another quantity: AddDrinkPanelTest.)
+
+        // A caloric drink with no product: its choice opens first; not counting the calories adds the glass.
+        rule.waitUntil(15_000) { rule.onAllNodes(hasText("+200 ml")).fetchSemanticsNodes().isEmpty() }
+        rule.onNodeWithTag(WATER_DRINK_TAG + 5).performClick()
+        rule.onNodeWithTag(WATER_CONTAINER_TAG + 1).performClick()
+        waitFor("Produit : Jus de fruits")
+        shot("wa3-drink-food")
+        rule.onNodeWithTag(DRINK_FOOD_SKIP_TAG).performClick()
+        waitFor("+250 ml")
+        waitForDescription(", Jus de fruits, 250 ml")
         // Nutrition: the "Eau" entry at the head of the journal.
         rule.onNode(hasContentDescription("Retour")).performClick()
         rule.tab("Nutrition")
         rule.waitUntilAtLeastOneExists(hasTestTag(WATER_JOURNAL_TAG), 15_000)
-        waitForDescription("Eau, 0,3 litre sur 2")
-        shot("wa3-nutrition-entry")
+        waitForDescription("Eau, 0,5 litre sur 2")
+        shot("wa4-nutrition-entry")
     }
 }

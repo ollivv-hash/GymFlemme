@@ -101,6 +101,9 @@ interface MealDao {
     @Query("DELETE FROM meal_entry WHERE id = :id")
     suspend fun delete(id: Long)
 
+    @Query("SELECT * FROM meal_entry WHERE id = :id")
+    suspend fun get(id: Long): MealEntryEntity?
+
     @Query("SELECT * FROM meal_entry WHERE date = :date ORDER BY eatenAt")
     fun observeDay(date: LocalDate): Flow<List<MealEntryEntity>>
 
