@@ -23,6 +23,8 @@ object BadgeConfig {
         Badge.CREATINE_LOYAL to listOf(7.0, 30.0, 90.0, 365.0), // days in a row
         Badge.GOLDEN_SHAKER to listOf(7.0, 30.0, 100.0, 250.0), // days with the protein target reached
         Badge.ALL_ROUNDER to listOf(10.0, 20.0, 35.0, 50.0), // different exercises
+        Badge.CAMEL_REPENTANT to listOf(7.0, 30.0, 100.0, 250.0), // days with the hydration goal reached (V2.29)
+        Badge.ENDLESS_SOURCE to listOf(3.0, 7.0, 21.0, 60.0), // days in a row with the hydration goal reached
     )
 
     // --- One-off badges ---
@@ -48,6 +50,12 @@ object BadgeConfig {
     /** With a session in the days before the anniversary. */
     const val ANNIVERSARY_RECENT_DAYS = 30L
 
+    // --- Hydration (V2.29) ---
+    /** Oasis: hydration counted on a day without a session, in ml. */
+    const val OASIS_ML = 3_000
+    /** Hydraté is drawn only after water recorded on at least this many days of the month before. */
+    const val HYDRATED_MIN_DAYS_BEFORE = 5
+
     // --- Rower (Galérien) ---
     const val ROWER_LIBRARY_ID = "rowing-machine"
     const val ROWER_NAME = "Rameur"
@@ -63,6 +71,7 @@ object BadgeConfig {
         Challenge.CURIOUS to 3.0, // exercises never done before
         Challenge.PROTEIN_DATE to 20.0, // days with the protein target reached
         Challenge.TRIPLE_SESSION to 3.0, // sessions of each template of the rotation
+        Challenge.HYDRATED to 20.0, // days with the hydration goal reached (V2.29)
     )
     /** Triple séance is drawn only with at least this many templates in the rotation. */
     const val TRIPLE_SESSION_MIN_TEMPLATES = 3

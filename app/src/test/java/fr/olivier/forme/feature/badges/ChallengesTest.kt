@@ -5,6 +5,7 @@ import fr.olivier.forme.feature.badges.domain.Challenge
 import fr.olivier.forme.feature.badges.domain.ChallengeEligibility
 import fr.olivier.forme.feature.badges.domain.Challenges
 import fr.olivier.forme.feature.badges.domain.SessionFact
+import fr.olivier.forme.feature.badges.domain.WaterDay
 import fr.olivier.forme.feature.badges.reminder.ChallengeReminder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,7 +21,7 @@ import java.time.ZonedDateTime
 /** V2.19: monthly challenges — eligibility, deterministic draw never repeating last month, progress of each one. */
 class ChallengesTest {
     private val october = YearMonth.of(2026, 10)
-    private val all = ChallengeEligibility(hasRower = true, mealsLastMonth = true, rotationSize = 3)
+    private val all = ChallengeEligibility(hasRower = true, mealsLastMonth = true, rotationSize = 3, waterDaysLastMonth = 5)
 
     private fun session(day: LocalDate, template: Long? = null) = SessionFact(day.atTime(18, 0), day.atTime(19, 0), template)
     private fun progress(challenge: Challenge, h: BadgeHistory, month: YearMonth = october) = Challenges.progress(challenge, month, h)
@@ -33,6 +34,23 @@ class ChallengesTest {
         assertFalse(Challenge.PROTEIN_DATE in none)
         assertFalse(Challenge.TRIPLE_SESSION in none)
         assertTrue(Challenge.TWELVE_STRIKES in none)
+        // V2.29: Hydraté after water recorded on 5 days of the month before.
+        assertFalse(Challenge.HYDRATED in none)
+        assertFalse(Challenge.HYDRATED in Challenges.eligible(all.copy(waterDaysLastMonth = 4)))
+        assertTrue(Challenge.HYDRATED in Challenges.eligible(all.copy(waterDaysLastMonth = 5)))
+    }
+
+    @Test
+    fun hydratedCountsTheDaysWithTheGoalReachedInTheMonth() {
+        val goal = 2_500
+        val days = (1..25).map { d -> WaterDay(october.atDay(d), if (d % 5 == 0) 2_000 else 2_600, goal) } + // 20 reached
+            WaterDay(LocalDate.of(2026, 9, 30), 3_000, goal) // September: not counted
+        val p = progress(Challenge.HYDRATED, BadgeHistory(LocalDate.of(2026, 10, 31), water = days))
+        assertEquals(20.0, p.value, 0.0)
+        assertEquals(20.0, p.goal, 0.0)
+        assertEquals(october.atDay(24), p.completedOn)
+        val short = progress(Challenge.HYDRATED, BadgeHistory(LocalDate.of(2026, 10, 31), water = days.drop(1)))
+        assertNull(short.completedOn)
     }
 
     @Test

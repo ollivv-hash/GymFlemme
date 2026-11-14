@@ -18,6 +18,9 @@
     <string name="badge_name_creatine_loyal">Créatine fidèle</string>
     <string name="badge_name_golden_shaker">Shaker d\'or</string>
     <string name="badge_name_all_rounder">Touche-à-tout</string>
+    <!-- V2.29, hydration ("Chameau repenti": it is the camel who repents, no feminine) -->
+    <string name="badge_name_camel_repentant">Chameau repenti</string>
+    <string name="badge_name_endless_source">Source intarissable</string>
 
     <!-- What each tiered badge measures, after "37 / 50" -->
     <string name="badge_unit_repeat_offender">séances</string>
@@ -28,6 +31,8 @@
     <string name="badge_unit_creatine_loyal">jours d\'affilée</string>
     <string name="badge_unit_golden_shaker">jours d\'objectif protéines</string>
     <string name="badge_unit_all_rounder">exercices</string>
+    <string name="badge_unit_camel_repentant">jours d\'objectif eau</string>
+    <string name="badge_unit_endless_source">jours d\'affilée</string>
 
     <!-- Bronze, Argent, Or, Platine -->
     <string-array name="badge_msg_repeat_offender">
@@ -71,6 +76,24 @@
         <item>30 jours. Ton shaker est fier de toi.</item>
         <item>100 jours. Ton shaker mérite une médaille aussi.</item>
         <item>250 jours. Le shaker d\'or est à toi.</item>
+    </string-array>
+    <string-array name="badge_msg_camel_repentant">
+        <item>Sept jours bien hydraté. Le chameau en toi se repent.</item>
+        <item>30 jours. Ta gourde est devenue ta meilleure amie.</item>
+        <item>100 jours d\'objectif atteint. Tu es plus fiable qu\'une fontaine.</item>
+        <item>250 jours. On t\'appelle désormais « la source ».</item>
+    </string-array>
+    <string-array name="badge_msg_camel_repentant_f">
+        <item>Sept jours bien hydratée. Le chameau en toi se repent.</item>
+        <item>30 jours. Ta gourde est devenue ta meilleure amie.</item>
+        <item>100 jours d\'objectif atteint. Tu es plus fiable qu\'une fontaine.</item>
+        <item>250 jours. On t\'appelle désormais « la source ».</item>
+    </string-array>
+    <string-array name="badge_msg_endless_source">
+        <item>Trois jours d\'affilée. Ça coule de source.</item>
+        <item>Une semaine sans faillir. Rien ne t\'assèche.</item>
+        <item>Trois semaines d\'affilée. Le désert a perdu ton adresse.</item>
+        <item>Deux mois sans interruption. Intarissable, vraiment.</item>
     </string-array>
     <string-array name="badge_msg_all_rounder">
         <item>Dix exercices différents. Tu explores !</item>
@@ -127,6 +150,10 @@
     <string name="badge_name_return_of_the_king">Le retour du roi</string>
     <string name="badge_name_return_of_the_king_f">Le retour de la reine</string>
     <string name="badge_name_anniversary">Anniversaire</string>
+    <string name="badge_name_oasis">Oasis</string>
+    <string name="badge_condition_oasis">Au moins 3 litres comptés un jour sans séance</string>
+    <string name="badge_msg_oasis">3 litres un jour de repos. Tu es une oasis à toi tout seul.</string>
+    <string name="badge_msg_oasis_f">3 litres un jour de repos. Tu es une oasis à toi toute seule.</string>
     <string name="badge_name_new_year">Nouvel An</string>
 
     <string name="badge_condition_monday_fearless">4 séances terminées un lundi (au total)</string>

@@ -9,6 +9,7 @@ import fr.olivier.forme.feature.badges.domain.BadgeMigration
 import fr.olivier.forme.feature.badges.domain.Badges
 import fr.olivier.forme.feature.badges.domain.SessionFact
 import fr.olivier.forme.feature.badges.domain.Tier
+import fr.olivier.forme.feature.badges.domain.WaterDay
 import fr.olivier.forme.feature.sport.domain.MuscleGroup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -250,5 +251,67 @@ class BadgesTest {
         listOf("NOT_DEAD", "WELL_STARTED", "REPEAT_OFFENDER", "PILLAR", "BEATS_THE_COUCH", "EARLY_BIRD", "REGULAR", "FIRST_RECORD", "ALL_ROUNDER", "CREATINE_LOYAL")
             .map(BadgeMigration::fromV1)
             .forEach { (id, tier) -> assertEquals(Badge.valueOf(id).kind == BadgeKind.TIERED, tier > 0) }
+    }
+
+    // --- Hydration (V2.29) ---
+
+    private fun water(day: LocalDate, ml: Int, goal: Int = 2_500) = WaterDay(day, ml, goal)
+
+    @Test
+    fun camelRepentantCountsTheDaysWithTheGoalReachedNotInARow() {
+        // Every other day reached: 7 days reached on the 13th day.
+        val days = (0L until 30L).map { monday.plusDays(it) }.mapIndexed { i, d -> water(d, if (i % 2 == 0) 2_600 else 1_000) }
+        val h = BadgeHistory(today, water = days)
+        assertEquals(monday.plusDays(12), h.tier(Badge.CAMEL_REPENTANT, Tier.BRONZE))
+        assertNull(h.tier(Badge.CAMEL_REPENTANT, Tier.SILVER))
+        assertEquals(15.0, Badges.progress(h).getValue(Badge.CAMEL_REPENTANT), 0.0)
+        // Never a streak: no Source intarissable.
+        assertNull(h.tier(Badge.ENDLESS_SOURCE, Tier.BRONZE))
+        // The goal of each day counts: 2.6 L is not enough on a 3 L day.
+        assertTrue(earned(BadgeHistory(today, water = (0L..10L).map { water(monday.plusDays(it), 2_600, goal = 3_000) })).isEmpty())
+    }
+
+    @Test
+    fun endlessSourceNeedsDaysInARow() {
+        val run = (0L until 7L).map { water(monday.plusDays(it), 3_000) }
+        val h = BadgeHistory(today, water = run)
+        assertEquals(monday.plusDays(2), h.tier(Badge.ENDLESS_SOURCE, Tier.BRONZE))
+        assertEquals(monday.plusDays(6), h.tier(Badge.ENDLESS_SOURCE, Tier.SILVER))
+        assertEquals(monday.plusDays(6), h.tier(Badge.CAMEL_REPENTANT, Tier.BRONZE))
+        // A day missed breaks the run.
+        val broken = BadgeHistory(today, water = run.filterNot { it.date == monday.plusDays(2) })
+        assertEquals(monday.plusDays(5), broken.tier(Badge.ENDLESS_SOURCE, Tier.BRONZE))
+        // Current run: today not reached yet does not break it.
+        val ongoing = BadgeHistory(monday.plusDays(7), water = run)
+        assertEquals(7.0, Badges.progress(ongoing).getValue(Badge.ENDLESS_SOURCE), 0.0)
+    }
+
+    @Test
+    fun oasisIsThreeLitresOnADayWithoutASessionOnceTheDayIsOver() {
+        val tuesday = monday.plusDays(1)
+        // 3 L on a session day: no.
+        val withSession = BadgeHistory(today, sessions = listOf(session(monday)), water = listOf(water(monday, 3_200)))
+        assertNull(withSession.badge(Badge.OASIS))
+        // 2.9 L on a rest day: no.
+        assertNull(BadgeHistory(today, water = listOf(water(tuesday, 2_900))).badge(Badge.OASIS))
+        // 3 L on a rest day: yes, dated that day.
+        assertEquals(tuesday, BadgeHistory(today, water = listOf(water(tuesday, 3_000))).badge(Badge.OASIS))
+        // Today is not over: not yet.
+        assertNull(BadgeHistory(tuesday, water = listOf(water(tuesday, 3_500))).badge(Badge.OASIS))
+        assertEquals(BadgeKind.SECRET, Badge.OASIS.kind)
+    }
+
+    @Test
+    fun hydrationTiersAreWorthTheUsualPoints() {
+        assertEquals(listOf(7.0, 30.0, 100.0, 250.0), BadgeConfig.TIERS.getValue(Badge.CAMEL_REPENTANT))
+        assertEquals(listOf(3.0, 7.0, 21.0, 60.0), BadgeConfig.TIERS.getValue(Badge.ENDLESS_SOURCE))
+        assertEquals(listOf(10, 25, 50, 100), Tier.entries.map { BadgeConfig.points(Award(Badge.CAMEL_REPENTANT, it)) })
+        assertEquals(BadgeConfig.SECRET_POINTS, BadgeConfig.points(Award(Badge.OASIS)))
+    }
+
+    @Test
+    fun hydrationBadgesAreIdempotent() {
+        val h = BadgeHistory(today, water = (0L until 30L).map { water(monday.plusDays(it), 3_000) })
+        assertEquals(earned(h), earned(h))
     }
 }

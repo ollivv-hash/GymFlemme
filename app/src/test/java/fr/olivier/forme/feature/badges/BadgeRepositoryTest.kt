@@ -17,6 +17,9 @@ import fr.olivier.forme.feature.badges.domain.ChallengeEligibility
 import fr.olivier.forme.feature.badges.domain.Challenges
 import fr.olivier.forme.feature.badges.domain.Tier
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightEntity
+import fr.olivier.forme.feature.hydration.data.HydrationRepository
+import fr.olivier.forme.feature.hydration.data.HydrationSettingsRepository
+import fr.olivier.forme.feature.hydration.data.IntakeSource
 import fr.olivier.forme.feature.nutrition.data.MealEntryEntity
 import fr.olivier.forme.feature.nutrition.data.ProfileEntity
 import fr.olivier.forme.feature.nutrition.domain.MealType
@@ -239,5 +242,33 @@ class BadgeRepositoryTest {
             listOf(3L, 5L, 3L).map { Instant.ofEpochSecond(it * 86_400) },
             badges(backgroundScope).recordDays(sets),
         )
+    }
+
+    /** V2.29: the water of each day against the goal frozen that day, read from the database. */
+    @Test
+    fun hydrationBadgesReadTheWaterAndTheFrozenGoals() = runTest {
+        val water = HydrationRepository(
+            db, db.hydrationDao(),
+            HydrationSettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "water.preferences_pb") }),
+            clock,
+        )
+        // Seven days in a row with 2 L (no weight: the goal is 2 L), then today 1 L.
+        val start = clock.now
+        repeat(7) { day ->
+            clock.now = start.minus(Duration.ofDays(7L - day))
+            water.add(1, 2_000, IntakeSource.WATER_SCREEN)
+        }
+        clock.now = start
+        water.add(1, 1_000, IntakeSource.WATER_SCREEN)
+        val repository = badges(backgroundScope)
+        repository.evaluate()
+        val earned = stored().keys
+        assertTrue(Award(Badge.CAMEL_REPENTANT, Tier.BRONZE) in earned)
+        assertTrue(Award(Badge.ENDLESS_SOURCE, Tier.SILVER) in earned)
+        assertTrue(Award(Badge.OASIS) !in earned) // 2 L only
+        // 7 days with water last month or this one: Hydraté is eligible next month only if 5 of them were last month.
+        val history = repository.history()
+        assertEquals(8, history.water.size)
+        assertEquals(listOf(2_000), history.water.map { it.goalMl }.distinct())
     }
 }

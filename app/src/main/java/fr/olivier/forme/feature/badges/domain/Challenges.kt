@@ -14,6 +14,8 @@ enum class Challenge {
     CURIOUS,
     PROTEIN_DATE,
     TRIPLE_SESSION,
+    /** V2.29: the hydration goal reached 20 days in the month. */
+    HYDRATED,
     ;
 
     companion object {
@@ -22,7 +24,7 @@ enum class Challenge {
 }
 
 /** What decides which challenges may be drawn: a rower in the catalogue, meals last month, the rotation's size. */
-data class ChallengeEligibility(val hasRower: Boolean, val mealsLastMonth: Boolean, val rotationSize: Int)
+data class ChallengeEligibility(val hasRower: Boolean, val mealsLastMonth: Boolean, val rotationSize: Int, val waterDaysLastMonth: Int = 0)
 
 /** Progress of a challenge in its month: [value] out of [goal], and the day it was met (null while not met). */
 data class ChallengeProgress(val value: Double, val goal: Double, val completedOn: LocalDate?)
@@ -33,6 +35,7 @@ object Challenges {
             Challenge.ROWER_OF_THE_MONTH -> e.hasRower
             Challenge.PROTEIN_DATE -> e.mealsLastMonth
             Challenge.TRIPLE_SESSION -> e.rotationSize >= BadgeConfig.TRIPLE_SESSION_MIN_TEMPLATES
+            Challenge.HYDRATED -> e.waterDaysLastMonth >= BadgeConfig.HYDRATED_MIN_DAYS_BEFORE
             else -> true
         }
     }
@@ -70,6 +73,7 @@ object Challenges {
             Challenge.PROTEIN_DATE -> cumulative(h.proteinDays.distinct().filter(::inMonth).map { it to 1.0 }, goal)
             Challenge.NO_BLANK_WEEK -> noBlankWeek(month, sessionDays)
             Challenge.TRIPLE_SESSION -> tripleSession(h, ::inMonth, goal)
+            Challenge.HYDRATED -> cumulative(Badges.waterGoalDays(h).filter(::inMonth).map { it to 1.0 }, goal)
         }
     }
 

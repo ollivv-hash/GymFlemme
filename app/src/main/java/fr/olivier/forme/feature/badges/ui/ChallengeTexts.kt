@@ -9,7 +9,8 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 
 /** Texts of a monthly challenge (V2.19): name, goal, announcement, success, progress unit. */
-data class ChallengeTexts(val name: Int, val goal: Int, val announce: Int, val success: Int, val unit: Int) {
+/** [successFeminine] (V2.29): the success message when it agrees ("bien hydratée"). */
+data class ChallengeTexts(val name: Int, val goal: Int, val announce: Int, val success: Int, val unit: Int, val successFeminine: Int? = null) {
     companion object {
         fun of(challenge: Challenge): ChallengeTexts = when (challenge) {
             Challenge.TWELVE_STRIKES -> ChallengeTexts(R.string.challenge_name_twelve_strikes, R.string.challenge_goal_twelve_strikes, R.string.challenge_announce_twelve_strikes, R.string.challenge_success_twelve_strikes, R.string.challenge_unit_twelve_strikes)
@@ -19,6 +20,7 @@ data class ChallengeTexts(val name: Int, val goal: Int, val announce: Int, val s
             Challenge.CURIOUS -> ChallengeTexts(R.string.challenge_name_curious, R.string.challenge_goal_curious, R.string.challenge_announce_curious, R.string.challenge_success_curious, R.string.challenge_unit_curious)
             Challenge.PROTEIN_DATE -> ChallengeTexts(R.string.challenge_name_protein_date, R.string.challenge_goal_protein_date, R.string.challenge_announce_protein_date, R.string.challenge_success_protein_date, R.string.challenge_unit_protein_date)
             Challenge.TRIPLE_SESSION -> ChallengeTexts(R.string.challenge_name_triple_session, R.string.challenge_goal_triple_session, R.string.challenge_announce_triple_session, R.string.challenge_success_triple_session, R.string.challenge_unit_triple_session)
+            Challenge.HYDRATED -> ChallengeTexts(R.string.challenge_name_hydrated, R.string.challenge_goal_hydrated, R.string.challenge_announce_hydrated, R.string.challenge_success_hydrated, R.string.challenge_unit_hydrated, R.string.challenge_success_hydrated_f)
         }
     }
 }
@@ -34,7 +36,12 @@ object ChallengeWording {
 
     /** Challenge met: its message, or "Défi du mois réussi" in serious mode. */
     fun success(resources: Resources, challenge: Challenge, style: QuipStyle): String =
-        if (style.serious) resources.getString(R.string.challenge_neutral_success) else resources.getString(ChallengeTexts.of(challenge).success)
+        if (style.serious) {
+            resources.getString(R.string.challenge_neutral_success)
+        } else {
+            val texts = ChallengeTexts.of(challenge)
+            resources.getString(texts.successFeminine?.takeIf { style.feminine } ?: texts.success)
+        }
 
     fun monthName(month: YearMonth): String = month.month.getDisplayName(TextStyle.FULL_STANDALONE, Fmt.locale).lowercase(Fmt.locale)
 

@@ -24,6 +24,7 @@ import fr.olivier.forme.R
 import fr.olivier.forme.core.di.ApplicationScope
 import fr.olivier.forme.core.humor.Quip
 import fr.olivier.forme.core.humor.QuipRepository
+import fr.olivier.forme.feature.badges.data.BadgeRepository
 import fr.olivier.forme.feature.hydration.data.HydrationDao
 import fr.olivier.forme.feature.hydration.data.HydrationRepository
 import fr.olivier.forme.feature.hydration.data.HydrationSettingsRepository
@@ -55,6 +56,7 @@ class HydrationReminder @Inject constructor(
     private val dao: HydrationDao,
     private val settings: HydrationSettingsRepository,
     private val quips: QuipRepository,
+    private val badges: BadgeRepository,
     private val clock: Clock,
 ) {
     /** Settings changed: the next reminder is set again from now (or cancelled when off). */
@@ -133,6 +135,7 @@ class HydrationReminder @Inject constructor(
             NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
             return
         }
+        runCatching { badges.evaluate() } // announced at the next opening
         val text = quips.text(Quip.WATER_NOTED, HydrationMath.liters(added.today.countedMl), HydrationMath.liters(added.today.goal.totalMl))
         val done = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
