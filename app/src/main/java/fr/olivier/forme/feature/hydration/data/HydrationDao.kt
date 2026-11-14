@@ -161,6 +161,10 @@ interface HydrationDao {
     @Query("SELECT COUNT(*) FROM session WHERE isSeed = 0 AND startedAt >= :fromMillis AND startedAt < :toMillis")
     suspend fun countSessionsStarted(fromMillis: Long, toMillis: Long): Int
 
+    /** A real session in progress (reminders: not during a session). */
+    @Query("SELECT COUNT(*) FROM session WHERE endedAt IS NULL AND isSeed = 0")
+    suspend fun countRunningSessions(): Int
+
     // --- Restore ---
 
     @Query("DELETE FROM water_intake")

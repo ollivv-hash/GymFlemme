@@ -217,4 +217,9 @@
     <string name="drink_food_hint">Tape au moins 2 lettres pour chercher.</string>
     <string name="drink_food_use">Utiliser ce produit</string>
     <string name="drink_food_use_for">Utiliser « %1$s » pour %2$s ?</string>
+
+    <!-- Hydration reminders (V2.29). The title is fixed; the texts are in humor.xml. -->
+    <string name="water_channel">Rappels d\'hydratation</string>
+    <string name="water_notification_title">Hydratation</string>
+    <string name="water_notification_action">+%1$d ml</string>
 </resources>

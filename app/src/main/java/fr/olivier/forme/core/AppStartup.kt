@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import fr.olivier.forme.core.backup.AutoBackupScheduler
 import fr.olivier.forme.core.di.ApplicationScope
 import fr.olivier.forme.core.launch.QuickAction
+import fr.olivier.forme.feature.hydration.reminder.HydrationReminder
 import fr.olivier.forme.feature.badges.reminder.ChallengeReminder
 import fr.olivier.forme.feature.library.data.ExerciseLibraryLoader
 import fr.olivier.forme.feature.nutrition.data.CiqualLoader
@@ -27,6 +28,7 @@ class AppStartup @Inject constructor(
     private val autoBackup: AutoBackupScheduler,
     private val widget: WidgetRefresher,
     private val library: ExerciseLibraryLoader,
+    private val hydrationReminder: HydrationReminder,
 ) {
     fun run() {
         autoBackup.scheduleDaily()
@@ -35,6 +37,7 @@ class AppStartup @Inject constructor(
         scope.launch {
             runCatching { supplementReminder.reschedule() }.onFailure { Log.e("Forme", "Reminder scheduling failed", it) }
             runCatching { challengeReminder.reschedule() }.onFailure { Log.e("Forme", "Challenge reminder scheduling failed", it) }
+            hydrationReminder.ensureScheduled() // V2.29
             runCatching { ciqual.ensureLoaded() }.onFailure { Log.e("Forme", "Ciqual load failed", it) }
         }
         // Not queued behind the (longer) Ciqual load: the exercise sheets need it on the first launch.

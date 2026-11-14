@@ -171,5 +171,10 @@
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
+
+        <!-- V2.29: "+250 ml" / "+500 ml" of the hydration reminder (WorkManager sends it, no exact alarm). -->
+        <receiver
+            android:name=".feature.hydration.reminder.HydrationReminderReceiver"
+            android:exported="false" />
     </application>
 </manifest>
