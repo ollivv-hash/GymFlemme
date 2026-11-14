@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -79,7 +80,8 @@ class UpdateSmokeTest {
         rule.waitForHome()
         rule.runOnUiThread { manager.showForTest(UpdateState.Available(update, dismissed = false)) }
         rule.waitUntilAtLeastOneExists(hasTestTag(UPDATE_CARD_TAG), 15_000)
-        rule.onNode(hasText("Plus tard") and hasClickAction()).performClick()
+        // The card's own "Plus tard" (V2.29: the first-use card of the hydration has one too).
+        rule.onNode(hasText("Plus tard") and hasClickAction() and hasAnyAncestor(hasTestTag(UPDATE_CARD_TAG))).performClick()
         rule.waitUntil(15_000) { rule.onAllNodes(hasTestTag(UPDATE_CARD_TAG)).fetchSemanticsNodes().isEmpty() }
 
         rule.runOnUiThread { manager.showForTest(UpdateState.UpToDate) }

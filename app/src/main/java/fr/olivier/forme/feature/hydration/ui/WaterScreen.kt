@@ -62,6 +62,7 @@ fun WaterScreen(onBack: () -> Unit, onNeedsFood: (drinkId: Long) -> Unit = {}, v
     val allDrinks by viewModel.allDrinks.collectAsStateWithLifecycle()
     val containers by viewModel.containers.collectAsStateWithLifecycle()
     val week by viewModel.week.collectAsStateWithLifecycle()
+    val waterSettings by viewModel.hydrationSettings.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var editing by rememberSaveable { mutableStateOf<Long?>(null) }
     WaterSnackbarEffect(viewModel.events, snackbar, viewModel::undo, onNeedsFood, viewModel::resumePending)
@@ -71,6 +72,10 @@ fun WaterScreen(onBack: () -> Unit, onNeedsFood: (drinkId: Long) -> Unit = {}, v
             Modifier.padding(padding).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // V2.29: the first use, until answered.
+            waterSettings?.takeIf { !it.introSeen }?.let { intro ->
+                today?.let { t -> item(key = "intro") { WaterIntroCard(t, intro, onStart = viewModel::introStart, onLater = viewModel::introLater) } }
+            }
             item { today?.let { ProgressCard(it) } }
             item {
                 AddDrinkPanel(drinks, containers, onAdd = { id, ml -> viewModel.add(id, ml, IntakeSource.WATER_SCREEN) })

@@ -34,8 +34,8 @@ dans [CHANGELOG.md](CHANGELOG.md).
 | `kotlinx-serialization-json` | Export / import JSON, routes typées ; maintenu par JetBrains, sans réflexion |
 | `kotlinx-coroutines` | Asynchronisme |
 | `sh.calvin.reorderable` | Glisser-déposer dans une `LazyColumn` (absent de Compose) ; petite lib Apache 2, maintenue. **Seule dépendance tierce.** |
-| `androidx.work:work-runtime` | Sauvegarde automatique quotidienne, rattrapage Health Connect après séance |
-| `androidx.health.connect:connect-client` | Lecture de la FC et des calories écrites par Mi Fitness (V2.1) |
+| `androidx.work:work-runtime` | Sauvegarde automatique quotidienne, rattrapage Health Connect après séance, rappels d'hydratation (V2.29) |
+| `androidx.health.connect:connect-client` | Lecture de la FC et des calories écrites par Mi Fitness (V2.1), écriture facultative de l'hydratation (V2.29) |
 | `androidx.glance:glance-appwidget` | Widget d'écran d'accueil écrit en Compose (V2.6) ; bibliothèque officielle Google, remplace les `RemoteViews` écrites à la main |
 | Tests : JUnit 4, `kotlinx-coroutines-test`, Turbine, `androidx.test`, Robolectric, `compose-ui-test-junit4`, `glance-appwidget-testing` | Tests unitaires et instrumentés ; Robolectric exécute aussi les tests Room sur le JVM (sans téléphone) |
 
@@ -78,6 +78,7 @@ GymFlemme/
 ```
 
 V1.1 a ajouté `feature/nutrition/` (data · domain · reminder · ui) et la migration Room 1 → 2 ; V1.2 a ajouté la sauvegarde automatique dans `core/backup/` (`AutoBackupManager`, worker WorkManager) ; V2.1 a ajouté `feature/heart/` (data · domain · service · ui) et la migration 3 → 4 ; V2.6 a ajouté `core/launch/` (raccourcis) et `feature/widget/`.
+V2.29 a ajouté `feature/hydration/` (data · domain · health · reminder · ui) et la migration 14 → 15.
 V2.8 a ajouté `feature/library/` et `third_party/open-exercise-illustrations/` : `LICENSE`, `README.md` et `SOURCE.md`
 (URL, commit figé `2786aef`, date) **hors APK** comme preuve de licence ; `assets/exercise_library/` (`exercises.json`
 + 796 images WebP, réencodées en qualité 80 depuis 2.12.2, mêmes dimensions) ajouté aux assets par `app/build.gradle.kts`. APK release : 14,1 Mo → 37,5 Mo.
@@ -85,7 +86,7 @@ Le script `tools/ciqual/convert.py` régénère `app/src/main/assets/ciqual.tsv`
 
 ---
 
-## Modèle de données (Room, version 14)
+## Modèle de données (Room, version 15)
 
 Unités : charges en **kg** (`Double`, pas de 0,5), durées en secondes, distances en mètres. `Instant` ↔ epoch millis, `LocalDate` ↔ epochDay. Les enums sont stockées en texte.
 
@@ -117,6 +118,16 @@ Tables Nutrition (V1.1, migration explicite 1 → 2) :
 | `badge` (v7, palier v8) | id (nom du badge, ex. `REPEAT_OFFENDER`), tier (1 à 4 = Bronze à Platine, 0 = sans palier), earnedAt (jour), seen ; clé (id, tier) | Badges et paliers obtenus ; recalculés depuis l'historique, jamais retirés. Migration 7 → 8 : Pilier de la salle → Récidiviste Argent, Créatine fidèle → Argent, Récidiviste / Plus fort que le canapé / Touche-à-tout → Bronze. Exportés depuis la sauvegarde v7 (palier depuis la v8). |
 | `monthly_challenge` (v9) | month (`2026-10`, clé), challenge (nom du défi), completedAt (jour, null tant que non réussi), seen | Défi de chaque mois, tiré une fois. Exporté depuis la sauvegarde v9. |
 | `library_exercise` | id (ex. `leg-press`), nom, alias, variante (`imageOf`, `difference`), matériel, type de machine, muscles principaux / secondaires / `alsoTargets`, mouvement, catégorie, niveau, impact, unilatéral, échauffement, lieux, vue, images (`frames`, dossier, largeur, hauteur) | Bibliothèque **Open Exercise Illustrations** (CC0) en lecture seule : 415 exercices + 44 variantes, rechargée depuis l'APK quand sa version change (`ExerciseLibraryLoader.DATASET_VERSION`). Une variante montre les images de l'exercice d'origine mais garde son matériel, ses muscles et sa différence. **Non exportée.** |
+
+Tables Hydratation (V2.29, migration explicite **14 → 15**, testée ; boissons et contenants proposés d'office écrits par
+la migration, à la création de la base et à la restauration d'une sauvegarde d'avant la v16) :
+
+| Table | Colonnes principales | Remarques |
+|---|---|---|
+| `drink` | id, code (`water`, `coffee`… ; null = boisson perso, unique), name, icon (nom Material Symbols), hydrationCoefficient (0 à 1), linkedFoodId (→ food, mis à null si supprimé), isCaloric, archived, sortOrder | Jamais supprimée, seulement archivée (reste dans l'historique). `water` sert aux actions de la notification. |
+| `container` | id, name, volumeMl, defaultDrinkId (→ drink), isDefault (un seul), archived, sortOrder | Verre 250, Tasse 200 (café), Bouteille 500, Gourde 750 (par défaut). |
+| `water_intake` | id, timestamp, date (jour local à la saisie), drinkId, volumeMl, coefficientApplied (**copié** à la saisie, jamais recalculé), linkedMealEntryId (→ meal_entry, suppression en cascade), source (`HOME_TILE`, `WATER_SCREEN`, `NOTIFICATION`, `HEALTH_CONNECT_IMPORT` réservé) | Hydratation comptée = volume × coefficient. |
+| `water_day` | date (clé), baseGoalMl, customGoalMl, bonusMl, sessionDay | Objectif **figé** de chaque jour : celui du jour suit les réglages, la pesée et les séances ; un jour passé ne change plus (badges stables). |
 
 Migration explicite **2 → 3** (V1.1.1) : 4 colonnes nullables ajoutées (`exercise.nextNote`, `template_exercise.supersetGroup`,
 `session_exercise.supersetGroup`, `session_exercise.replacedExerciseId`), aucune donnée modifiée.
@@ -501,6 +512,41 @@ Source des données de composition : *Anses. 2025. Table de composition nutritio
 
 ---
 
+### Hydratation (V2.29)
+
+- **Objectif** : dernière pesée × 35 ml, arrondi aux 100 ml (2 L sans pesée, avec « Renseigne ton poids… »), ou objectif
+  personnalisé (500 – 6 000 ml) ; l'écran affiche les deux. **Bonus séance** (+500 ml par défaut, 0 – 1 500 par 250)
+  dès qu'une séance est **démarrée** dans la journée, une seule fois ; une séance abandonnée sans aucune série ni cardio
+  le retire, sauf autre séance ce jour-là (`SessionListener`). Valeurs indicatives, dites dans les réglages, la carte
+  de première utilisation et l'écran Eau.
+- **Tuile Eau** (demi-largeur, accent) : les tuiles demi-largeur vont par paires dans l'ordre Eau, Compléments, Défi
+  (une seule restante prend la largeur). « + » (48 dp) = contenant par défaut avec sa boisson ; appui long = feuille de
+  choix ; le reste ouvre l'écran Eau. Ligne secondaire du catalogue d'humour (rien bu, moins / plus de la moitié,
+  atteint) ; TalkBack : « Eau, 1,8 litre sur 3,4 ».
+- **Écran Eau** (et entrée « Eau » en tête du journal Nutrition) : anneau, boissons puis contenants (sans boisson
+  choisie, un contenant ajoute la sienne), « Autre quantité » 10 – 2 000 ml ; historique du jour (appui : boisson,
+  volume, heure ; corbeille) ; 7 derniers jours en barres avec l'objectif de chaque jour en pointillé (`BarChart`,
+  Compose Canvas). Après chaque ajout : « +250 ml · Annuler » 5 s, puis une fois par jour le message « objectif
+  atteint ».
+- **Boissons caloriques** : au premier ajout sans produit, choix du produit (Ciqual, mes aliments, scan) ou « Ne pas
+  compter les calories » (la boisson devient non calorique). Ensuite chaque prise crée une entrée du journal (1 ml =
+  1 g, repas de l'heure) ; lien dans les deux sens (suppression, quantité, heure ; une autre boisson remplace l'entrée).
+- **Rappels** : chaîne de tâches WorkManager (aucune alarme exacte), canal « Rappels d'hydratation ». Pas de rappel
+  avant la réponse à la carte de première utilisation, sans permission, hors plage (08:00 – 21:00, toutes les 90 min),
+  dans les 30 min après une boisson, pendant une séance, objectif atteint (`ReminderRules`). Actions « +250 / +500 ml »
+  (quantités réglables) par un `BroadcastReceiver`, sans ouvrir l'app.
+- **Badges** : Chameau repenti (jours d'objectif 7 / 30 / 100 / 250), Source intarissable (jours d'affilée 3 / 7 /
+  21 / 60), Oasis (secret : 3 L un jour sans séance, jugé le lendemain), défi Hydraté (20 jours, tiré si de l'eau a été
+  notée 5 jours le mois d'avant) ; chaque jour comparé à son objectif figé.
+- **Health Connect** (facultatif, désactivé par défaut) : `WRITE_HYDRATION`, un `HydrationRecord` par prise (volume
+  compté, identifiant client `water-{id}`), modifié ou supprimé en miroir ; aucune lecture.
+- **Réglages › Hydratation** : objectif, bonus, contenants et boissons (ajout, modification, ordre, archivage, contenant
+  par défaut, icône, coefficient 0 – 100 % par 10, produit lié), rappels, Health Connect.
+- **Première utilisation** : carte sur l'accueil et l'écran Eau, jusqu'à une réponse (« C'est parti » : rappels comme
+  coché, permission de notification demandée ; « Plus tard » : sans rappel). Pas d'étape dans l'assistant de profil.
+- **Bilan de la semaine** : eau moyenne des jours notés et jours à l'objectif. Pas d'écran Statistiques à ce jour :
+  `HydrationRepository.observeDaysWithGoal` lui fournira les données.
+
 ## Mise à jour depuis GitHub (V2.28)
 
 Deux variantes (`productFlavors`, dimension `distribution`), même identifiant `fr.olivier.forme` :
@@ -606,8 +652,8 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
 ### Export / import manuel
 
 - Export / import d'un fichier JSON complet via le **Storage Access Framework** (choix libre de l'emplacement).
-- Format versionné : `{ "schemaVersion": 12, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "supplements", "supplementIntakes", "dishes", "dishIngredients" }, "badges": [ … ], "challenges": [ … ] }`.
-  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9, les compléments depuis la v10, les plats perso depuis la v11, le prénom depuis la v12, l'apparence (thème, accent, couleurs dynamiques) depuis la v13, le niveau d'activité et la cible de protéines en grammes depuis la v14, le nombre d'utilisations des plats depuis la v15. Les fichiers **v1** à **v12** restent importables (sans apparence : celle du téléphone est gardée) (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8 ; créatine des fichiers v1 à v9 (profil + `creatine`) convertie en complément comme la migration 9 → 10). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
+- Format versionné : `{ "schemaVersion": 16, "exportedAt": "…", "sport": { …, "heart" }, "bodyWeight": [ … ], "nutrition": { "profile", "foods", "meals", "supplements", "supplementIntakes", "dishes", "dishIngredients" }, "badges": [ … ], "challenges": [ … ], "appearance", "hydration": { "drinks", "containers", "intakes", "days", "settings" } }`.
+  La FC des séances (courbe + résumé) est incluse depuis la v4, l'objectif calories depuis la v5, le lien vers la bibliothèque d'exercices (`libraryId`) depuis la v6, les badges depuis la v7, leur palier depuis la v8, les défis mensuels depuis la v9, les compléments depuis la v10, les plats perso depuis la v11, le prénom depuis la v12, l'apparence (thème, accent, couleurs dynamiques) depuis la v13, le niveau d'activité et la cible de protéines en grammes depuis la v14, le nombre d'utilisations des plats depuis la v15, l'hydratation (boissons, contenants, prises, objectifs des jours, réglages sauf Health Connect et première utilisation) depuis la v16. Les fichiers **v1** à **v15** restent importables (v1 à v12 sans apparence : celle du téléphone est gardée ; avant la v16, sans hydratation : boissons et contenants proposés d'office, aucune prise, réglages gardés) (champs absents = valeurs par défaut ; badges absents = recalculés depuis l'historique, sans annonce ; badges v7 convertis en paliers comme la migration 7 → 8 ; créatine des fichiers v1 à v9 (profil + `creatine`) convertie en complément comme la migration 9 → 10). Les tables Ciqual et bibliothèque d'exercices ne sont pas exportées (elles sont dans l'APK).
 - **L'import remplace toutes les données** (transaction unique, après confirmation). Une sauvegarde de sécurité est exportée automatiquement juste avant.
 - Les **photos** des machines (copiées dans le stockage interne de l'app) ne sont **pas** incluses dans le JSON.
 
@@ -626,7 +672,8 @@ Modèles (Rameur : 5 min par défaut dans tous les modèles, modifiable) :
   sinon la même série de la dernière fois. Toucher une valeur permet de la saisir au clavier.
 - **Records** : un record doit battre strictement la meilleure valeur précédente ; une première fois n'est pas un record.
 - **Variante de build debug** : `fr.olivier.forme.debug`, installable à côté de la release sans conflit de données.
-- **Permissions demandées** : notifications (timer de repos, rappels des compléments), caméra (uniquement à l'ouverture du scanner),
-  Internet (uniquement pour Open Food Facts), alarmes exactes (fin de repos), démarrage (reprogrammer les rappels des compléments).
+- **Permissions demandées** : notifications (timer de repos, rappels des compléments et de l'hydratation), caméra (uniquement à l'ouverture du scanner),
+  Internet (uniquement pour Open Food Facts), alarmes exactes (fin de repos), démarrage (reprogrammer les rappels des compléments),
+  Health Connect en écriture pour l'hydratation (V2.29, seulement si activé).
 - **APK release** limité à l'architecture `arm64-v8a` (tous les téléphones 64 bits récents) pour économiser ~15 Mo
   de code natif ML Kit ; le build debug garde toutes les architectures (émulateurs).

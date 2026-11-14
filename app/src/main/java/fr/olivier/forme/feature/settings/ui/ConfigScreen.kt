@@ -26,6 +26,7 @@ fun ConfigScreen(
     onProfile: () -> Unit,
     onFoods: () -> Unit,
     onSupplements: () -> Unit,
+    onHydration: () -> Unit = {},
     onWatch: () -> Unit,
     onAi: () -> Unit,
     onSources: () -> Unit,
@@ -41,6 +42,7 @@ fun ConfigScreen(
             Entry("Profil", "Âge, sexe, FC max, objectifs (protéines, calories, entraînement), whey", onProfile)
             Entry("Mes aliments", "Aliments perso, produits scannés, favoris", onFoods)
             Entry("Compléments", "Créatine, oméga-3, vitamines… : actifs, quantité, rappels", onSupplements)
+            Entry(stringResource(R.string.hydration_settings_title), stringResource(R.string.hydration_settings_subtitle), onHydration)
             Entry("Montre cardio", "Choisir la montre, tester la FC en direct et Health Connect", onWatch)
             Entry("Analyse IA", "App IA par défaut (Claude, ChatGPT…), test du partage", onAi)
             Entry(stringResource(R.string.appearance_title), stringResource(R.string.appearance_subtitle), onAppearance)

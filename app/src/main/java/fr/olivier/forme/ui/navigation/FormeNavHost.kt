@@ -2,6 +2,7 @@ package fr.olivier.forme.ui.navigation
 
 import fr.olivier.forme.core.update.LocalUpdateFeature
 import fr.olivier.forme.feature.hydration.ui.DrinkFoodScreen
+import fr.olivier.forme.feature.hydration.ui.HydrationSettingsScreen
 import fr.olivier.forme.feature.hydration.ui.WaterScreen
 import fr.olivier.forme.feature.badges.ui.BadgeAnnouncer
 import fr.olivier.forme.feature.badges.ui.BadgesScreen
@@ -169,6 +170,9 @@ fun FormeNavHost(
                 )
             }
             composable<WaterRoute> { WaterScreen(onBack = { nav.popBackStack() }, onNeedsFood = { nav.navigate(DrinkFoodRoute(it)) }) }
+            composable<HydrationSettingsRoute> {
+                HydrationSettingsScreen(onBack = { nav.popBackStack() }, onChooseProduct = { nav.navigate(DrinkFoodRoute(it)) })
+            }
             composable<DrinkFoodRoute> {
                 DrinkFoodScreen(
                     onDone = { nav.popBackStack() },
@@ -236,6 +240,7 @@ fun FormeNavHost(
                     onProfile = { nav.navigate(ProfileRoute) },
                     onFoods = { nav.navigate(FoodsRoute) },
                     onSupplements = { nav.navigate(SupplementsRoute) },
+                    onHydration = { nav.navigate(HydrationSettingsRoute) },
                     onWatch = { nav.navigate(WatchTestRoute) },
                     onAi = { nav.navigate(AiSettingsRoute) },
                 )

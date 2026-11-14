@@ -203,6 +203,7 @@
     <string name="water_journal_entry">Eau</string>
     <string name="water_journal_entry_spoken">Eau, %1$s sur %2$s, ouvrir le suivi de l\'eau</string>
     <string name="water_error">Impossible d\'enregistrer la boisson</string>
+    <string name="water_week_summary">Eau %1$s/j · objectif atteint %2$d/%3$d</string>
     <string name="water_indicative">Valeurs indicatives, à adapter selon ta situation, ton activité et la chaleur.</string>
 
     <!-- Hydration: the product of a caloric drink (V2.29). Neutral texts. -->
@@ -222,4 +223,77 @@
     <string name="water_channel">Rappels d\'hydratation</string>
     <string name="water_notification_title">Hydratation</string>
     <string name="water_notification_action">+%1$d ml</string>
+
+    <!-- Réglages › Hydratation and the first-use card (V2.29). Neutral texts. -->
+    <string name="hydration_settings_title">Hydratation</string>
+    <string name="hydration_settings_subtitle">Objectif, contenants, boissons, rappels, Health Connect</string>
+    <string name="hydration_goal_section">Objectif</string>
+    <string name="hydration_goal_computed">Valeur calculée : %1$s (35 ml par kg)</string>
+    <string name="hydration_goal_custom">Objectif personnalisé</string>
+    <string name="hydration_bonus_section">Bonus jour de séance</string>
+    <string name="hydration_bonus_switch">Ajouter un bonus les jours de séance</string>
+    <string name="hydration_less">Moins</string>
+    <string name="hydration_more">Plus</string>
+    <string name="hydration_containers_section">Mes contenants</string>
+    <string name="hydration_drinks_section">Mes boissons</string>
+    <string name="hydration_add_container">Ajouter un contenant</string>
+    <string name="hydration_add_drink">Ajouter une boisson</string>
+    <string name="hydration_default">par défaut</string>
+    <string name="hydration_archived">archivé</string>
+    <string name="hydration_move_up">Monter %1$s</string>
+    <string name="hydration_move_down">Descendre %1$s</string>
+    <string name="hydration_container_line">%1$d ml · %2$s</string>
+    <string name="hydration_drink_line">Compte pour %1$d %%</string>
+    <string name="hydration_drink_line_caloric">Compte pour %1$d %% · calories : %2$s</string>
+    <string name="hydration_drink_no_product">produit à choisir</string>
+    <string name="hydration_name">Nom</string>
+    <string name="hydration_volume">Volume (ml)</string>
+    <string name="hydration_default_drink">Boisson par défaut</string>
+    <string name="hydration_default_container">Contenant par défaut</string>
+    <string name="hydration_archive">Archiver</string>
+    <string name="hydration_restore">Restaurer</string>
+    <string name="hydration_icon">Icône</string>
+    <string name="hydration_coefficient">Compte pour l\'hydratation : %1$d %%</string>
+    <string name="hydration_caloric">Boisson calorique (ajoutée au journal)</string>
+    <string name="hydration_product">Produit : %1$s</string>
+    <string name="hydration_choose_product">Choisir le produit</string>
+    <string name="hydration_change_product">Changer</string>
+    <string name="hydration_unlink_product">Délier</string>
+    <string name="hydration_reminders_section">Rappels</string>
+    <string name="hydration_reminders_switch">Rappels pour boire</string>
+    <string name="hydration_reminders_hours">De %1$s à %2$s</string>
+    <string name="hydration_reminders_start">Début</string>
+    <string name="hydration_reminders_end">Fin</string>
+    <string name="hydration_reminders_interval">Toutes les</string>
+    <string name="hydration_reminders_interval_value">%1$d min</string>
+    <string name="hydration_skip_after_drink">Pas juste après avoir bu</string>
+    <string name="hydration_skip_after_drink_hint">Aucun rappel dans les 30 minutes qui suivent une boisson</string>
+    <string name="hydration_skip_during_session">Pas pendant une séance</string>
+    <string name="hydration_actions">Boutons de la notification</string>
+    <string name="hydration_action_n">Bouton %1$d</string>
+    <string name="hydration_health_section">Health Connect</string>
+    <string name="hydration_health_switch">Enregistrer l\'hydratation dans Health Connect</string>
+    <string name="hydration_health_hint">Chaque boisson y est écrite avec son volume compté, modifiée ou supprimée en même temps.</string>
+    <string name="hydration_health_unavailable">Health Connect n\'est pas disponible sur ce téléphone.</string>
+    <string name="hydration_health_denied">Autorisation refusée : rien n\'est écrit dans Health Connect.</string>
+    <string name="hydration_ok">OK</string>
+    <!-- TalkBack labels of the drink icons, in the order of DrinkIcons.all -->
+    <string-array name="drink_icon_labels">
+        <item>Verre d\'eau</item>
+        <item>Bulles</item>
+        <item>Tasse</item>
+        <item>Théière</item>
+        <item>Verre à cocktail</item>
+        <item>Goutte</item>
+        <item>Verre</item>
+        <item>Soupe</item>
+        <item>Chope</item>
+        <item>Verre à vin</item>
+    </string-array>
+
+    <!-- First-use card; the title is in humor.xml (water_intro_title) -->
+    <string name="water_intro_body">Ton objectif du jour est de %1$s, calculé à partir de ton poids. Les jours de séance, on ajoute %2$d ml.</string>
+    <string name="water_intro_reminders">Activer les rappels pour boire (entre %1$s et %2$s)</string>
+    <string name="water_intro_start">C\'est parti</string>
+    <string name="water_intro_later">Plus tard</string>
 </resources>

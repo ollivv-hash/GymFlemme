@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.time.Clock
 import java.time.LocalDate
+import fr.olivier.forme.feature.hydration.data.HydrationRepository
+import fr.olivier.forme.feature.hydration.domain.HydrationMath
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,9 +23,22 @@ class NutritionWeekSource @Inject constructor(
     private val heart: HeartRepository,
     private val weights: BodyWeightRepository,
     private val clock: Clock,
+    private val hydration: HydrationRepository,
 ) {
     /** Protein target from the current weight; calorie target of each day = rest-day target + its sessions (net). */
     fun observe(weekStart: LocalDate): Flow<NutritionWeek> = combine(
+        observeFood(weekStart),
+        hydration.observeDaysWithGoal(weekStart, weekStart.plusDays(6)),
+    ) { food, water ->
+        // V2.29: the water of the week, each day against its own goal (2 L without one).
+        food.copy(
+            waterDays = water.size,
+            avgWaterMl = water.takeIf { it.isNotEmpty() }?.map { it.countedMl }?.average()?.let { kotlin.math.round(it).toInt() },
+            waterGoalDays = water.count { it.countedMl >= (it.goalMl ?: HydrationMath.NO_WEIGHT_GOAL_ML) },
+        )
+    }
+
+    private fun observeFood(weekStart: LocalDate): Flow<NutritionWeek> = combine(
         nutrition.observeRange(weekStart, weekStart.plusDays(6)),
         nutrition.profile,
         weights.observeAll().map { list -> list.maxByOrNull { it.date }?.weightKg },

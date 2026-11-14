@@ -7,6 +7,8 @@ import fr.olivier.forme.core.db.TestClock
 import fr.olivier.forme.core.db.testDatabase
 import fr.olivier.forme.core.settings.SettingsRepository
 import fr.olivier.forme.feature.ai.data.AiDayRepository
+import fr.olivier.forme.feature.hydration.data.HydrationRepository
+import fr.olivier.forme.feature.hydration.data.HydrationSettingsRepository
 import fr.olivier.forme.feature.library.data.LibraryRepository
 import fr.olivier.forme.feature.ai.domain.AnalysisMarkdown
 import fr.olivier.forme.feature.bodyweight.data.BodyWeightRepository
@@ -53,7 +55,7 @@ class AiDayRepositoryTest {
         )
         val weights = BodyWeightRepository(db.bodyWeightDao())
         val settings = SettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "s.preferences_pb") })
-        val repository = AiDayRepository(sessions, heart, nutrition, NutritionWeekSource(nutrition, heart, weights, clock), weights, settings, LibraryRepository(db.libraryDao()), clock)
+        val repository = AiDayRepository(sessions, heart, nutrition, NutritionWeekSource(nutrition, heart, weights, clock, HydrationRepository(db, db.hydrationDao(), HydrationSettingsRepository(PreferenceDataStoreFactory.create(scope = backgroundScope) { File(tmp.root, "w.preferences_pb") }), clock)), weights, settings, LibraryRepository(db.libraryDao()), clock)
 
         // The library, for the volume per muscle (V2.12): the seeded chest press is linked to it.
         db.libraryDao().insertAll(

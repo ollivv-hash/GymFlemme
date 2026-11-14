@@ -8,6 +8,7 @@ import fr.olivier.forme.feature.hydration.data.IntakeSource
 import fr.olivier.forme.feature.hydration.domain.HydrationMath
 import fr.olivier.forme.feature.hydration.ui.AddDrinkSheet
 import fr.olivier.forme.feature.hydration.ui.WaterSnackbarEffect
+import fr.olivier.forme.feature.hydration.ui.WaterIntroCard
 import fr.olivier.forme.feature.hydration.ui.WaterViewModel
 import kotlin.math.roundToInt
 import androidx.compose.ui.res.stringResource
@@ -293,6 +294,7 @@ fun HomeScreen(
     val board by level.board.collectAsStateWithLifecycle()
     var choosingSession by remember { mutableStateOf(false) }
     val waterToday by water.today.collectAsStateWithLifecycle()
+    val waterSettings by water.hydrationSettings.collectAsStateWithLifecycle()
     val drinks by water.drinks.collectAsStateWithLifecycle()
     val containers by water.containers.collectAsStateWithLifecycle()
     var choosingDrink by remember { mutableStateOf(false) }
@@ -404,6 +406,10 @@ fun HomeScreen(
             )
             // V2.29: the half-width tiles go by pairs in this order (water, supplements, challenge); one left alone
             // takes the whole width.
+            // V2.29: the first use of the hydration, until answered.
+            val intro = waterSettings?.takeIf { !it.introSeen }
+            val introToday = waterToday
+            if (intro != null && introToday != null) WaterIntroCard(introToday, intro, onStart = water::introStart, onLater = water::introLater)
             HalfTiles(
                 waterTile?.let { state -> { m: Modifier -> WaterTile(state, onOpen = onOpenWater, onAdd = water::addDefault, onChoose = { choosingDrink = true }, modifier = m) } },
                 supplements?.let { state ->

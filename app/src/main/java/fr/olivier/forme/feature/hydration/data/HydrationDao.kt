@@ -122,6 +122,14 @@ interface HydrationDao {
     @Query("SELECT * FROM water_intake")
     suspend fun getAllIntakes(): List<WaterIntakeEntity>
 
+    /** Each day with an intake from [from] to [to]: counted and the goal frozen that day (Week tab, statistics). */
+    @Query(
+        """SELECT w.date AS date, CAST(ROUND(SUM(w.volumeMl * w.coefficientApplied)) AS INTEGER) AS countedMl,
+                  (SELECT COALESCE(d.customGoalMl, d.baseGoalMl) + d.bonusMl FROM water_day d WHERE d.date = w.date) AS goalMl
+           FROM water_intake w WHERE w.date >= :from AND w.date <= :to GROUP BY w.date ORDER BY w.date""",
+    )
+    fun observeDaysWithGoal(from: LocalDate, to: LocalDate): Flow<List<WaterDayTotal>>
+
     // --- Days (frozen goals) ---
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

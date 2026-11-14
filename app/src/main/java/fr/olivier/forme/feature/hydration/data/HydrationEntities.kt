@@ -113,3 +113,6 @@ data class IntakeWithDrink(
 
 /** Hydration counted on a day, in ml (sum of volume × coefficient, rounded). */
 data class DailyWater(val date: LocalDate, val countedMl: Int)
+
+/** Hydration of a day with its frozen goal (null: no goal row, 2 L assumed by the readers). */
+data class WaterDayTotal(val date: LocalDate, val countedMl: Int, val goalMl: Int?)

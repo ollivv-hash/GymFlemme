@@ -20,6 +20,8 @@ import fr.olivier.forme.MainActivity
 import fr.olivier.forme.feature.hydration.ui.DRINK_FOOD_SKIP_TAG
 import fr.olivier.forme.feature.hydration.ui.WATER_CONTAINER_TAG
 import fr.olivier.forme.feature.hydration.ui.WATER_DRINK_TAG
+import fr.olivier.forme.feature.hydration.ui.WATER_INTRO_LATER_TAG
+import fr.olivier.forme.feature.hydration.ui.WATER_INTRO_TAG
 import fr.olivier.forme.feature.hydration.ui.WATER_JOURNAL_TAG
 import fr.olivier.forme.feature.sport.ui.home.bento.WATER_ADD_TAG
 import fr.olivier.forme.feature.sport.ui.home.bento.WATER_TILE_TAG
@@ -56,6 +58,12 @@ class WaterSmokeTest {
     @Test
     fun tileScreenAndJournal() {
         rule.waitForHome()
+        // V2.29: the first-use card, answered "Plus tard": it goes.
+        rule.waitUntilAtLeastOneExists(hasTestTag(WATER_INTRO_TAG), 15_000)
+        waitFor("Ton objectif du jour est de 2 L")
+        shot("wa0-home-intro")
+        rule.onNodeWithTag(WATER_INTRO_LATER_TAG).performScrollTo().performClick()
+        rule.waitUntil(15_000) { rule.onAllNodes(hasTestTag(WATER_INTRO_TAG)).fetchSemanticsNodes().isEmpty() }
         rule.waitUntilAtLeastOneExists(hasTestTag(WATER_TILE_TAG), 15_000)
         rule.onNodeWithTag(WATER_TILE_TAG).performScrollTo()
         // No weight yet: 2 L.

@@ -19,6 +19,10 @@ data class NutritionWeek(
     val kcalTargetDays: Int?,
     val wheyDays: Int,
     val creatineDays: Int,
+    /** V2.29: days with water recorded, their average counted (ml) and the days reaching that day's goal (NutritionWeekSource). */
+    val waterDays: Int = 0,
+    val avgWaterMl: Int? = null,
+    val waterGoalDays: Int = 0,
 ) {
     companion object {
         fun of(

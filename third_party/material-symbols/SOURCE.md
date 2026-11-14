@@ -11,5 +11,6 @@
 - V2.29 (hydration), from commit 10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7 (the commit above can no longer be
   downloaded), same style and conversion: `water_full`, `bubble_chart`, `coffee`, `emoji_food_beverage`, `local_bar`,
   `water_drop`, `local_drink`, `soup_kitchen`, `sports_bar`, `wine_bar` → `ic_drink_<name>`; `add` → `ic_add`,
-  `delete` → `ic_delete`. Every name asked for existed: none was replaced.
+  `delete` → `ic_delete`, `keyboard_arrow_up` → `ic_arrow_up`, `keyboard_arrow_down` → `ic_arrow_down`. Every name asked
+  for existed: none was replaced.
 - `LICENSE` and `SOURCE.md`: proof of license, not packaged in the APK.
