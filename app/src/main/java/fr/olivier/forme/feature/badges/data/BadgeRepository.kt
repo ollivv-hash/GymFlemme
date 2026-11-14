@@ -1,5 +1,8 @@
 package fr.olivier.forme.feature.badges.data
 
+import fr.olivier.forme.feature.badges.domain.WaterDay
+import fr.olivier.forme.feature.hydration.domain.HydrationMath
+
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -128,6 +131,7 @@ class BadgeRepository @Inject constructor(
             hasRower = dao.activeExercises().any { Badges.isRower(it.name, it.libraryId) },
             mealsLastMonth = dao.mealCount(previous.atDay(1), previous.atEndOfMonth()) > 0,
             rotationSize = dao.rotation().size,
+            waterDaysLastMonth = dao.waterDayCount(previous.atDay(1), previous.atEndOfMonth()),
         )
     }
 
@@ -173,6 +177,7 @@ class BadgeRepository @Inject constructor(
             ),
             musclesDone = real.map { it.muscleGroup to it.startedAt.day() },
             rotation = dao.rotation().toSet(),
+            water = dao.waterByDay().map { WaterDay(it.date, it.countedMl, it.goalMl ?: HydrationMath.NO_WEIGHT_GOAL_ML) },
         )
     }
 

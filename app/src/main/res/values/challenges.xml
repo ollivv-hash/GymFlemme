@@ -46,6 +46,14 @@
     <string name="challenge_unit_protein_date">jours d\'objectif protéines</string>
     <string name="challenge_unit_triple_session">séances de la rotation</string>
 
+    <!-- V2.29, hydration -->
+    <string name="challenge_name_hydrated">Hydraté</string>
+    <string name="challenge_goal_hydrated">Objectif d\'hydratation atteint 20 jours</string>
+    <string name="challenge_announce_hydrated">Ce mois-ci : 20 jours avec ton objectif d\'eau. À ta santé !</string>
+    <string name="challenge_success_hydrated">20 jours bien hydraté. Défi bu jusqu\'à la dernière goutte.</string>
+    <string name="challenge_success_hydrated_f">20 jours bien hydratée. Défi bu jusqu\'à la dernière goutte.</string>
+    <string name="challenge_unit_hydrated">jours d\'objectif eau</string>
+
     <!-- Serious mode; %1$s = the goal -->
     <string name="challenge_neutral_announce">Défi du mois : %1$s</string>
     <string name="challenge_neutral_success">Défi du mois réussi</string>

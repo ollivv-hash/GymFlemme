@@ -61,6 +61,9 @@ data class DayProteinRow(val date: LocalDate, val proteinG: Double)
 
 data class DayWeightRow(val date: LocalDate, val weightKg: Double)
 
+/** V2.29: hydration counted on a day and that day's frozen goal (null: no goal row, 2 L assumed). */
+data class DayWaterRow(val date: LocalDate, val countedMl: Int, val goalMl: Int?)
+
 @Dao
 interface BadgeDao {
     @Query("SELECT * FROM badge ORDER BY earnedAt, id, tier")
@@ -120,6 +123,17 @@ interface BadgeDao {
     @Query("SELECT proteinTargetGPerKg FROM profile WHERE id = 1")
     suspend fun proteinGPerKg(): Double?
 
+    /** V2.29: each day with an intake, its hydration counted and the goal frozen that day. */
+    @Query(
+        """SELECT w.date AS date, CAST(ROUND(SUM(w.volumeMl * w.coefficientApplied)) AS INTEGER) AS countedMl,
+                  (SELECT COALESCE(d.customGoalMl, d.baseGoalMl) + d.bonusMl FROM water_day d WHERE d.date = w.date) AS goalMl
+           FROM water_intake w GROUP BY w.date ORDER BY w.date""",
+    )
+    suspend fun waterByDay(): List<DayWaterRow>
+
+    @Query("SELECT COUNT(DISTINCT date) FROM water_intake WHERE date BETWEEN :from AND :to")
+    suspend fun waterDayCount(from: LocalDate, to: LocalDate): Int
+
     @Query("SELECT id FROM workout_template WHERE orderInRotation IS NOT NULL AND archived = 0")
     suspend fun rotation(): List<Long>
 
@@ -155,7 +169,8 @@ interface BadgeDao {
                   + (SELECT COUNT(*) FROM cardio_entry) + (SELECT COUNT(*) FROM meal_entry)
                   + (SELECT COUNT(*) FROM supplement_intake i JOIN supplement s ON s.id = i.supplementId
                      WHERE s.code = 'creatine') + (SELECT COUNT(*) FROM body_weight_entry)
-                  + (SELECT COUNT(*) FROM workout_template)""",
+                  + (SELECT COUNT(*) FROM workout_template) + (SELECT COUNT(*) FROM water_intake)
+                  + (SELECT COALESCE(SUM(volumeMl), 0) FROM water_intake)""",
     )
     fun observeHistorySize(): Flow<Long>
 

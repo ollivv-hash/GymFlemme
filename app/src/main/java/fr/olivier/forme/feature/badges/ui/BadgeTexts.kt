@@ -17,6 +17,8 @@ data class BadgeTexts(
     val condition: Int? = null,
     val unit: Int? = null,
     val tierMessages: Int? = null,
+    /** V2.29: tier messages that agree ("bien hydratée"), aligned item by item. */
+    val tierMessagesFeminine: Int? = null,
     val message: Int? = null,
     val messageFeminine: Int? = null,
 ) {
@@ -30,6 +32,8 @@ data class BadgeTexts(
             Badge.CREATINE_LOYAL -> BadgeTexts(R.string.badge_name_creatine_loyal, unit = R.string.badge_unit_creatine_loyal, tierMessages = R.array.badge_msg_creatine_loyal)
             Badge.GOLDEN_SHAKER -> BadgeTexts(R.string.badge_name_golden_shaker, unit = R.string.badge_unit_golden_shaker, tierMessages = R.array.badge_msg_golden_shaker)
             Badge.ALL_ROUNDER -> BadgeTexts(R.string.badge_name_all_rounder, unit = R.string.badge_unit_all_rounder, tierMessages = R.array.badge_msg_all_rounder)
+            Badge.CAMEL_REPENTANT -> BadgeTexts(R.string.badge_name_camel_repentant, unit = R.string.badge_unit_camel_repentant, tierMessages = R.array.badge_msg_camel_repentant, tierMessagesFeminine = R.array.badge_msg_camel_repentant_f)
+            Badge.ENDLESS_SOURCE -> BadgeTexts(R.string.badge_name_endless_source, unit = R.string.badge_unit_endless_source, tierMessages = R.array.badge_msg_endless_source)
 
             Badge.NOT_DEAD -> BadgeTexts(R.string.badge_name_not_dead, R.string.badge_name_not_dead_f, R.string.badge_condition_not_dead, message = R.string.badge_msg_not_dead, messageFeminine = R.string.badge_msg_not_dead_f)
             Badge.WELL_STARTED -> BadgeTexts(R.string.badge_name_well_started, R.string.badge_name_well_started_f, R.string.badge_condition_well_started, message = R.string.badge_msg_well_started)
@@ -46,6 +50,7 @@ data class BadgeTexts(
             Badge.RETURN_OF_THE_KING -> BadgeTexts(R.string.badge_name_return_of_the_king, R.string.badge_name_return_of_the_king_f, R.string.badge_condition_return_of_the_king, message = R.string.badge_msg_return_of_the_king, messageFeminine = R.string.badge_msg_return_of_the_king_f)
             Badge.ANNIVERSARY -> BadgeTexts(R.string.badge_name_anniversary, condition = R.string.badge_condition_anniversary, message = R.string.badge_msg_anniversary)
             Badge.NEW_YEAR -> BadgeTexts(R.string.badge_name_new_year, condition = R.string.badge_condition_new_year, message = R.string.badge_msg_new_year)
+            Badge.OASIS -> BadgeTexts(R.string.badge_name_oasis, condition = R.string.badge_condition_oasis, message = R.string.badge_msg_oasis, messageFeminine = R.string.badge_msg_oasis_f)
         }
     }
 }
@@ -71,7 +76,10 @@ object BadgeWording {
         if (style.serious) {
             return if (tier != null) resources.getString(R.string.badge_neutral_tier, name, tier(resources, tier)) else resources.getString(R.string.badge_neutral, name)
         }
-        if (tier != null) return resources.getStringArray(texts.tierMessages ?: error("${award.badge} has no tiers"))[tier.number - 1]
+        if (tier != null) {
+            val messages = texts.tierMessagesFeminine?.takeIf { style.feminine } ?: texts.tierMessages ?: error("${award.badge} has no tiers")
+            return resources.getStringArray(messages)[tier.number - 1]
+        }
         return resources.getString(texts.messageFeminine?.takeIf { style.feminine } ?: texts.message ?: error("${award.badge} has no message"))
     }
 

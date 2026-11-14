@@ -3,6 +3,7 @@ package fr.olivier.forme.feature.hydration.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import fr.olivier.forme.feature.badges.data.BadgeRepository
 import fr.olivier.forme.feature.hydration.data.AddedIntake
 import fr.olivier.forme.feature.hydration.data.ContainerEntity
 import fr.olivier.forme.feature.hydration.data.DrinkEntity
@@ -43,7 +44,11 @@ private data class PendingIntake(val drinkId: Long, val volumeMl: Int, val sourc
 
 /** Water screen and home tile (V2.29). */
 @HiltViewModel
-class WaterViewModel @Inject constructor(private val repository: HydrationRepository, clock: Clock) : ViewModel() {
+class WaterViewModel @Inject constructor(
+    private val repository: HydrationRepository,
+    private val badges: BadgeRepository,
+    clock: Clock,
+) : ViewModel() {
     private fun <T> Flow<T>.state(initial: T): StateFlow<T> = stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial)
 
     val date: LocalDate = repository.today()
@@ -75,6 +80,8 @@ class WaterViewModel @Inject constructor(private val repository: HydrationReposi
 
     private fun launchAdd(block: suspend () -> AddedIntake?) = viewModelScope.launch {
         val added = runCatching { block() }.getOrNull()
+        // V2.29: hydration badges and challenge, announced like the others.
+        if (added != null) runCatching { badges.evaluate() }
         _events.emit(added?.let { WaterEvent.Added(it.id, it.volumeMl, it.goalJustReached, it.today.goal.totalMl) } ?: WaterEvent.Failed)
     }
 

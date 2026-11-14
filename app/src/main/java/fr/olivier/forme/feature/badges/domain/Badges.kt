@@ -23,6 +23,10 @@ enum class Badge(val kind: BadgeKind) {
     CREATINE_LOYAL(BadgeKind.TIERED),
     GOLDEN_SHAKER(BadgeKind.TIERED),
     ALL_ROUNDER(BadgeKind.TIERED),
+    /** V2.29: days with the hydration goal reached (not in a row). */
+    CAMEL_REPENTANT(BadgeKind.TIERED),
+    /** V2.29: days in a row with the hydration goal reached. */
+    ENDLESS_SOURCE(BadgeKind.TIERED),
 
     NOT_DEAD(BadgeKind.ONE_OFF),
     WELL_STARTED(BadgeKind.ONE_OFF),
@@ -39,6 +43,8 @@ enum class Badge(val kind: BadgeKind) {
     RETURN_OF_THE_KING(BadgeKind.SECRET),
     ANNIVERSARY(BadgeKind.SECRET),
     NEW_YEAR(BadgeKind.SECRET),
+    /** V2.29: at least 3 L counted on a day without a session. */
+    OASIS(BadgeKind.SECRET),
     ;
 
     companion object {
@@ -81,7 +87,14 @@ data class BadgeHistory(
     val musclesDone: List<Pair<MuscleGroup, LocalDate>> = emptyList(),
     /** Templates of the active rotation. */
     val rotation: Set<Long> = emptySet(),
+    /** V2.29: hydration counted each day with an intake, and that day's goal (frozen). */
+    val water: List<WaterDay> = emptyList(),
 )
+
+/** Hydration of a day (V2.29): [countedMl] against the goal of that day. */
+data class WaterDay(val date: LocalDate, val countedMl: Int, val goalMl: Int) {
+    val reached get() = countedMl >= goalMl
+}
 
 /** Global level: [number] from 1, [floor] the points it needed, [next] those of the next level (null at the top). */
 data class Level(val number: Int, val points: Int, val floor: Int, val next: Int?)
@@ -110,7 +123,12 @@ object Badges {
         Badge.CREATINE_LOYAL to currentCreatineRun(history).toDouble(),
         Badge.GOLDEN_SHAKER to history.proteinDays.distinct().size.toDouble(),
         Badge.ALL_ROUNDER to history.exercisesDone.map { it.first }.distinct().size.toDouble(),
+        Badge.CAMEL_REPENTANT to waterGoalDays(history).size.toDouble(),
+        Badge.ENDLESS_SOURCE to currentWaterRun(history).toDouble(),
     )
+
+    /** V2.29: days with the hydration goal reached. */
+    fun waterGoalDays(history: BadgeHistory): List<LocalDate> = history.water.filter { it.reached }.map { it.date }.distinct().sorted()
 
     /**
      * Days whose protein total reached that day's target, computed with the weight in force that day: the last
@@ -154,6 +172,8 @@ object Badges {
             Badge.CREATINE_LOYAL to streak(Badge.CREATINE_LOYAL, h.creatineDays, { it }) { it.plusDays(1) },
             Badge.GOLDEN_SHAKER to cumulative(Badge.GOLDEN_SHAKER, counted(h.proteinDays.distinct())),
             Badge.ALL_ROUNDER to cumulative(Badge.ALL_ROUNDER, counted(firstDone)),
+            Badge.CAMEL_REPENTANT to cumulative(Badge.CAMEL_REPENTANT, counted(waterGoalDays(h))),
+            Badge.ENDLESS_SOURCE to streak(Badge.ENDLESS_SOURCE, waterGoalDays(h), { it }) { it.plusDays(1) },
         )
     }
 
@@ -216,6 +236,18 @@ object Badges {
         return run
     }
 
+    /** Days in a row with the hydration goal reached, up to now; today, not reached yet, never breaks the run. */
+    private fun currentWaterRun(h: BadgeHistory): Int {
+        val days = waterGoalDays(h).toSet()
+        var day = if (h.today in days) h.today else h.today.minusDays(1)
+        var run = 0
+        while (day in days) {
+            run++
+            day = day.minusDays(1)
+        }
+        return run
+    }
+
     // --- One-off and secret ---
 
     private fun oneOffs(h: BadgeHistory): Map<Badge, LocalDate> {
@@ -240,7 +272,18 @@ object Badges {
         put(Badge.RETURN_OF_THE_KING, days.zipWithNext().firstOrNull { (before, after) -> daysWithout(before, after) >= BadgeConfig.RETURN_DAYS }?.second)
         put(Badge.ANNIVERSARY, anniversary(days, h.today))
         put(Badge.NEW_YEAR, ends.firstOrNull { it.monthValue == 1 && it.dayOfMonth == 1 })
+        put(Badge.OASIS, oasis(h))
         return result
+    }
+
+    /**
+     * V2.29: first day with at least 3 L counted and no session started. A day is judged once over (a session could
+     * still come today), so the badge comes the next day at the earliest.
+     */
+    private fun oasis(h: BadgeHistory): LocalDate? {
+        val sessionDays = h.sessions.map { it.start.toLocalDate() }.toSet()
+        return h.water.filter { it.date.isBefore(h.today) && it.countedMl >= BadgeConfig.OASIS_ML && it.date !in sessionDays }
+            .minOfOrNull { it.date }
     }
 
     /** Whole days without a session between two session days. */
